@@ -18,7 +18,7 @@ class ResultWindow(QMainWindow):
                             'Sampler',
                             'Steps',
                             'CFG scale',
-                            'Model hash',
+                            'Model',
                             'Clip skip',
                             'ENSD',
                             'Version',
@@ -34,7 +34,7 @@ class ResultWindow(QMainWindow):
         self.negative_for_copy = self.params[0].dictionary_get('Negative')
         self.seed_for_copy = self.params[0].dictionary_get('Seed')
         self.tab_index = 0
-        window_width = 1024
+        window_width = 1050
         window_height = 864
         pos_x, pos_y = center_calculate(window_width, window_height)
         self.setGeometry(pos_x, pos_y, window_width, window_height)

@@ -18,6 +18,6 @@ if __name__ == '__main__':
         parameters_list = []
         for filepath in src[0]:
             chunk_data = decode_text_chunk(filepath, 1)
-            parameters = parse_parameter(chunk_data, filepath)
+            parameters = parse_parameter(chunk_data, filepath, models)
             parameters_list.append(parameters)
         show_result_window(parameters_list)

@@ -1,4 +1,3 @@
-import csv
 import os
 import re
 import json
@@ -61,13 +60,22 @@ class ChunkData:
         if loras > 0:
             self.params['Lora'] = str(loras)
 
+    def model_name(self, model_list):
+        model_hash = self.params.get('Model hash')
+        if model_hash:
+            model_name = '[' + model_hash + ']'
+            for tmp in model_list:
+                if tmp[1] == model_hash:
+                    model_name = tmp[0] + ' [' + tmp[1] + ']'
+            self.params['Model'] = model_name
+
     def json_export(self, filepath):
         if filepath:
             with open(filepath, 'w') as f:
                 json.dump(self.params, f, sort_keys=True, indent=4, ensure_ascii=False)
 
 
-def parse_parameter(chunks, filepath):
+def parse_parameter(chunks, filepath, model_list):
     target_data = ChunkData(chunks)
     target_data.filepath_registration(filepath)
     target_data = main_prompt_parse(target_data)
@@ -76,6 +84,7 @@ def parse_parameter(chunks, filepath):
     target_data = control_net_parse(target_data)
     target_data = main_status_parse(target_data)
     target_data.make_dictionary()
+    target_data.model_name(model_list)
     return target_data
 
 

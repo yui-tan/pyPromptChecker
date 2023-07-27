@@ -1,55 +1,7 @@
-import os
-import sys
 import csv
 import re
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout
 from PyQt5.QtWidgets import QTabWidget, QTextEdit, QPushButton, QFileDialog, QDesktopWidget
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt
-
-
-def make_label_layout(layout, data):
-    filename = 'libs/model_list.csv'
-    with open(filename, encoding='utf8', newline='') as f:
-        csvreader = csv.reader(f)
-        model_list = [row for row in csvreader]
-    status_data = ['Filename',
-                   'Filepath',
-                   'Size',
-                   'Seed',
-                   'Sampler',
-                   'Steps',
-                   'Cfg scale',
-                   'Model hash',
-                   'Clip skip',
-                   'Version',
-                   'Tiled diffusion',
-                   'Controlnet']
-
-    for tmp in status_data:
-        status_layout = QHBoxLayout()
-        if tmp == 'Controlnet':
-            title = QLabel('ControlNet')
-            value = QLabel(data.get('Controlnet 0', 'False'))
-        elif tmp == 'Tiled diffusion':
-            title = QLabel(tmp)
-            value = QLabel(data.get('Tiled diffusion', 'False'))
-        elif tmp == 'Model hash' and model_list:
-            title = QLabel('Model')
-            value = QLabel(model_hash_to_name(data.get(tmp, 'None'), model_list))
-        else:
-            title = QLabel(tmp.replace('Cfg', 'CFG'))
-            value = QLabel(data.get(tmp, 'None'))
-        size_policy_title = title.sizePolicy()
-        size_policy_value = value.sizePolicy()
-        size_policy_title.setHorizontalStretch(1)
-        size_policy_value.setHorizontalStretch(2)
-        title.setSizePolicy(size_policy_title)
-        value.setSizePolicy(size_policy_value)
-        status_layout.addWidget(title)
-        status_layout.addWidget(value)
-        layout.addLayout(status_layout)
-    return layout
 
 
 def make_tab_widget(data):
