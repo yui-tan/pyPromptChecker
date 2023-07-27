@@ -2,7 +2,7 @@ import sys
 import os
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout
 from PyQt6.QtWidgets import QTabWidget, QTextEdit, QPushButton, QFileDialog
-from PyQt6.QtWidgets import QSplitter, QMainWindow
+from PyQt6.QtWidgets import QSplitter, QMainWindow, QGroupBox
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
 
@@ -38,25 +38,35 @@ class ResultWindow(QMainWindow):
         window_height = 864
         self.setGeometry(0, 0, window_width, window_height)
 
-        self.root_tab = QTabWidget(self)
-        layout = QVBoxLayout()
+        root_layout = QVBoxLayout()
+        # self.setLayout(root_layout)
+        self.root_tab = QTabWidget()
 
         for tmp in self.params:
-            tab_layout = QTabWidget()
-            page_layout = QVBoxLayout()
+            tab_page = QWidget()
+            tab_page_layout = QVBoxLayout()
+            inner_tab = QTabWidget()
+
+            label_group = QGroupBox()
+            label_group_layout = QHBoxLayout()
 
             label_layout = make_label_layout(self, tmp)
-            page_layout.addLayout(label_layout)
+            label_group_layout.addLayout(label_layout)
+            label_group.setLayout(label_group_layout)
+            tab_page_layout.addWidget(label_group)
 
-            splitter = make_page_layout(tmp)
-            page_layout.addWidget(splitter)
+            for i in range(1):
+                inner_page = QWidget()
+                inner_page.setLayout(make_page_layout(tmp))
+                inner_tab.addTab(inner_page, 'Prompts')
+            inner_tab.setTabPosition(QTabWidget.TabPosition.South)
+            tab_page_layout.addWidget(inner_tab)
+            tab_page.setLayout(tab_page_layout)
 
-            tab_layout.setLayout(page_layout)
+            self.root_tab.addTab(tab_page, tmp.dictionary_get('Filename'))
+            self.root_tab.currentChanged.connect(self.tab_changed)
 
-            self.root_tab.addTab(tab_layout, tmp.dictionary_get('Filename'))
-        self.root_tab.currentChanged.connect(self.tab_changed)
-
-        layout.addWidget(self.root_tab)
+        root_layout.addWidget(self.root_tab)
 
         button_layout = QHBoxLayout()
         button_text = ['Positive to Clipboard',
@@ -69,10 +79,10 @@ class ResultWindow(QMainWindow):
             button_layout.addWidget(copy_button)
             copy_button.clicked.connect(self.button_clicked)
 
-        layout.addLayout(button_layout)
+        root_layout.addLayout(button_layout)
 
         central_widget = QWidget()
-        central_widget.setLayout(layout)
+        central_widget.setLayout(root_layout)
         self.setCentralWidget(central_widget)
 
         self.center()
@@ -117,6 +127,7 @@ def show_result_window(target_data):
 
 
 def make_page_layout(target_data):
+    textbox_layout = QVBoxLayout()
     splitter = QSplitter(Qt.Orientation.Vertical)
     positive_text = target_data.dictionary_get('Positive')
     positive_prompt = QTextEdit()
@@ -129,8 +140,9 @@ def make_page_layout(target_data):
 
     splitter.addWidget(positive_prompt)
     splitter.addWidget(negative_prompt)
+    textbox_layout.addWidget(splitter)
 
-    return splitter
+    return textbox_layout
 
 
 def make_label_layout(layout, data):
