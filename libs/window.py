@@ -138,6 +138,7 @@ def make_page_layout(target_data):
 
 
 def make_label_layout(layout, data):
+    label_number = 0
     upper_label_layout = QHBoxLayout()
     label_layout = QVBoxLayout()
     for tmp in layout.Properties:
@@ -155,6 +156,11 @@ def make_label_layout(layout, data):
             status_layout.addWidget(title)
             status_layout.addWidget(value)
             label_layout.addLayout(status_layout)
+            label_number = label_number + 1
+    if label_number < 11:
+        for i in range(11 - label_number):
+            margin = QLabel()
+            label_layout.addWidget(margin)
     filepath = data.dictionary_get('Filepath')
     pixmap = make_pixmap_label(filepath)
     upper_label_layout.addWidget(pixmap)
