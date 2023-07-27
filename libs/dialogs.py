@@ -1,4 +1,3 @@
-import csv
 import re
 from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout
 from PyQt5.QtWidgets import QTabWidget, QTextEdit, QPushButton, QFileDialog, QDesktopWidget
@@ -23,8 +22,6 @@ def make_tab_widget(data):
                 page.setLayout(make_control_net_page(number_of_controlnet, data))
                 tabs.addTab(page, number_of_controlnet)
                 flag = True
-#        if tmp == 'Lora hashes':
-#            page = QTabWidget(tabs)
     if flag:
         return tabs
     else:
@@ -69,19 +66,3 @@ def make_control_net_page(target, data):
             data_layout.addWidget(value)
             page_layout.addLayout(data_layout)
     return page_layout
-
-
-def model_hash_to_name(model_hash, model_list):
-    result = None
-    for tmp in model_list:
-        if model_hash in tmp:
-            result = tmp
-            break
-    if result:
-        model_name = result[1] + ' [' + result[0] + ']'
-    else:
-        model_name = '[' + model_hash + ']'
-
-    model_name = model_name.replace('"', '')
-
-    return model_name

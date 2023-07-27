@@ -1,10 +1,10 @@
 import sys
 import os
-from PyQt5.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout
-from PyQt5.QtWidgets import QTabWidget, QTextEdit, QPushButton, QFileDialog, QDesktopWidget
-from PyQt5.QtWidgets import QSplitter, QMainWindow
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt
+from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout
+from PyQt6.QtWidgets import QTabWidget, QTextEdit, QPushButton, QFileDialog
+from PyQt6.QtWidgets import QSplitter, QMainWindow
+from PyQt6.QtGui import QPixmap
+from PyQt6.QtCore import Qt
 
 
 class ResultWindow(QMainWindow):
@@ -36,8 +36,7 @@ class ResultWindow(QMainWindow):
         self.tab_index = 0
         window_width = 1050
         window_height = 864
-        pos_x, pos_y = center_calculate(window_width, window_height)
-        self.setGeometry(pos_x, pos_y, window_width, window_height)
+        self.setGeometry(0, 0, window_width, window_height)
 
         self.root_tab = QTabWidget(self)
         layout = QVBoxLayout()
@@ -76,6 +75,14 @@ class ResultWindow(QMainWindow):
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
 
+        self.center()
+
+    def center(self):
+        frame_geometry = self.frameGeometry()
+        screen_center = QApplication.primaryScreen().geometry().center()
+        frame_geometry.moveCenter(screen_center)
+        self.move(frame_geometry.topLeft())
+
     def tab_changed(self, index):
         self.positive_for_copy = self.params[index].dictionary_get('Positive')
         self.negative_for_copy = self.params[index].dictionary_get('Negative')
@@ -106,22 +113,11 @@ def show_result_window(target_data):
     app = QApplication(sys.argv)
     window = ResultWindow(target_data)
     window.show()
-    sys.exit(app.exec_())
-
-
-def center_calculate(width, height):
-    screen_geometry = QDesktopWidget().screenGeometry()
-    screen_width = screen_geometry.width()
-    screen_height = screen_geometry.height()
-
-    x = (screen_width - width) // 2
-    y = (screen_height - height) // 2
-
-    return x, y
+    sys.exit(app.exec())
 
 
 def make_page_layout(target_data):
-    splitter = QSplitter(Qt.Vertical)
+    splitter = QSplitter(Qt.Orientation.Vertical)
     positive_text = target_data.dictionary_get('Positive')
     positive_prompt = QTextEdit()
     positive_prompt.setPlainText(positive_text)
@@ -189,12 +185,32 @@ def make_label_layout(layout, data):
     return upper_label_layout
 
 
+def make_add_networks_tab():
+    pass
+
+
+def make_tiled_diffusion_tab():
+    pass
+
+
+def region_control_tab():
+    pass
+
+
+def make_control_net_tab():
+    pass
+
+
+def make_regional_prompter_tab():
+    pass
+
+
 def make_pixmap_label(filepath):
     pixmap = QPixmap(filepath)
     pixmap = pixmap.scaledToHeight(300)
     image_label = QLabel()
     image_label.setPixmap(pixmap)
-    image_label.setAlignment(Qt.AlignCenter)
+    image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
     return image_label
 
 
