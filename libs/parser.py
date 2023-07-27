@@ -53,11 +53,15 @@ class ChunkData:
         self.data_list = [[value.strip() for value in d1] for d1 in self.data_list]
         for tmp in self.data_list:
             key, value = tmp
-            self.params[key] = value
+            if 'NoiseInv' in key:
+                key = key.replace('NoiseInv', 'Noise inversion')
+            if value == 'true':
+                value = 'True'
             if 'ControlNet' in key and 'True' in value:
                 control_net = control_net + 1
             if 'Lora' in key:
                 loras = loras + 1
+            self.params[key] = value
         if control_net > 0:
             self.params['ControlNet'] = str(control_net)
         if loras > 0:
@@ -102,7 +106,7 @@ def main_status_parse(target_data):
 
 
 def main_prompt_parse(target_data):
-    prompt_regex = r'(?<=parameters)([\s\S]*)(?=Steps)'
+    prompt_regex = r'([\S\s]*)(?=Steps: )'
     result = [['Positive', 'None'], ['Negative', 'None']]
     prompt = target_data.data_get()
     if prompt == 'This file has no embedded data':
@@ -112,11 +116,16 @@ def main_prompt_parse(target_data):
     match = re.search(prompt_regex, prompt)
     if match:
         prompt = match.group()
+        if re.search(r'^parameters', prompt):
+            prompt = prompt.replace('parameters', '', 1)
+            send_prompt = 'parameters' + prompt
+        else:
+            send_prompt = prompt
         tmp = prompt.split('Negative prompt: ')
         result[0][1] = tmp[0]
         if len(tmp) == 2:
             result[1][1] = tmp[1]
-        target_data.data_refresh('parameters' + prompt, result)
+        target_data.data_refresh(send_prompt, result)
     return target_data
 
 
@@ -176,11 +185,12 @@ def control_net_parse(target_data):
         controlnet_result = re.finditer(r'(ControlNet[^:]*: "[^"]*")', target)
         for tmp in controlnet_result:
             number = tmp.group().split(':')[0]
-            hyphened = re.sub(r'(\([^)]*\))', lambda match: match.group(0).replace(', ', '-'), tmp.group(0))
+            hyphened = re.sub(r'(\([^)]*\))', lambda match: match.group(0).replace(', ', '<comma>'), tmp.group(0))
             detail_param = re.sub(r'(["|,][^:]*: )', lambda match: match.group(0).replace(',', ', ' + number), hyphened)
             detail_param = detail_param.replace(number + ':', number + ': True,' + number)
             detail_param = detail_param.replace('"', '')
             result = [[value.split(':')[0], value.split(':')[1]] for value in detail_param.split(',')]
+            result = [[value.replace('<comma>', ',') for value in d1] for d1 in result]
         target_data.data_refresh(target, result)
     return target_data
 

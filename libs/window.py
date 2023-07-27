@@ -11,35 +11,33 @@ class ResultWindow(QMainWindow):
     def __init__(self, target_data):
         super().__init__()
 
-        self. Properties = ['Filename',
-                            'Filepath',
-                            'Size',
-                            'Seed',
-                            'Sampler',
-                            'Steps',
-                            'CFG scale',
-                            'Model',
-                            'Clip skip',
-                            'ENSD',
-                            'Version',
-                            'Lora',
-                            'Additional Networks',
-                            'Tiled diffusion',
-                            'Region control',
-                            'ControlNet',
-                            'Regional Prompter']
+        self.Properties = ['Filename',
+                           'Filepath',
+                           'Size',
+                           'Seed',
+                           'Sampler',
+                           'Steps',
+                           'CFG scale',
+                           'Model',
+                           'Variation seed',
+                           'Variation seed strength',
+                           'Denoising strength',
+                           'Clip skip',
+                           'Lora',
+                           'ControlNet',
+                           'ENSD',
+                           'Version']
         self.setWindowTitle('PNG Prompt Data')
         self.params = target_data
         self.positive_for_copy = self.params[0].dictionary_get('Positive')
         self.negative_for_copy = self.params[0].dictionary_get('Negative')
         self.seed_for_copy = self.params[0].dictionary_get('Seed')
         self.tab_index = 0
-        window_width = 1050
+        window_width = 1096
         window_height = 864
         self.setGeometry(0, 0, window_width, window_height)
 
         root_layout = QVBoxLayout()
-        # self.setLayout(root_layout)
         self.root_tab = QTabWidget()
 
         for tmp in self.params:
@@ -55,10 +53,14 @@ class ResultWindow(QMainWindow):
             label_group.setLayout(label_group_layout)
             tab_page_layout.addWidget(label_group)
 
-            for i in range(1):
+            for i in range(2):
                 inner_page = QWidget()
-                inner_page.setLayout(make_page_layout(tmp))
-                inner_tab.addTab(inner_page, 'Prompts')
+                if i == 0:
+                    inner_page.setLayout(make_page_layout(tmp))
+                    inner_tab.addTab(inner_page, 'Prompts')
+                if i == 1 and tmp.dictionary_get('Tiled diffusion'):
+                    inner_page.setLayout(make_tiled_diffusion_tab(tmp))
+                    inner_tab.addTab(inner_page, 'Tiled diffusion')
             inner_tab.setTabPosition(QTabWidget.TabPosition.South)
             tab_page_layout.addWidget(inner_tab)
             tab_page.setLayout(tab_page_layout)
@@ -73,7 +75,8 @@ class ResultWindow(QMainWindow):
                        'Negative to Clipboard',
                        'Seed to Clipboard',
                        'Export JSON (This Image)',
-                       'Export JSON (All Images)']
+                       'Export JSON (All Images)',
+                       'Reselect the files']
         for tmp in button_text:
             copy_button = QPushButton(tmp)
             button_layout.addWidget(copy_button)
@@ -117,6 +120,8 @@ class ResultWindow(QMainWindow):
             data.json_export(filepath)
         elif where_from == 'Export JSON (All Images)':
             pass
+        elif where_from == 'Reselect the files':
+            pass
 
 
 def show_result_window(target_data):
@@ -152,6 +157,8 @@ def make_label_layout(layout, data):
     for tmp in layout.Properties:
         item = data.dictionary_get(tmp)
         if item:
+            if tmp == 'Filepath':
+                item = os.path.dirname(item)
             status_layout = QHBoxLayout()
             title = QLabel(tmp)
             value = QLabel(item)
@@ -167,26 +174,26 @@ def make_label_layout(layout, data):
             label_number = label_number + 1
             if tmp == 'Lora':
                 title.setText('Loras in prompt')
-                cnt = data.dictionary_length()
-                for i in range(cnt):
-                    key = 'Lora ' + str(i)
-                    item = data.dictionary_get(key)
-                    if item:
-                        status_layout = QHBoxLayout()
-                        title = QLabel(key)
-                        value = QLabel(item)
-                        size_policy_title = title.sizePolicy()
-                        size_policy_value = value.sizePolicy()
-                        size_policy_title.setHorizontalStretch(1)
-                        size_policy_value.setHorizontalStretch(2)
-                        title.setSizePolicy(size_policy_title)
-                        value.setSizePolicy(size_policy_value)
-                        status_layout.addWidget(title)
-                        status_layout.addWidget(value)
-                        label_layout.addLayout(status_layout)
-                        label_number = label_number + 1
-    if label_number < 11:
-        for i in range(11 - label_number):
+    #                cnt = data.dictionary_length()
+    #                for i in range(cnt):
+    #                    key = 'Lora ' + str(i)
+    #                    item = data.dictionary_get(key)
+    #                    if item:
+    #                        status_layout = QHBoxLayout()
+    #                        title = QLabel(key)
+    #                        value = QLabel(item)
+    #                        size_policy_title = title.sizePolicy()
+    #                        size_policy_value = value.sizePolicy()
+    #                        size_policy_title.setHorizontalStretch(1)
+    #                        size_policy_value.setHorizontalStretch(2)
+    #                        title.setSizePolicy(size_policy_title)
+    #                        value.setSizePolicy(size_policy_value)
+    #                        status_layout.addWidget(title)
+    #                        status_layout.addWidget(value)
+    #                        label_layout.addLayout(status_layout)
+    #                        label_number = label_number + 1
+    if label_number < 15:
+        for i in range(15 - label_number):
             margin = QLabel()
             label_layout.addWidget(margin)
     filepath = data.dictionary_get('Filepath')
@@ -201,8 +208,47 @@ def make_add_networks_tab():
     pass
 
 
-def make_tiled_diffusion_tab():
-    pass
+def make_tiled_diffusion_tab(data):
+    cnt = 0
+    groups = ['Tiled diffusion', 'Noise inversion', 'Region control']
+    status_data = [['Method',
+                    'Keep input size',
+                    'Tile batch size',
+                    'Tile width',
+                    'Tile height',
+                    'Tile Overlap',
+                    'Upscaler',
+                    'Upscale factor'
+                    ],
+                   ['Noise inversion Kernel size',
+                    'Noise inversion Renoise strength',
+                    'Noise inversion Retouch',
+                    'Noise inversion Steps']]
+    group_layout = QVBoxLayout()
+    for functions in status_data:
+        page = QGroupBox()
+        page.setTitle(groups[cnt])
+        if not data.dictionary_get(groups[cnt]):
+            page.setDisabled(True)
+        page_layout = QVBoxLayout()
+        for tmp in functions:
+            status = data.dictionary_get(tmp)
+            status_layout = QHBoxLayout()
+            title = QLabel(tmp)
+            value = QLabel(status)
+            size_policy_title = title.sizePolicy()
+            size_policy_value = value.sizePolicy()
+            size_policy_title.setHorizontalStretch(1)
+            size_policy_value.setHorizontalStretch(2)
+            title.setSizePolicy(size_policy_title)
+            value.setSizePolicy(size_policy_value)
+            status_layout.addWidget(title)
+            status_layout.addWidget(value)
+            page_layout.addLayout(status_layout)
+        page.setLayout(page_layout)
+        group_layout.addWidget(page)
+        cnt = cnt + 1
+    return group_layout
 
 
 def region_control_tab():
@@ -219,7 +265,7 @@ def make_regional_prompter_tab():
 
 def make_pixmap_label(filepath):
     pixmap = QPixmap(filepath)
-    pixmap = pixmap.scaledToHeight(300)
+    pixmap = pixmap.scaledToHeight(350)
     image_label = QLabel()
     image_label.setPixmap(pixmap)
     image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
