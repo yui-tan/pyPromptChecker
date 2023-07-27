@@ -157,6 +157,26 @@ def make_label_layout(layout, data):
             status_layout.addWidget(value)
             label_layout.addLayout(status_layout)
             label_number = label_number + 1
+            if tmp == 'Lora':
+                title.setText('Loras in prompt')
+                cnt = data.dictionary_length()
+                for i in range(cnt):
+                    key = 'Lora ' + str(i)
+                    item = data.dictionary_get(key)
+                    if item:
+                        status_layout = QHBoxLayout()
+                        title = QLabel(key)
+                        value = QLabel(item)
+                        size_policy_title = title.sizePolicy()
+                        size_policy_value = value.sizePolicy()
+                        size_policy_title.setHorizontalStretch(1)
+                        size_policy_value.setHorizontalStretch(2)
+                        title.setSizePolicy(size_policy_title)
+                        value.setSizePolicy(size_policy_value)
+                        status_layout.addWidget(title)
+                        status_layout.addWidget(value)
+                        label_layout.addLayout(status_layout)
+                        label_number = label_number + 1
     if label_number < 11:
         for i in range(11 - label_number):
             margin = QLabel()
