@@ -6,7 +6,7 @@ for my personal use
 
 ![](https://user-images.githubusercontent.com/121333129/256680831-d7c3b5ec-1472-4ca2-ab38-2caac319feb0.png)
 
--[]Add support for hires.fix status  
--[]Add support for ControlNet status  
--[]Add support for Add Network status  
--[]Add support for Regional Prompter status  
+ - [ ] Add support for hires.fix status  
+ - [ ] Add support for ControlNet status  
+ - [ ] Add support for Add Network status  
+ - [ ] Add support for Regional Prompter status  
