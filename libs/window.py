@@ -32,11 +32,9 @@ class ResultWindow(QMainWindow):
         self.positive_for_copy = self.params[0].dictionary_get('Positive')
         self.negative_for_copy = self.params[0].dictionary_get('Negative')
         self.seed_for_copy = self.params[0].dictionary_get('Seed')
-#        self.array = self.make_3d_array()
         self.tab_index = 0
         window_width = 1096
         window_height = 864
-        self.setGeometry(0, 0, window_width, window_height)
 
         root_layout = QVBoxLayout()
         self.root_tab = QTabWidget()
@@ -77,7 +75,7 @@ class ResultWindow(QMainWindow):
                        'Seed to Clipboard',
                        'Export JSON (This Image)',
                        'Export JSON (All Images)',
-                       'Reselect the files']
+                       'Reselect files']
         for tmp in button_text:
             copy_button = QPushButton(tmp)
             button_layout.addWidget(copy_button)
@@ -89,6 +87,7 @@ class ResultWindow(QMainWindow):
         central_widget.setLayout(root_layout)
         self.setCentralWidget(central_widget)
 
+        self.resize(window_width, window_height)
         self.center()
 
     def center(self):
@@ -96,10 +95,6 @@ class ResultWindow(QMainWindow):
         screen_center = QApplication.primaryScreen().geometry().center()
         frame_geometry.moveCenter(screen_center)
         self.move(frame_geometry.topLeft())
-
-#    def make_3d_array(self):
-#        dictionary_array = [list(my_class.all_dictionary) for my_class in self.params]
-#        return dictionary_array
 
     def tab_changed(self, index):
         self.positive_for_copy = self.params[index].dictionary_get('Positive')
@@ -350,7 +345,7 @@ def make_regional_prompter_tab():
 
 def make_pixmap_label(filepath):
     pixmap = QPixmap(filepath)
-    pixmap = pixmap.scaledToHeight(350)
+    pixmap = pixmap.scaled(350, 350, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
     image_label = QLabel()
     image_label.setPixmap(pixmap)
     image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
