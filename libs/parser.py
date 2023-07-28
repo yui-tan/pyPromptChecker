@@ -25,6 +25,12 @@ class ChunkData:
         else:
             return None
 
+    def all_dictionary(self):
+        if self.params:
+            return self.params
+        else:
+            return None
+
     def dictionary_length(self):
         return len(self.params)
 

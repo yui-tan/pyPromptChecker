@@ -32,6 +32,7 @@ class ResultWindow(QMainWindow):
         self.positive_for_copy = self.params[0].dictionary_get('Positive')
         self.negative_for_copy = self.params[0].dictionary_get('Negative')
         self.seed_for_copy = self.params[0].dictionary_get('Seed')
+#        self.array = self.make_3d_array()
         self.tab_index = 0
         window_width = 1096
         window_height = 864
@@ -95,6 +96,10 @@ class ResultWindow(QMainWindow):
         screen_center = QApplication.primaryScreen().geometry().center()
         frame_geometry.moveCenter(screen_center)
         self.move(frame_geometry.topLeft())
+
+#    def make_3d_array(self):
+#        dictionary_array = [list(my_class.all_dictionary) for my_class in self.params]
+#        return dictionary_array
 
     def tab_changed(self, index):
         self.positive_for_copy = self.params[index].dictionary_get('Positive')
@@ -208,51 +213,131 @@ def make_add_networks_tab():
     pass
 
 
-def make_tiled_diffusion_tab(data):
-    cnt = 0
-    groups = ['Tiled diffusion', 'Noise inversion', 'Region control']
-    status_data = [['Method',
-                    'Keep input size',
-                    'Tile batch size',
-                    'Tile width',
-                    'Tile height',
-                    'Tile Overlap',
-                    'Upscaler',
-                    'Upscale factor'
-                    ],
-                   ['Noise inversion Kernel size',
-                    'Noise inversion Renoise strength',
-                    'Noise inversion Retouch',
-                    'Noise inversion Steps']]
-    group_layout = QVBoxLayout()
-    for functions in status_data:
-        page = QGroupBox()
-        page.setTitle(groups[cnt])
-        if not data.dictionary_get(groups[cnt]):
-            page.setDisabled(True)
-        page_layout = QVBoxLayout()
-        for tmp in functions:
-            status = data.dictionary_get(tmp)
-            status_layout = QHBoxLayout()
-            title = QLabel(tmp)
-            value = QLabel(status)
-            size_policy_title = title.sizePolicy()
-            size_policy_value = value.sizePolicy()
-            size_policy_title.setHorizontalStretch(1)
-            size_policy_value.setHorizontalStretch(2)
-            title.setSizePolicy(size_policy_title)
-            value.setSizePolicy(size_policy_value)
-            status_layout.addWidget(title)
-            status_layout.addWidget(value)
-            page_layout.addLayout(status_layout)
-        page.setLayout(page_layout)
-        group_layout.addWidget(page)
-        cnt = cnt + 1
-    return group_layout
+def make_tiled_diffusion_tab(target):
+    page_layout = QHBoxLayout()
+    tiled_diffusion_section = QVBoxLayout()
+    tiled_diffusion_basic_info = make_tiled_diffusion_group(target)
+    noise_inversion_info = make_noise_inversion_group(target)
+    region_control_info = region_control_group(target)
+
+    tiled_diffusion_section.addWidget(tiled_diffusion_basic_info)
+    tiled_diffusion_section.addWidget(noise_inversion_info)
+
+    page_layout.addLayout(tiled_diffusion_section, 1)
+    page_layout.addWidget(region_control_info, 1)
+    return page_layout
 
 
-def region_control_tab():
-    pass
+def make_tiled_diffusion_group(target):
+    status_data = ['Method',
+                   'Keep input size',
+                   'Tile batch size',
+                   'Tile width',
+                   'Tile height',
+                   'Tile Overlap',
+                   'Upscaler',
+                   'Upscale factor'
+                   ]
+    section = QGroupBox()
+    section.setTitle('Tiled diffusion')
+    section_layout = QVBoxLayout()
+    for status in status_data:
+        item = target.dictionary_get(status)
+        if not item:
+            if status == 'Keep input size':
+                item = 'False'
+            elif status == 'Upscaler' or status == 'Upscale factor':
+                item = 'None'
+        status_layout = QHBoxLayout()
+        title = QLabel(status)
+        value = QLabel(item)
+        size_policy_title = title.sizePolicy()
+        size_policy_value = value.sizePolicy()
+        size_policy_title.setHorizontalStretch(1)
+        size_policy_value.setHorizontalStretch(2)
+        title.setSizePolicy(size_policy_title)
+        value.setSizePolicy(size_policy_value)
+        status_layout.addWidget(title)
+        status_layout.addWidget(value)
+        section_layout.addLayout(status_layout)
+    section.setLayout(section_layout)
+    return section
+
+
+def make_noise_inversion_group(target):
+    status_data = ['Noise inversion Kernel size',
+                   'Noise inversion Renoise strength',
+                   'Noise inversion Retouch',
+                   'Noise inversion Steps']
+    section = QGroupBox()
+    section.setTitle('Noise inversion')
+    if not target.dictionary_get('Noise inversion'):
+        section.setDisabled(True)
+    section_layout = QVBoxLayout()
+    for status in status_data:
+        item = target.dictionary_get(status)
+        status = status.replace('Noise inversion ', '')
+        if not item:
+            item = 'None'
+        status_layout = QHBoxLayout()
+        title = QLabel(status)
+        value = QLabel(item)
+        size_policy_title = title.sizePolicy()
+        size_policy_value = value.sizePolicy()
+        size_policy_title.setHorizontalStretch(1)
+        size_policy_value.setHorizontalStretch(2)
+        title.setSizePolicy(size_policy_title)
+        value.setSizePolicy(size_policy_value)
+        status_layout.addWidget(title)
+        status_layout.addWidget(value)
+        section_layout.addLayout(status_layout)
+    section.setLayout(section_layout)
+    return section
+
+
+def region_control_group(target):
+    flag = False
+    status_data = ['blend mode',
+                   'feather ratio',
+                   'w',
+                   'h',
+                   'x',
+                   'y',
+                   'seed',
+                   'prompt',
+                   'neg prompt'
+                   ]
+    region_control_tab = QTabWidget()
+    for i in range(8):
+        region_number = 'Region ' + str(i + 1)
+        check = target.dictionary_get(region_number + ' enable')
+        if check or i == 0:
+            page = QWidget()
+            region_control_section_layout = QVBoxLayout()
+            for status in status_data:
+                label_layout = QHBoxLayout()
+                key = region_number + ' ' + status
+                item = target.dictionary_get(key)
+                if not item:
+                    item = 'None'
+                title = status.replace('w', 'width').replace('h', 'height')
+                title = title.replace('neg', 'negative')
+                title = title.capitalize()
+                if 'prompt' in status:
+                    status_label = QTextEdit()
+                    status_label.setText(item)
+                    label_layout.addWidget(status_label)
+                else:
+                    status_label = QLabel(title)
+                    values_label = QLabel(item)
+                    label_layout.addWidget(status_label)
+                    label_layout.addWidget(values_label)
+                region_control_section_layout.addLayout(label_layout)
+            page.setLayout(region_control_section_layout)
+            region_control_tab.addTab(page, region_number)
+            if not check:
+                region_control_tab.setDisabled(True)
+    return region_control_tab
 
 
 def make_control_net_tab():
