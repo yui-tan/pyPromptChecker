@@ -1,11 +1,15 @@
 import csv
+import os
+
 from libs.decoder import decode_text_chunk
 from libs.parser import parse_parameter
 from libs.window import show_result_window, file_choose_dialog
 
 
 def model_hashes():
-    with open('model_list.csv', encoding='utf8', newline='') as f:
+    directory = os.path.dirname(__file__)
+    filename = os.path.join(directory, 'model_list.csv')
+    with open(filename, encoding='utf8', newline='') as f:
         csvreader = csv.reader(f)
         model_list = [row for row in csvreader]
     return model_list
