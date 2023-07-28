@@ -6,10 +6,10 @@ Supported only PNG files
 'Export JSON (All Images)' and 'Reselect files' buttons are ___useless___ as much as ___me___  
   
 Screenshot
-![](https://user-images.githubusercontent.com/121333129/256804202-bca55875-c3ef-42c8-822f-3cb81ddeb68c.png)
+![](https://user-images.githubusercontent.com/121333129/256811612-7f399475-def0-4ee2-a61b-7d81b7b19116.png)
 
 Tiled diffusion screenshots
-![](https://user-images.githubusercontent.com/121333129/256807671-3a0fb6bb-f84f-482e-805f-3ff63bcac45d.png)
+![](https://user-images.githubusercontent.com/121333129/256811663-852bf850-d299-4644-a607-57ba261f17c3.png)
 # Requirements  
 ***
 - PyQt6

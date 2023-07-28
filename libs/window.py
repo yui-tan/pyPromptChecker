@@ -313,11 +313,13 @@ def region_control_group(target):
                 label_layout = QHBoxLayout()
                 key = region_number + ' ' + status
                 item = target.dictionary_get(key)
+                title = status.replace('neg', 'negative').capitalize()
                 if not item:
                     item = 'None'
-                title = status.replace('w', 'width').replace('h', 'height')
-                title = title.replace('neg', 'negative')
-                title = title.capitalize()
+                if title == 'W':
+                    title = 'Width'
+                elif title == 'H':
+                    title = 'Height'
                 if 'prompt' in status:
                     status_label = QTextEdit()
                     status_label.setText(item)
