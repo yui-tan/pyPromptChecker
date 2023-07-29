@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout
 from PyQt6.QtWidgets import QTabWidget, QTextEdit, QPushButton, QFileDialog
 from PyQt6.QtWidgets import QSplitter, QMainWindow, QGroupBox
@@ -52,12 +53,16 @@ class ResultWindow(QMainWindow):
             label_group.setLayout(label_group_layout)
             tab_page_layout.addWidget(label_group)
 
-            for i in range(2):
+            for i in range(3):
                 inner_page = QWidget()
                 if i == 0:
                     inner_page.setLayout(make_page_layout(tmp))
                     inner_tab.addTab(inner_page, 'Prompts')
-                if i == 1 and tmp.dictionary_get('Tiled diffusion'):
+                if i == 1 and (tmp.dictionary_get('Hires upscale') or tmp.dictionary_get(
+                        'Face restoration') or tmp.dictionary_get('Lora')):
+                    inner_page.setLayout(make_hires_lora_tab(tmp))
+                    inner_tab.addTab(inner_page, 'Hires / Loras')
+                if i == 2 and tmp.dictionary_get('Tiled diffusion'):
                     inner_page.setLayout(make_tiled_diffusion_tab(tmp))
                     inner_tab.addTab(inner_page, 'Tiled diffusion')
             inner_tab.setTabPosition(QTabWidget.TabPosition.South)
@@ -73,8 +78,8 @@ class ResultWindow(QMainWindow):
         button_text = ['Positive to Clipboard',
                        'Negative to Clipboard',
                        'Seed to Clipboard',
-                       'Export JSON (This Image)',
-                       'Export JSON (All Images)',
+                       'Export JSON (This image)',
+                       'Export JSON (All images)',
                        'Reselect files']
         for tmp in button_text:
             copy_button = QPushButton(tmp)
@@ -114,12 +119,17 @@ class ResultWindow(QMainWindow):
         elif where_from == 'Seed to Clipboard':
             if self.seed_for_copy:
                 clipboard.setText(self.seed_for_copy)
-        elif where_from == 'Export JSON (This Image)':
+        elif where_from == 'Export JSON (This image)':
             data = self.params[self.tab_index]
             filepath = savefile_choose_dialog()
             data.json_export(filepath)
-        elif where_from == 'Export JSON (All Images)':
-            pass
+        elif where_from == 'Export JSON (All images)':
+            filepath = savefile_choose_dialog(True)
+            dict_list = []
+            for tmp in self.params:
+                dict_list.append(tmp.all_dictionary())
+            with open(filepath, 'w') as f:
+                json.dump(dict_list, f, sort_keys=True, indent=4, ensure_ascii=False)
         elif where_from == 'Reselect the files':
             pass
 
@@ -173,25 +183,7 @@ def make_label_layout(layout, data):
             label_layout.addLayout(status_layout)
             label_number = label_number + 1
             if tmp == 'Lora':
-                title.setText('Loras in prompt')
-    #                cnt = data.dictionary_length()
-    #                for i in range(cnt):
-    #                    key = 'Lora ' + str(i)
-    #                    item = data.dictionary_get(key)
-    #                    if item:
-    #                        status_layout = QHBoxLayout()
-    #                        title = QLabel(key)
-    #                        value = QLabel(item)
-    #                        size_policy_title = title.sizePolicy()
-    #                        size_policy_value = value.sizePolicy()
-    #                        size_policy_title.setHorizontalStretch(1)
-    #                        size_policy_value.setHorizontalStretch(2)
-    #                        title.setSizePolicy(size_policy_title)
-    #                        value.setSizePolicy(size_policy_value)
-    #                        status_layout.addWidget(title)
-    #                        status_layout.addWidget(value)
-    #                        label_layout.addLayout(status_layout)
-    #                        label_number = label_number + 1
+                title.setText('Lora in prompt')
     if label_number < 15:
         for i in range(15 - label_number):
             margin = QLabel()
@@ -204,8 +196,142 @@ def make_label_layout(layout, data):
     return upper_label_layout
 
 
-def make_add_networks_tab():
-    pass
+def make_hires_lora_tab(target):
+    page_layout = QHBoxLayout()
+    hires_group = make_hires_group(target)
+    page_layout.addLayout(hires_group)
+    lora_group = make_lora_section(target)
+    page_layout.addWidget(lora_group)
+    addnet_group = make_addnet_section(target)
+    page_layout.addWidget(addnet_group)
+    return page_layout
+
+
+def make_hires_group(target):
+    hires = ['Hires upscaler', 'Hires upscale', 'Hires resize', 'Hires steps', 'Denoising strength']
+    hires_group_layout = QVBoxLayout()
+    hires_section = QGroupBox()
+    hires_section.setTitle('Hires.fix')
+    hires_section_layout = QVBoxLayout()
+    for tmp in hires:
+        label_layout = QHBoxLayout()
+        item = target.dictionary_get(tmp)
+        if not item:
+            if tmp == 'Hires upscaler':
+                hires_section.setDisabled(True)
+            item = 'None'
+        title = QLabel(tmp)
+        value = QLabel(item)
+        size_policy_title = title.sizePolicy()
+        size_policy_value = value.sizePolicy()
+        size_policy_title.setHorizontalStretch(2)
+        size_policy_value.setHorizontalStretch(1)
+        title.setSizePolicy(size_policy_title)
+        value.setSizePolicy(size_policy_value)
+        label_layout.addWidget(title)
+        label_layout.addWidget(value)
+        hires_section_layout.addLayout(label_layout)
+    hires_section.setLayout(hires_section_layout)
+
+    label_layout = QHBoxLayout()
+    face_section = QGroupBox()
+    face_section.setTitle('Face restoration')
+    name = 'Face restoration'
+    item = target.dictionary_get(name)
+    if not item:
+        face_section.setDisabled(True)
+        item = 'None'
+    title = QLabel(name)
+    value = QLabel(item)
+    size_policy_title = title.sizePolicy()
+    size_policy_value = value.sizePolicy()
+    size_policy_title.setHorizontalStretch(2)
+    size_policy_value.setHorizontalStretch(1)
+    title.setSizePolicy(size_policy_title)
+    value.setSizePolicy(size_policy_value)
+    label_layout.addWidget(title)
+    label_layout.addWidget(value)
+    face_section.setLayout(label_layout)
+
+    hires_group_layout.addWidget(hires_section, 2)
+    hires_group_layout.addWidget(face_section, 1)
+    return hires_group_layout
+
+
+def make_lora_section(target):
+    label_cnt = 0
+    cnt = target.dictionary_length()
+    lora_section = QGroupBox()
+    loras = target.dictionary_get('Lora')
+    group_layout = QVBoxLayout()
+    if loras:
+        lora_section.setTitle('Lora in prompt : ' + loras)
+        for i in range(cnt):
+            key = 'Lora ' + str(i)
+            item = target.dictionary_get(key)
+            if item or label_cnt < 10:
+                label_layout = QHBoxLayout()
+                if not item:
+                    key = ''
+                title = QLabel(key)
+                value = QLabel(item)
+                size_policy_title = title.sizePolicy()
+                size_policy_value = value.sizePolicy()
+                size_policy_title.setHorizontalStretch(1)
+                size_policy_value.setHorizontalStretch(2)
+                title.setSizePolicy(size_policy_title)
+                value.setSizePolicy(size_policy_value)
+                label_layout.addWidget(title)
+                label_layout.addWidget(value)
+                group_layout.addLayout(label_layout)
+                label_cnt = label_cnt + 1
+    else:
+        lora_section.setDisabled(True)
+        lora_section.setTitle('Lora : 0')
+    lora_section.setLayout(group_layout)
+    return lora_section
+
+
+def make_addnet_section(target):
+    status = ['Module', 'Model', 'Weight A']
+    addnet_section = QGroupBox()
+    section_layout = QVBoxLayout()
+    addnet_section.setTitle('Additional Networks')
+    addnet = target.dictionary_get('AddNet Enabled')
+    if not addnet:
+        addnet_section.setDisabled(True)
+    for i in range(1, 6):
+        for tmp in status:
+            label_layout = QHBoxLayout()
+            key = 'AddNet ' + tmp + ' ' + str(i)
+            item = target.dictionary_get(key)
+            if tmp == 'Module' and item:
+                title = QLabel('Module ' + str(i))
+                value = QLabel(item)
+            elif tmp == 'Model' and item:
+                title = QLabel('Model')
+                item = item.replace('(', '[').replace(')', ']')
+                value = QLabel(item)
+            elif tmp == 'Weight A' and item:
+                title = QLabel('UNet / TEnc')
+                item = float(item)
+                item_2 = float(target.dictionary_get('AddNet Weight B ' + str(i)))
+                item = str(item) + ' / ' + str(item_2)
+                value = QLabel(item)
+            else:
+                title = QLabel()
+                value = QLabel()
+            size_policy_title = title.sizePolicy()
+            size_policy_value = value.sizePolicy()
+            size_policy_title.setHorizontalStretch(1)
+            size_policy_value.setHorizontalStretch(3)
+            title.setSizePolicy(size_policy_title)
+            value.setSizePolicy(size_policy_value)
+            label_layout.addWidget(title)
+            label_layout.addWidget(value)
+            section_layout.addLayout(label_layout)
+    addnet_section.setLayout(section_layout)
+    return addnet_section
 
 
 def make_tiled_diffusion_tab(target):
@@ -354,10 +480,12 @@ def make_pixmap_label(filepath):
     return image_label
 
 
-def savefile_choose_dialog():
+def savefile_choose_dialog(all_images=False):
     caption = 'Save File'
     path = os.path.expanduser('~')
     default_filename = os.path.join(path, 'parameters.json')
+    if all_images:
+        default_filename = os.path.join(path, 'all_parameters.json')
     file_filter = 'JSON Files(*.json)'
     select_filter = ''
     filename, _ = QFileDialog.getSaveFileName(

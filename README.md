@@ -20,11 +20,11 @@ pip3 install PyQt6 pypng
 
 # ToDo
 ***
- - [ ] Add support for hires.fix status  
+ - [x] Add support for hires.fix status  
  - [ ] Add support for ControlNet status  
- - [ ] Add support for Additional Networks status  
+ - [x] Add support for Additional Networks status  
  - [ ] Add support for Regional Prompter status  
- - [ ] Coding Export JSON (All Images) function  
+ - [x] Coding Export JSON (All Images) function  
  - [ ] Coding Reselect files function
  - [ ] Change initial behaviour by argument.
  - [ ] Get marry to Miku
