@@ -1,4 +1,3 @@
-import sys
 import os
 import json
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout
@@ -25,6 +24,7 @@ class ResultWindow(QMainWindow):
                            'Denoising strength',
                            'Clip skip',
                            'Lora',
+                           'Hires upscaler',
                            'ControlNet',
                            'ENSD',
                            'Version']
@@ -34,8 +34,8 @@ class ResultWindow(QMainWindow):
         self.negative_for_copy = self.params[0].dictionary_get('Negative')
         self.seed_for_copy = self.params[0].dictionary_get('Seed')
         self.tab_index = 0
-        window_width = 1096
-        window_height = 864
+        window_width = 1024
+        window_height = 920
 
         root_layout = QVBoxLayout()
         self.root_tab = QTabWidget()
@@ -53,7 +53,7 @@ class ResultWindow(QMainWindow):
             label_group.setLayout(label_group_layout)
             tab_page_layout.addWidget(label_group)
 
-            for i in range(3):
+            for i in range(5):
                 inner_page = QWidget()
                 if i == 0:
                     inner_page.setLayout(make_page_layout(tmp))
@@ -65,6 +65,15 @@ class ResultWindow(QMainWindow):
                 if i == 2 and tmp.dictionary_get('Tiled diffusion'):
                     inner_page.setLayout(make_tiled_diffusion_tab(tmp))
                     inner_tab.addTab(inner_page, 'Tiled diffusion')
+                if i == 3 and tmp.dictionary_get('ControlNet'):
+                    inner_page.setLayout(make_control_net_tab(tmp, 0))
+                    inner_tab.addTab(inner_page, 'ControlNet Unit 0-2')
+                if i == 4 and tmp.dictionary_get('ControlNet 3'):
+                    inner_page.setLayout(make_control_net_tab(tmp, 3))
+                    inner_tab.addTab(inner_page, 'ControlNet Unit 3-5')
+                if i == 5 and tmp.dictionary_get('ControlNet 6'):
+                    inner_page.setLayout(make_control_net_tab(tmp, 6))
+                    inner_tab.addTab(inner_page, 'ControlNet Unit 6-8')
             inner_tab.setTabPosition(QTabWidget.TabPosition.South)
             tab_page_layout.addWidget(inner_tab)
             tab_page.setLayout(tab_page_layout)
@@ -125,20 +134,16 @@ class ResultWindow(QMainWindow):
             data.json_export(filepath)
         elif where_from == 'Export JSON (All images)':
             filepath = savefile_choose_dialog(True)
-            dict_list = []
-            for tmp in self.params:
-                dict_list.append(tmp.all_dictionary())
-            with open(filepath, 'w') as f:
-                json.dump(dict_list, f, sort_keys=True, indent=4, ensure_ascii=False)
-        elif where_from == 'Reselect the files':
+            if filepath:
+                dict_list = []
+                for tmp in self.params:
+                    dict_list.append(tmp.all_dictionary())
+                with open(filepath, 'w') as f:
+                    json.dump(dict_list, f, sort_keys=True, indent=4, ensure_ascii=False)
+        elif where_from == 'Reselect files':
             pass
-
-
-def show_result_window(target_data):
-    app = QApplication(sys.argv)
-    window = ResultWindow(target_data)
-    window.show()
-    sys.exit(app.exec())
+        #    sys.stdout.flush()
+        #    os.execv(sys.argv[0], sys.argv)
 
 
 def make_page_layout(target_data):
@@ -184,6 +189,9 @@ def make_label_layout(layout, data):
             label_number = label_number + 1
             if tmp == 'Lora':
                 title.setText('Lora in prompt')
+            elif tmp == 'Hires upscaler':
+                title.setText('Hires.fix')
+                value.setText('True')
     if label_number < 15:
         for i in range(15 - label_number):
             margin = QLabel()
@@ -199,11 +207,11 @@ def make_label_layout(layout, data):
 def make_hires_lora_tab(target):
     page_layout = QHBoxLayout()
     hires_group = make_hires_group(target)
-    page_layout.addLayout(hires_group)
+    page_layout.addLayout(hires_group, 2)
     lora_group = make_lora_section(target)
-    page_layout.addWidget(lora_group)
+    page_layout.addWidget(lora_group, 3)
     addnet_group = make_addnet_section(target)
-    page_layout.addWidget(addnet_group)
+    page_layout.addWidget(addnet_group, 3)
     return page_layout
 
 
@@ -463,8 +471,50 @@ def region_control_group(target):
     return region_control_tab
 
 
-def make_control_net_tab():
-    pass
+def make_control_net_tab(target, starts):
+    page_layout = QHBoxLayout()
+    status_data = ['model',
+                   'control mode',
+                   'pixel perfect',
+                   'preprocessor',
+                   'resize mode',
+                   'starting/ending',
+                   'weight',
+                   'preprocessor params']
+    for i in range(starts, 3):
+        control_net_enable = target.dictionary_get('ControlNet ' + str(i))
+        section = QGroupBox()
+        section_layout = QVBoxLayout()
+        section.setTitle('ControlNet Unit ' + str(i))
+        if not control_net_enable:
+            section.setDisabled(True)
+        for tmp in status_data:
+            label_layout = QHBoxLayout()
+            key = 'ControlNet ' + str(i) + ' ' + tmp
+            item = target.dictionary_get(key)
+            key = tmp.capitalize()
+            if key == 'Starting/ending':
+                key = 'Starting/Ending'
+            elif key == 'Preprocessor params':
+                key = 'Preproc. params'
+            if not item:
+                item = 'None'
+            elif key == 'Model':
+                item = item.replace(' ', '\n')
+            title = QLabel(key)
+            value = QLabel(item)
+            size_policy_title = title.sizePolicy()
+            size_policy_value = value.sizePolicy()
+            size_policy_title.setHorizontalStretch(4)
+            size_policy_value.setHorizontalStretch(6)
+            title.setSizePolicy(size_policy_title)
+            value.setSizePolicy(size_policy_value)
+            label_layout.addWidget(title)
+            label_layout.addWidget(value)
+            section_layout.addLayout(label_layout)
+        section.setLayout(section_layout)
+        page_layout.addWidget(section)
+    return page_layout
 
 
 def make_regional_prompter_tab():
@@ -499,7 +549,6 @@ def savefile_choose_dialog(all_images=False):
 
 
 def file_choose_dialog():
-    app = QApplication(sys.argv)
     caption = 'Select Files'
     default_dir = os.path.expanduser('~')
     file_filter = 'PNG Images(*.png)'

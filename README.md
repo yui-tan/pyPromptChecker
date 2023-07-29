@@ -1,15 +1,21 @@
 # pyPromptChecker  
 ***
-tiny script for AI images created by AUTOMATIC/stable-diffusion-webui  
+A tiny script for AI images created by AUTOMATIC/stable-diffusion-webui  
 For my personal use  
 Supported only PNG files  
-'Export JSON (All Images)' and 'Reselect files' buttons are ___useless___ as much as ___me___  
+'Reselect files' buttons is ___useless___ as much as ___me___  
   
 Screenshot
-![](https://user-images.githubusercontent.com/121333129/256811612-7f399475-def0-4ee2-a61b-7d81b7b19116.png)
+![](https://user-images.githubusercontent.com/121333129/256966356-cf675550-ef93-4f28-a31b-a69db097d4be.png)
 
-Tiled diffusion screenshots
-![](https://user-images.githubusercontent.com/121333129/256811663-852bf850-d299-4644-a607-57ba261f17c3.png)
+Tiled diffusion status screenshot
+![](https://user-images.githubusercontent.com/121333129/256966357-6c778370-2153-45d7-b128-cdcd659f3ee7.png)
+
+Additional and Hires status screenshot
+![](https://user-images.githubusercontent.com/121333129/256966358-6fc1eac8-af03-4e2e-9ef4-0e5451f249c9.png)
+
+ControlNet status screenshot
+![](https://user-images.githubusercontent.com/121333129/256966359-3030c47e-13ea-49b7-b3fa-a2845b2818fc.png)
 # Requirements  
 ***
 - PyQt6
@@ -20,11 +26,12 @@ pip3 install PyQt6 pypng
 
 # ToDo
 ***
+ - [ ] Refactoring and clean up
  - [x] Add support for hires.fix status  
- - [ ] Add support for ControlNet status  
+ - [x] Add support for ControlNet status  
  - [x] Add support for Additional Networks status  
  - [ ] Add support for Regional Prompter status  
  - [x] Coding Export JSON (All Images) function  
  - [ ] Coding Reselect files function
- - [ ] Change initial behaviour by argument.
+ - [ ] Change initial behaviour by argument
  - [ ] Get marry to Miku
