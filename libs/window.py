@@ -2,7 +2,6 @@ import os
 import json
 import sys
 import csv
-import subprocess
 import libs.parser
 import libs.decoder
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout
@@ -15,22 +14,33 @@ from PyQt6.QtCore import Qt
 class ResultWindow(QMainWindow):
     def __init__(self, targets=None):
         super().__init__()
-        models = model_hashes()
-        self.params = []
-        for filepath in targets:
-            chunk_data = libs.decoder.decode_text_chunk(filepath, 1)
-            parameters = libs.parser.parse_parameter(chunk_data, filepath, models)
-            self.params.append(parameters)
         self.setWindowTitle('PNG Prompt Data')
-        self.positive_for_copy = self.params[0].dictionary_get('Positive')
-        self.negative_for_copy = self.params[0].dictionary_get('Negative')
-        self.seed_for_copy = self.params[0].dictionary_get('Seed')
+        self.models = model_hashes()
+        self.params = []
+        self.positive_for_copy = ''
+        self.negative_for_copy = ''
+        self.seed_for_copy = ''
         self.tab_index = 0
+        self.init_ui(targets)
+
         window_width = 1024
         window_height = 920
 
+        self.resize(window_width, window_height)
+        self.center()
+
+    def init_ui(self, targets):
+        for filepath in targets:
+            chunk_data = libs.decoder.decode_text_chunk(filepath, 1)
+            parameters = libs.parser.parse_parameter(chunk_data, filepath, self.models)
+            self.params.append(parameters)
+
+        self.positive_for_copy = self.params[0].dictionary_get('Positive')
+        self.negative_for_copy = self.params[0].dictionary_get('Negative')
+        self.seed_for_copy = self.params[0].dictionary_get('Seed')
+
         root_layout = QVBoxLayout()
-        self.root_tab = QTabWidget()
+        root_tab = QTabWidget()
 
         for tmp in self.params:
             tab_page = QWidget()
@@ -70,10 +80,10 @@ class ResultWindow(QMainWindow):
             tab_page_layout.addWidget(inner_tab)
             tab_page.setLayout(tab_page_layout)
 
-            self.root_tab.addTab(tab_page, tmp.dictionary_get('Filename'))
-            self.root_tab.currentChanged.connect(self.tab_changed)
+            root_tab.addTab(tab_page, tmp.dictionary_get('Filename'))
+            root_tab.currentChanged.connect(self.tab_changed)
 
-        root_layout.addWidget(self.root_tab)
+        root_layout.addWidget(root_tab)
 
         button_layout = QHBoxLayout()
         button_text = ['Positive to Clipboard',
@@ -91,10 +101,10 @@ class ResultWindow(QMainWindow):
 
         central_widget = QWidget()
         central_widget.setLayout(root_layout)
-        self.setCentralWidget(central_widget)
 
-        self.resize(window_width, window_height)
-        self.center()
+        if self.centralWidget():
+            self.centralWidget().deleteLater()
+        self.setCentralWidget(central_widget)
 
     def center(self):
         frame_geometry = self.frameGeometry()
@@ -134,9 +144,9 @@ class ResultWindow(QMainWindow):
                     json.dump(dict_list, f, sort_keys=True, indent=4, ensure_ascii=False)
         elif where_from == 'Reselect files':
             filepath = file_choose_dialog()[0]
-            self.close()
-            new_window = ResultWindow(filepath)
-            new_window.show()
+            if filepath:
+                self.params = []
+                self.init_ui(filepath)
 
 
 def result_window(target_data):

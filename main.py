@@ -1,35 +1,8 @@
-import csv
 import os
 import sys
 import argparse
-
-from PyQt6.QtWidgets import QApplication
-
 import libs.window
-from libs.decoder import png_checker, decode_text_chunk
-from libs.parser import parse_parameter
-
-
-def model_hashes():
-    directory = os.path.dirname(__file__)
-    filename = os.path.join(directory, 'libs/model_list.csv')
-    with open(filename, encoding='utf8', newline='') as f:
-        csvreader = csv.reader(f)
-        model_list = [row for row in csvreader]
-    return model_list
-
-
-def main(target_path):
-    pass
-#    if src[0]:
-#        parameters_list = []
-#        for filepath in src[0]:
-#            chunk_data = decode_text_chunk(filepath, 1)
-#            parameters = parse_parameter(chunk_data, filepath, models)
-#            parameters_list.append(parameters)
-#        window = libs.window.ResultWindow(parameters_list)
-#        window.show()
-#        sys.exit(app.exec())
+import libs.decoder
 
 
 def check_files(target_list):
@@ -43,7 +16,7 @@ def check_files(target_list):
             file_is_not_found_list.append(filepath)
         elif not os.path.isfile(filepath):
             this_is_directory_list.append(filepath)
-        elif not png_checker(filepath):
+        elif not libs.decoder.png_checker(filepath):
             this_file_is_not_png_file_list.append(filepath)
         else:
             valid_file_list.append(filepath)
@@ -88,5 +61,3 @@ if __name__ == '__main__':
         sys.exit()
     print('a hoy!!!!')
     libs.window.result_window(filepaths)
-
-

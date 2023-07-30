@@ -2,8 +2,7 @@
 ***
 A tiny script for AI images created by AUTOMATIC/stable-diffusion-webui  
 For my personal use  
-Supported only PNG files  
-'Reselect files' buttons is ___useless___ as much as ___me___  
+Supported only PNG files
   
 Screenshot
 ![](https://user-images.githubusercontent.com/121333129/256966356-cf675550-ef93-4f28-a31b-a69db097d4be.png)
@@ -32,6 +31,7 @@ pip3 install PyQt6 pypng
  - [x] Add support for Additional Networks status  
  - [ ] Add support for Regional Prompter status  
  - [x] Coding Export JSON (All Images) function  
- - [ ] Coding Reselect files function
+ - [x] Coding Reselect files function
  - [ ] Change initial behaviour by argument
+ - [ ] Add support for import JSON
  - [ ] Get marry to Miku

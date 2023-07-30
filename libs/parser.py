@@ -196,3 +196,8 @@ def control_net_parse(target_data):
             result = [[value.replace('<comma>', ',') for value in d1] for d1 in result]
         target_data.data_refresh(target, result)
     return target_data
+
+
+def regional_prompter_parse():
+    pass
+
