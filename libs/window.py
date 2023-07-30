@@ -611,7 +611,9 @@ def file_choose_dialog(where=False):
     return filenames
 
 
-def directory_choose_dialog():
+def directory_choose_dialog(where=False):
+    if where:
+        app = QApplication(sys.argv)
     caption = 'Select Directory'
     default_dir = os.path.expanduser('~')
     directory = QFileDialog.getExistingDirectory(
@@ -619,5 +621,4 @@ def directory_choose_dialog():
         caption,
         default_dir,
     )
-
     return directory

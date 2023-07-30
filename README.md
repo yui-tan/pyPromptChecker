@@ -23,6 +23,26 @@ ControlNet status screenshot
 pip3 install PyQt6 pypng
 ````
 
+# Howto
+***
+````
+python main.py
+
+usage: main.py [-h] [-a | -f [FILEPATH ...] | -d DIRECTORY]
+
+Script for extracting and formatting PNG chunks.
+If no options are specified, the script will open a file choose dialog.
+All options are mutually exclusive.
+
+options:
+  -h, --help            show this help message and exit
+  -a, --ask             open directory choose dialog.
+  -f [FILEPATH ...], --filepath [FILEPATH ...]
+                        send path to files.
+  -d DIRECTORY, --directory DIRECTORY
+                        send path to directory.
+````
+
 # ToDo
 ***
  - [ ] Refactoring and clean up
@@ -32,6 +52,6 @@ pip3 install PyQt6 pypng
  - [ ] Add support for Regional Prompter status  
  - [x] Coding Export JSON (All Images) function  
  - [x] Coding Reselect files function
- - [ ] Change initial behaviour by argument
+ - [x] Change initial behaviour by argument
  - [ ] Add support for import JSON
  - [ ] Get marry to Miku

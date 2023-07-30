@@ -1,8 +1,19 @@
 import os
 import sys
 import argparse
+import glob
 import libs.window
 import libs.decoder
+
+
+def directory_to_filelist(directory_path):
+    if not os.path.isdir(directory_path):
+        print('This is not a directory')
+        print("It's all thanks to you there's no work to do :))")
+        sys.exit()
+    directory = os.path.join(directory_path, '*')
+    file_list = glob.glob(directory)
+    return file_list
 
 
 def check_files(target_list):
@@ -30,13 +41,18 @@ if __name__ == '__main__':
     description_text = description_text + 'All options are mutually exclusive.'
     parser = argparse.ArgumentParser(description=description_text, formatter_class=argparse.RawTextHelpFormatter)
     group = parser.add_mutually_exclusive_group()
-    group.add_argument('-a', '--ask', action='store_true', help='Open directory choose dialog. --not yet implemented')
+    group.add_argument('-a', '--ask', action='store_true', help='Open directory choose dialog.')
     group.add_argument('-f', '--filepath', nargs='*', type=str, help='Send path to the file.')
-    group.add_argument('-d', '--directory', type=str, help='Send path to the directory. --not yet implemented')
+    group.add_argument('-d', '--directory', type=str, help='Send path to the directory.')
     args = parser.parse_args()
 
     if args.filepath:
         filepaths = args.filepath
+    elif args.directory:
+        filepaths = directory_to_filelist(args.directory)
+    elif args.ask:
+        src = libs.window.directory_choose_dialog(True)
+        filepaths = directory_to_filelist(src)
     else:
         src = libs.window.file_choose_dialog(True)
         filepaths = src[0]
@@ -60,4 +76,5 @@ if __name__ == '__main__':
         print("It's all thanks to you there's no work to do :))")
         sys.exit()
     print('a hoy!!!!')
-    libs.window.result_window(filepaths)
+    valid_filepath.sort()
+    libs.window.result_window(valid_filepath)
