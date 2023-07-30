@@ -36,11 +36,11 @@ All options are mutually exclusive.
 
 options:
   -h, --help            show this help message and exit
-  -a, --ask             open directory choose dialog.
+  -a, --ask              open directory choose dialog.
   -f [FILEPATH ...], --filepath [FILEPATH ...]
-                        send path to files.
+                              send path to files.
   -d DIRECTORY, --directory DIRECTORY
-                        send path to directory.
+                              send path to directory.
 ````
 
 # ToDo
