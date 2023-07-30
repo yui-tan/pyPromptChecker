@@ -1,6 +1,13 @@
 import png
 
 
+def png_checker(filepath):
+    with open(filepath, 'rb') as f:
+        png_signature = b'\x89PNG\r\n\x1a\n'
+        file_header = f.read(8)
+        return png_signature == file_header
+
+
 def decode_text_chunk(target, index):
     if index < 0:
         raise Exception('The index value {} less than 0!'.format(index))

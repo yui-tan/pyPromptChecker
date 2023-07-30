@@ -77,9 +77,10 @@ class ChunkData:
         model_hash = self.params.get('Model hash')
         if model_hash:
             model_name = '[' + model_hash + ']'
-            for tmp in model_list:
-                if tmp[1] == model_hash:
-                    model_name = tmp[0] + ' [' + tmp[1] + ']'
+            if model_list:
+                for tmp in model_list:
+                    if tmp[1] == model_hash:
+                        model_name = tmp[0] + ' [' + tmp[1] + ']'
             self.params['Model'] = model_name
 
     def json_export(self, filepath):
@@ -88,7 +89,7 @@ class ChunkData:
                 json.dump(self.params, f, sort_keys=True, indent=4, ensure_ascii=False)
 
 
-def parse_parameter(chunks, filepath, model_list):
+def parse_parameter(chunks, filepath, model_list=None):
     target_data = ChunkData(chunks)
     target_data.filepath_registration(filepath)
     target_data = main_prompt_parse(target_data)
@@ -146,10 +147,6 @@ def lora_parse(target_data):
     return target_data
 
 
-def additional_networks_parse(target_data):
-    pass
-
-
 def tiled_diffusion_parse(target_data):
     tiled_diffusion_regex = r'Tiled Diffusion: \{.*},'
     region_regex = r'"Region [0-9][^}]*}'
@@ -199,7 +196,3 @@ def control_net_parse(target_data):
             result = [[value.replace('<comma>', ',') for value in d1] for d1 in result]
         target_data.data_refresh(target, result)
     return target_data
-
-
-def regional_prompter_parse(target_data):
-    pass

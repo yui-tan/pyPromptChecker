@@ -1,5 +1,10 @@
 import os
 import json
+import sys
+import csv
+import subprocess
+import libs.parser
+import libs.decoder
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout
 from PyQt6.QtWidgets import QTabWidget, QTextEdit, QPushButton, QFileDialog
 from PyQt6.QtWidgets import QSplitter, QMainWindow, QGroupBox
@@ -8,28 +13,15 @@ from PyQt6.QtCore import Qt
 
 
 class ResultWindow(QMainWindow):
-    def __init__(self, target_data):
+    def __init__(self, targets=None):
         super().__init__()
-
-        self.Properties = ['Filename',
-                           'Filepath',
-                           'Size',
-                           'Seed',
-                           'Sampler',
-                           'Steps',
-                           'CFG scale',
-                           'Model',
-                           'Variation seed',
-                           'Variation seed strength',
-                           'Denoising strength',
-                           'Clip skip',
-                           'Lora',
-                           'Hires upscaler',
-                           'ControlNet',
-                           'ENSD',
-                           'Version']
+        models = model_hashes()
+        self.params = []
+        for filepath in targets:
+            chunk_data = libs.decoder.decode_text_chunk(filepath, 1)
+            parameters = libs.parser.parse_parameter(chunk_data, filepath, models)
+            self.params.append(parameters)
         self.setWindowTitle('PNG Prompt Data')
-        self.params = target_data
         self.positive_for_copy = self.params[0].dictionary_get('Positive')
         self.negative_for_copy = self.params[0].dictionary_get('Negative')
         self.seed_for_copy = self.params[0].dictionary_get('Seed')
@@ -48,7 +40,7 @@ class ResultWindow(QMainWindow):
             label_group = QGroupBox()
             label_group_layout = QHBoxLayout()
 
-            label_layout = make_label_layout(self, tmp)
+            label_layout = make_label_layout(tmp)
             label_group_layout.addLayout(label_layout)
             label_group.setLayout(label_group_layout)
             tab_page_layout.addWidget(label_group)
@@ -56,7 +48,7 @@ class ResultWindow(QMainWindow):
             for i in range(5):
                 inner_page = QWidget()
                 if i == 0:
-                    inner_page.setLayout(make_page_layout(tmp))
+                    inner_page.setLayout(make_textbox_tab(tmp))
                     inner_tab.addTab(inner_page, 'Prompts')
                 if i == 1 and (tmp.dictionary_get('Hires upscale') or tmp.dictionary_get(
                         'Face restoration') or tmp.dictionary_get('Lora')):
@@ -141,51 +133,74 @@ class ResultWindow(QMainWindow):
                 with open(filepath, 'w') as f:
                     json.dump(dict_list, f, sort_keys=True, indent=4, ensure_ascii=False)
         elif where_from == 'Reselect files':
-            pass
-        #    sys.stdout.flush()
-        #    os.execv(sys.argv[0], sys.argv)
+            filepath = file_choose_dialog()[0]
+            self.close()
+            new_window = ResultWindow(filepath)
+            new_window.show()
 
 
-def make_page_layout(target_data):
-    textbox_layout = QVBoxLayout()
-    splitter = QSplitter(Qt.Orientation.Vertical)
-    positive_text = target_data.dictionary_get('Positive')
-    positive_prompt = QTextEdit()
-    positive_prompt.setPlainText(positive_text)
-    positive_prompt.setReadOnly(True)
-    negative_text = target_data.dictionary_get('Negative')
-    negative_prompt = QTextEdit()
-    negative_prompt.setPlainText(negative_text)
-    negative_prompt.setReadOnly(True)
-
-    splitter.addWidget(positive_prompt)
-    splitter.addWidget(negative_prompt)
-    textbox_layout.addWidget(splitter)
-
-    return textbox_layout
+def result_window(target_data):
+    app = QApplication(sys.argv)
+    window = ResultWindow(target_data)
+    window.show()
+    sys.exit(app.exec())
 
 
-def make_label_layout(layout, data):
+def model_hashes():
+    directory = os.path.dirname(__file__)
+    filename = os.path.join(directory, 'model_list.csv')
+    if os.path.exists(filename):
+        with open(filename, encoding='utf8', newline='') as f:
+            csvreader = csv.reader(f)
+            model_list = [row for row in csvreader]
+        return model_list
+    else:
+        return None
+
+
+def make_label_layout(target):
     label_number = 0
-    upper_label_layout = QHBoxLayout()
-    label_layout = QVBoxLayout()
-    for tmp in layout.Properties:
-        item = data.dictionary_get(tmp)
+    status = ['Filename',
+              'Filepath',
+              'Size',
+              'Seed',
+              'Sampler',
+              'Eta',
+              'Steps',
+              'CFG scale',
+              'Model',
+              'Variation seed',
+              'Variation seed strength',
+              'Denoising strength',
+              'Clip skip',
+              'Lora',
+              'Hires upscaler',
+              'ControlNet',
+              'ENSD',
+              'Version']
+    label_section_layout = QHBoxLayout()
+    label_group_layout = QVBoxLayout()
+    for tmp in status:
+        item = target.dictionary_get(tmp)
         if item:
             if tmp == 'Filepath':
                 item = os.path.dirname(item)
-            status_layout = QHBoxLayout()
+            if tmp == 'Denoising strength' and target.dictionary_get('Hires upscaler'):
+                continue
+            label_layout = QHBoxLayout()
             title = QLabel(tmp)
             value = QLabel(item)
+            title.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            value.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             size_policy_title = title.sizePolicy()
             size_policy_value = value.sizePolicy()
             size_policy_title.setHorizontalStretch(1)
             size_policy_value.setHorizontalStretch(2)
             title.setSizePolicy(size_policy_title)
             value.setSizePolicy(size_policy_value)
-            status_layout.addWidget(title)
-            status_layout.addWidget(value)
-            label_layout.addLayout(status_layout)
+            label_layout.addWidget(title)
+            label_layout.addWidget(value)
+            label_group_layout.addLayout(label_layout)
             label_number = label_number + 1
             if tmp == 'Lora':
                 title.setText('Lora in prompt')
@@ -194,25 +209,53 @@ def make_label_layout(layout, data):
                 value.setText('True')
     if label_number < 15:
         for i in range(15 - label_number):
-            margin = QLabel()
-            label_layout.addWidget(margin)
-    filepath = data.dictionary_get('Filepath')
-    pixmap = make_pixmap_label(filepath)
-    upper_label_layout.addWidget(pixmap)
-    upper_label_layout.addLayout(label_layout)
+            margin_label = QLabel()
+            label_group_layout.addWidget(margin_label)
+    filepath = target.dictionary_get('Filepath')
+    pixmap_label = make_pixmap_label(filepath)
+    label_section_layout.addWidget(pixmap_label)
+    label_section_layout.addLayout(label_group_layout)
 
-    return upper_label_layout
+    return label_section_layout
+
+
+def make_pixmap_label(filepath):
+    pixmap = QPixmap(filepath)
+    pixmap = pixmap.scaled(350, 350, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
+    pixmap_label = QLabel()
+    pixmap_label.setPixmap(pixmap)
+    pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    return pixmap_label
+
+
+def make_textbox_tab(target):
+    textbox_tab_layout = QVBoxLayout()
+    splitter = QSplitter(Qt.Orientation.Vertical)
+    positive_text = target.dictionary_get('Positive')
+    positive_prompt = QTextEdit()
+    positive_prompt.setPlainText(positive_text)
+    positive_prompt.setReadOnly(True)
+    negative_text = target.dictionary_get('Negative')
+    negative_prompt = QTextEdit()
+    negative_prompt.setPlainText(negative_text)
+    negative_prompt.setReadOnly(True)
+
+    splitter.addWidget(positive_prompt)
+    splitter.addWidget(negative_prompt)
+    textbox_tab_layout.addWidget(splitter)
+
+    return textbox_tab_layout
 
 
 def make_hires_lora_tab(target):
-    page_layout = QHBoxLayout()
+    tab_layout = QHBoxLayout()
     hires_group = make_hires_group(target)
-    page_layout.addLayout(hires_group, 2)
+    tab_layout.addLayout(hires_group, 3)
     lora_group = make_lora_section(target)
-    page_layout.addWidget(lora_group, 3)
+    tab_layout.addWidget(lora_group, 3)
     addnet_group = make_addnet_section(target)
-    page_layout.addWidget(addnet_group, 3)
-    return page_layout
+    tab_layout.addWidget(addnet_group, 4)
+    return tab_layout
 
 
 def make_hires_group(target):
@@ -228,12 +271,13 @@ def make_hires_group(target):
             if tmp == 'Hires upscaler':
                 hires_section.setDisabled(True)
             item = 'None'
+        tmp = tmp.replace('Hires ', '').capitalize().replace('strength', '')
         title = QLabel(tmp)
         value = QLabel(item)
         size_policy_title = title.sizePolicy()
         size_policy_value = value.sizePolicy()
-        size_policy_title.setHorizontalStretch(2)
-        size_policy_value.setHorizontalStretch(1)
+        size_policy_title.setHorizontalStretch(3)
+        size_policy_value.setHorizontalStretch(7)
         title.setSizePolicy(size_policy_title)
         value.setSizePolicy(size_policy_value)
         label_layout.addWidget(title)
@@ -271,7 +315,7 @@ def make_lora_section(target):
     cnt = target.dictionary_length()
     lora_section = QGroupBox()
     loras = target.dictionary_get('Lora')
-    group_layout = QVBoxLayout()
+    section_layout = QVBoxLayout()
     if loras:
         lora_section.setTitle('Lora in prompt : ' + loras)
         for i in range(cnt):
@@ -291,12 +335,12 @@ def make_lora_section(target):
                 value.setSizePolicy(size_policy_value)
                 label_layout.addWidget(title)
                 label_layout.addWidget(value)
-                group_layout.addLayout(label_layout)
+                section_layout.addLayout(label_layout)
                 label_cnt = label_cnt + 1
     else:
         lora_section.setDisabled(True)
         lora_section.setTitle('Lora : 0')
-    lora_section.setLayout(group_layout)
+    lora_section.setLayout(section_layout)
     return lora_section
 
 
@@ -343,7 +387,7 @@ def make_addnet_section(target):
 
 
 def make_tiled_diffusion_tab(target):
-    page_layout = QHBoxLayout()
+    tab_layout = QHBoxLayout()
     tiled_diffusion_section = QVBoxLayout()
     tiled_diffusion_basic_info = make_tiled_diffusion_group(target)
     noise_inversion_info = make_noise_inversion_group(target)
@@ -352,33 +396,33 @@ def make_tiled_diffusion_tab(target):
     tiled_diffusion_section.addWidget(tiled_diffusion_basic_info)
     tiled_diffusion_section.addWidget(noise_inversion_info)
 
-    page_layout.addLayout(tiled_diffusion_section, 1)
-    page_layout.addWidget(region_control_info, 1)
-    return page_layout
+    tab_layout.addLayout(tiled_diffusion_section, 1)
+    tab_layout.addWidget(region_control_info, 1)
+    return tab_layout
 
 
 def make_tiled_diffusion_group(target):
-    status_data = ['Method',
-                   'Keep input size',
-                   'Tile batch size',
-                   'Tile width',
-                   'Tile height',
-                   'Tile Overlap',
-                   'Upscaler',
-                   'Upscale factor'
-                   ]
+    status = ['Method',
+              'Keep input size',
+              'Tile batch size',
+              'Tile width',
+              'Tile height',
+              'Tile Overlap',
+              'Upscaler',
+              'Upscale factor'
+              ]
     section = QGroupBox()
     section.setTitle('Tiled diffusion')
     section_layout = QVBoxLayout()
-    for status in status_data:
-        item = target.dictionary_get(status)
+    for tmp in status:
+        item = target.dictionary_get(tmp)
         if not item:
-            if status == 'Keep input size':
+            if tmp == 'Keep input size':
                 item = 'False'
-            elif status == 'Upscaler' or status == 'Upscale factor':
+            elif tmp == 'Upscaler' or tmp == 'Upscale factor':
                 item = 'None'
         status_layout = QHBoxLayout()
-        title = QLabel(status)
+        title = QLabel(tmp)
         value = QLabel(item)
         size_policy_title = title.sizePolicy()
         size_policy_value = value.sizePolicy()
@@ -394,22 +438,23 @@ def make_tiled_diffusion_group(target):
 
 
 def make_noise_inversion_group(target):
-    status_data = ['Noise inversion Kernel size',
-                   'Noise inversion Renoise strength',
-                   'Noise inversion Retouch',
-                   'Noise inversion Steps']
+    status = ['Noise inversion Kernel size',
+              'Noise inversion Renoise strength',
+              'Noise inversion Retouch',
+              'Noise inversion Steps'
+              ]
     section = QGroupBox()
     section.setTitle('Noise inversion')
     if not target.dictionary_get('Noise inversion'):
         section.setDisabled(True)
     section_layout = QVBoxLayout()
-    for status in status_data:
-        item = target.dictionary_get(status)
-        status = status.replace('Noise inversion ', '')
+    for tmp in status:
+        item = target.dictionary_get(tmp)
+        tmp = tmp.replace('Noise inversion ', '')
         if not item:
             item = 'None'
         status_layout = QHBoxLayout()
-        title = QLabel(status)
+        title = QLabel(tmp)
         value = QLabel(item)
         size_policy_title = title.sizePolicy()
         size_policy_value = value.sizePolicy()
@@ -425,17 +470,16 @@ def make_noise_inversion_group(target):
 
 
 def region_control_group(target):
-    flag = False
-    status_data = ['blend mode',
-                   'feather ratio',
-                   'w',
-                   'h',
-                   'x',
-                   'y',
-                   'seed',
-                   'prompt',
-                   'neg prompt'
-                   ]
+    status = ['blend mode',
+              'feather ratio',
+              'w',
+              'h',
+              'x',
+              'y',
+              'seed',
+              'prompt',
+              'neg prompt'
+              ]
     region_control_tab = QTabWidget()
     for i in range(8):
         region_number = 'Region ' + str(i + 1)
@@ -443,18 +487,18 @@ def region_control_group(target):
         if check or i == 0:
             page = QWidget()
             region_control_section_layout = QVBoxLayout()
-            for status in status_data:
+            for tmp in status:
                 label_layout = QHBoxLayout()
-                key = region_number + ' ' + status
+                key = region_number + ' ' + tmp
                 item = target.dictionary_get(key)
-                title = status.replace('neg', 'negative').capitalize()
+                title = tmp.replace('neg', 'negative').capitalize()
                 if not item:
                     item = 'None'
                 if title == 'W':
                     title = 'Width'
                 elif title == 'H':
                     title = 'Height'
-                if 'prompt' in status:
+                if 'prompt' in tmp:
                     status_label = QTextEdit()
                     status_label.setText(item)
                     label_layout.addWidget(status_label)
@@ -473,14 +517,15 @@ def region_control_group(target):
 
 def make_control_net_tab(target, starts):
     page_layout = QHBoxLayout()
-    status_data = ['model',
-                   'control mode',
-                   'pixel perfect',
-                   'preprocessor',
-                   'resize mode',
-                   'starting/ending',
-                   'weight',
-                   'preprocessor params']
+    status = ['model',
+              'control mode',
+              'pixel perfect',
+              'preprocessor',
+              'resize mode',
+              'starting/ending',
+              'weight',
+              'preprocessor params'
+              ]
     for i in range(starts, 3):
         control_net_enable = target.dictionary_get('ControlNet ' + str(i))
         section = QGroupBox()
@@ -488,7 +533,7 @@ def make_control_net_tab(target, starts):
         section.setTitle('ControlNet Unit ' + str(i))
         if not control_net_enable:
             section.setDisabled(True)
-        for tmp in status_data:
+        for tmp in status:
             label_layout = QHBoxLayout()
             key = 'ControlNet ' + str(i) + ' ' + tmp
             item = target.dictionary_get(key)
@@ -521,15 +566,6 @@ def make_regional_prompter_tab():
     pass
 
 
-def make_pixmap_label(filepath):
-    pixmap = QPixmap(filepath)
-    pixmap = pixmap.scaled(350, 350, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
-    image_label = QLabel()
-    image_label.setPixmap(pixmap)
-    image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    return image_label
-
-
 def savefile_choose_dialog(all_images=False):
     caption = 'Save File'
     path = os.path.expanduser('~')
@@ -548,7 +584,9 @@ def savefile_choose_dialog(all_images=False):
     return filename
 
 
-def file_choose_dialog():
+def file_choose_dialog(where=False):
+    if where:
+        app = QApplication(sys.argv)
     caption = 'Select Files'
     default_dir = os.path.expanduser('~')
     file_filter = 'PNG Images(*.png)'
@@ -561,3 +599,15 @@ def file_choose_dialog():
         select_filter
     )
     return filenames
+
+
+def directory_choose_dialog():
+    caption = 'Select Directory'
+    default_dir = os.path.expanduser('~')
+    directory = QFileDialog.getExistingDirectory(
+        None,
+        caption,
+        default_dir,
+    )
+
+    return directory
