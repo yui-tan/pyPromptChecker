@@ -579,15 +579,15 @@ def make_control_net_tab(target, starts):
 def make_regional_prompter_tab(target):
     filepath = target.dictionary_get('Filepath')
     pixmap = QPixmap(filepath)
-    pixmap = pixmap.scaled(350, 350, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
+    pixmap = pixmap.scaled(500, 500, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
 
     regional_prompter_group = QHBoxLayout()
-    regional_prompter_group.addWidget(make_regional_prompter_status_section(target))
+    regional_prompter_group.addWidget(make_regional_prompter_status_section(target), 1)
 
     ratio_pixmap_label = QLabel()
     str_ratios = target.dictionary_get('RP Ratios')
     ratio_mode = target.dictionary_get('RP Matrix submode')
-    main, sub = regional_prompter_ratio_check(str_ratios)
+    main, sub = regional_prompter_ratio_check(str_ratios, ratio_mode)
     if main and sub:
         pixmap = make_regional_prompter_pixmap(pixmap, ratio_mode, main, sub)
         ratio_pixmap_label.setPixmap(pixmap)
@@ -603,7 +603,7 @@ def make_regional_prompter_tab(target):
 
     ratio_strings_section_layout.addWidget(ratio_pixmap_label)
     ratio_strings_section.setLayout(ratio_strings_section_layout)
-    regional_prompter_group.addWidget(ratio_strings_section)
+    regional_prompter_group.addWidget(ratio_strings_section, 2)
 
     return regional_prompter_group
 
@@ -653,6 +653,7 @@ def make_regional_prompter_pixmap(pixmap, divide_mode, main_ratio, sub_ratio):
     paint_area.setPen(QColor(255, 255, 255))
     paint_area.setBrush(QColor(255, 255, 255))
     painted_pos_y = 0
+    painted_pos_x = 0
 
     if divide_mode == 'Horizontal':
         for index, ratio in enumerate(main_ratio):
@@ -668,19 +669,38 @@ def make_regional_prompter_pixmap(pixmap, divide_mode, main_ratio, sub_ratio):
                     paint_area.drawRect(start_draw_pos_x, painted_pos_y, 2, height_by_ratio)
                     painted_pos_x = start_draw_pos_x
             painted_pos_y = start_draw_pos_y
+    elif divide_mode == 'Vertical':
+        for index, ratio in enumerate(main_ratio):
+            width_by_ratio = int((pixmap.width() / divide_sum) * ratio)
+            start_draw_pos_x = painted_pos_x + width_by_ratio
+            paint_area.drawRect(start_draw_pos_x, 0, 2, pixmap.height())
+            if sub_ratio[index] and len(sub_ratio[index]) > 1:
+                sub_divide_sum = sum(sub_ratio[index])
+                painted_pos_y = 0
+                for tmp in sub_ratio[index]:
+                    height_by_sub_ratio = int((pixmap.height() / sub_divide_sum) * tmp)
+                    start_draw_pos_y = painted_pos_y + height_by_sub_ratio
+                    paint_area.drawRect(painted_pos_x, start_draw_pos_y, width_by_ratio, 2)
+                    painted_pos_y = start_draw_pos_y
+            painted_pos_x = start_draw_pos_x
 
     paint_area.end()
 
     return pixmap
 
 
-def regional_prompter_ratio_check(str_ratio):
+def regional_prompter_ratio_check(str_ratio, divide_mode):
     result = True
     main_ratio = []
     sub_ratio = []
+    major_splitter = ';'
+    minor_splitter = ','
+    if divide_mode == 'Vertical':
+        major_splitter = minor_splitter
+        minor_splitter = ';'
 
-    for tmp in str_ratio.split(';'):
-        ratio = tmp.split(',')
+    for tmp in str_ratio.split(major_splitter):
+        ratio = tmp.split(minor_splitter)
         try:
             main_ratio.append(int(ratio[0]))
             sub_ratio.append([int(number) for number in ratio[1:]])
