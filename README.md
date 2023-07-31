@@ -49,7 +49,7 @@ options:
  - [x] Add support for hires.fix status  
  - [x] Add support for ControlNet status  
  - [x] Add support for Additional Networks status  
- - [ ] Add support for Regional Prompter status  
+ - [x] Add support for Regional Prompter status  
  - [x] Coding Export JSON (All Images) function  
  - [x] Coding Reselect files function
  - [x] Change initial behaviour by argument
