@@ -7,7 +7,7 @@ import libs.decoder
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout
 from PyQt6.QtWidgets import QTabWidget, QTextEdit, QPushButton, QFileDialog
 from PyQt6.QtWidgets import QSplitter, QMainWindow, QGroupBox
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QPixmap, QPainter, QColor
 from PyQt6.QtCore import Qt
 
 
@@ -55,7 +55,7 @@ class ResultWindow(QMainWindow):
             label_group.setLayout(label_group_layout)
             tab_page_layout.addWidget(label_group)
 
-            for i in range(5):
+            for i in range(7):
                 inner_page = QWidget()
                 if i == 0:
                     inner_page.setLayout(make_textbox_tab(tmp))
@@ -76,6 +76,10 @@ class ResultWindow(QMainWindow):
                 if i == 5 and tmp.dictionary_get('ControlNet 6'):
                     inner_page.setLayout(make_control_net_tab(tmp, 6))
                     inner_tab.addTab(inner_page, 'ControlNet Unit 6-8')
+                if i == 6 and tmp.dictionary_get('RP Active'):
+                    inner_page.setLayout(make_regional_prompter_tab(tmp))
+                    inner_tab.addTab(inner_page, 'Regional Prompter')
+
             inner_tab.setTabPosition(QTabWidget.TabPosition.South)
             tab_page_layout.addWidget(inner_tab)
             tab_page.setLayout(tab_page_layout)
@@ -572,8 +576,122 @@ def make_control_net_tab(target, starts):
     return page_layout
 
 
-def make_regional_prompter_tab():
-    pass
+def make_regional_prompter_tab(target):
+    filepath = target.dictionary_get('Filepath')
+    pixmap = QPixmap(filepath)
+    pixmap = pixmap.scaled(350, 350, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
+
+    regional_prompter_group = QHBoxLayout()
+    regional_prompter_group.addWidget(make_regional_prompter_status_section(target))
+
+    ratio_pixmap_label = QLabel()
+    str_ratios = target.dictionary_get('RP Ratios')
+    ratio_mode = target.dictionary_get('RP Matrix submode')
+    main, sub = regional_prompter_ratio_check(str_ratios)
+    if main and sub:
+        pixmap = make_regional_prompter_pixmap(pixmap, ratio_mode, main, sub)
+        ratio_pixmap_label.setPixmap(pixmap)
+    else:
+        ratio_pixmap_label.setText("Couldn't analyze ratio strings")
+    ratio_pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+    ratio_strings = '(' + str_ratios.replace(' ', '') + ')'
+
+    ratio_strings_section = QGroupBox()
+    ratio_strings_section_layout = QVBoxLayout()
+    ratio_strings_section.setTitle('Regional Prompter Ratios: ' + ratio_mode + ' ' + ratio_strings)
+
+    ratio_strings_section_layout.addWidget(ratio_pixmap_label)
+    ratio_strings_section.setLayout(ratio_strings_section_layout)
+    regional_prompter_group.addWidget(ratio_strings_section)
+
+    return regional_prompter_group
+
+
+def make_regional_prompter_status_section(target):
+    status = ['RP Divide mode',
+              'RP Mask submode',
+              'RP Prompt submode',
+              'RP Calc Mode',
+              'RP Base Ratios',
+              'RP Use Base',
+              'RP Use Common',
+              'RP Use Ncommon',
+              'RP Change AND',
+              'RP LoRA Neg U Ratios',
+              'RP LoRA Neg Te Ratios',
+              'RP threshold']
+    status_section = QGroupBox()
+    status_section_label_layout = QVBoxLayout()
+    for tmp in status:
+        label_layout = QHBoxLayout()
+        item = target.dictionary_get(tmp)
+        if not item:
+            item = 'None'
+        title = QLabel(tmp.replace('RP ', '').capitalize())
+        value = QLabel(item)
+        size_policy_title = title.sizePolicy()
+        size_policy_value = value.sizePolicy()
+        size_policy_title.setHorizontalStretch(4)
+        size_policy_value.setHorizontalStretch(6)
+        title.setSizePolicy(size_policy_title)
+        value.setSizePolicy(size_policy_value)
+        label_layout.addWidget(title)
+        label_layout.addWidget(value)
+        status_section_label_layout.addLayout(label_layout)
+    status_section.setLayout(status_section_label_layout)
+    status_section.setTitle('Status')
+    return status_section
+
+
+def make_regional_prompter_pixmap(pixmap, divide_mode, main_ratio, sub_ratio):
+    divide_sum = sum(main_ratio)
+
+    paint_area = QPainter()
+    paint_area.begin(pixmap)
+    paint_area.drawPixmap(0, 0, pixmap)
+    paint_area.setPen(QColor(255, 255, 255))
+    paint_area.setBrush(QColor(255, 255, 255))
+    painted_pos_y = 0
+
+    if divide_mode == 'Horizontal':
+        for index, ratio in enumerate(main_ratio):
+            height_by_ratio = int((pixmap.height() / divide_sum) * ratio)
+            start_draw_pos_y = painted_pos_y + height_by_ratio
+            paint_area.drawRect(0, start_draw_pos_y, pixmap.width(), 2)
+            if sub_ratio[index] and len(sub_ratio[index]) > 1:
+                sub_divide_sum = sum(sub_ratio[index])
+                painted_pos_x = 0
+                for tmp in sub_ratio[index]:
+                    width_by_sub_ratio = int((pixmap.width() / sub_divide_sum) * tmp)
+                    start_draw_pos_x = painted_pos_x + width_by_sub_ratio
+                    paint_area.drawRect(start_draw_pos_x, painted_pos_y, 2, height_by_ratio)
+                    painted_pos_x = start_draw_pos_x
+            painted_pos_y = start_draw_pos_y
+
+    paint_area.end()
+
+    return pixmap
+
+
+def regional_prompter_ratio_check(str_ratio):
+    result = True
+    main_ratio = []
+    sub_ratio = []
+
+    for tmp in str_ratio.split(';'):
+        ratio = tmp.split(',')
+        try:
+            main_ratio.append(int(ratio[0]))
+            sub_ratio.append([int(number) for number in ratio[1:]])
+        except ValueError:
+            result = False
+            break
+
+    if not result:
+        return None, None
+    else:
+        return main_ratio, sub_ratio
 
 
 def savefile_choose_dialog(all_images=False):

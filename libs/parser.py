@@ -92,7 +92,7 @@ class ChunkData:
 def parse_parameter(chunks, filepath, model_list=None):
     target_data = ChunkData(chunks)
     target_data.filepath_registration(filepath)
-    target_data = main_prompt_parse(target_data)
+    target_data = prompt_parse(target_data)
     target_data = lora_parse(target_data)
     target_data = tiled_diffusion_parse(target_data)
     target_data = control_net_parse(target_data)
@@ -104,15 +104,18 @@ def parse_parameter(chunks, filepath, model_list=None):
 
 def main_status_parse(target_data):
     target_str = target_data.data_get()
+    comma_in_hyphen_regex = r'\"[^"]*"'
     if target_str == 'This file has no embedded data':
         return target_data
     if target_str:
+        target_str = re.sub(comma_in_hyphen_regex, lambda match: match.group().replace(',', '<comma>'), target_str)
         result = [[value.split(':')[0], value.split(':')[1]] for value in target_str.split(',')]
+        result = [[d2.replace('<comma>', ',').replace('"', '').strip() for d2 in d1] for d1 in result]
         target_data.data_refresh(target_str, result)
     return target_data
 
 
-def main_prompt_parse(target_data):
+def prompt_parse(target_data):
     prompt_regex = r'([\S\s]*)(?=Steps: )'
     result = [['Positive', 'None'], ['Negative', 'None']]
     prompt = target_data.data_get()
@@ -142,7 +145,7 @@ def lora_parse(target_data):
     if match:
         target = match.group().replace('"', '')
         loras = [d1.split(':')[0].strip() + ' ' + '[' + d1.split(':')[1].strip() + ']' for d1 in target.split(',')]
-        loras = [['Lora ' + str(index), value]for index, value in enumerate(loras)]
+        loras = [['Lora ' + str(index), value] for index, value in enumerate(loras)]
         target_data.data_refresh('Lora hashes: "' + target + '",', loras)
     return target_data
 
@@ -196,8 +199,3 @@ def control_net_parse(target_data):
             result = [[value.replace('<comma>', ',') for value in d1] for d1 in result]
         target_data.data_refresh(target, result)
     return target_data
-
-
-def regional_prompter_parse():
-    pass
-
