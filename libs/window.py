@@ -34,7 +34,6 @@ class ResultWindow(QMainWindow):
             chunk_data = libs.decoder.decode_text_chunk(filepath, 1)
             parameters = libs.parser.parse_parameter(chunk_data, filepath, self.models)
             self.params.append(parameters)
-
         self.positive_for_copy = self.params[0].dictionary_get('Positive')
         self.negative_for_copy = self.params[0].dictionary_get('Negative')
         self.seed_for_copy = self.params[0].dictionary_get('Seed')
@@ -143,7 +142,7 @@ class ResultWindow(QMainWindow):
             if filepath:
                 dict_list = []
                 for tmp in self.params:
-                    dict_list.append(tmp.all_dictionary())
+                    dict_list.append(tmp.params)
                 with open(filepath, 'w') as f:
                     json.dump(dict_list, f, sort_keys=True, indent=4, ensure_ascii=False)
         elif where_from == 'Reselect files':
@@ -609,14 +608,14 @@ def make_regional_prompter_tab(target):
 
 
 def make_regional_prompter_status_section(target):
-    status = ['RP Divide mode',
-              'RP Mask submode',
-              'RP Prompt submode',
-              'RP Calc Mode',
+    status = ['RP Calc Mode',
               'RP Base Ratios',
               'RP Use Base',
               'RP Use Common',
               'RP Use Ncommon',
+              'RP Divide mode',
+              'RP Mask submode',
+              'RP Prompt submode',
               'RP Change AND',
               'RP LoRA Neg U Ratios',
               'RP LoRA Neg Te Ratios',
@@ -628,12 +627,30 @@ def make_regional_prompter_status_section(target):
         item = target.dictionary_get(tmp)
         if not item:
             item = 'None'
-        title = QLabel(tmp.replace('RP ', '').capitalize())
+        if tmp == 'RP Calc Mode':
+            tmp = 'Generation Mode'
+        elif tmp == 'RP Use Base':
+            tmp = 'Use base prompt'
+        elif tmp == 'RP Base Ratios':
+            tmp = 'Base ratio'
+        elif tmp == 'RP Use Common':
+            tmp = 'Use common prompt'
+        elif tmp == 'RP Use Ncommon':
+            tmp = 'Use neg. common prompt'
+        elif tmp == 'RP Change AND':
+            tmp = 'Change "AND" to "BREAK"'
+        elif tmp == 'RP LoRA Neg U Ratios':
+            tmp = 'Lora neg. UNet Ratio'
+        elif tmp == 'RP LoRA Neg Te Ratios':
+            tmp = 'Lora neg. TEnc Ratio'
+        else:
+            tmp = tmp.replace('RP ', '').capitalize()
+        title = QLabel(tmp)
         value = QLabel(item)
         size_policy_title = title.sizePolicy()
         size_policy_value = value.sizePolicy()
-        size_policy_title.setHorizontalStretch(4)
-        size_policy_value.setHorizontalStretch(6)
+        size_policy_title.setHorizontalStretch(6)
+        size_policy_value.setHorizontalStretch(4)
         title.setSizePolicy(size_policy_title)
         value.setSizePolicy(size_policy_value)
         label_layout.addWidget(title)

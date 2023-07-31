@@ -13,29 +13,11 @@ class ChunkData:
         if not data:
             self.data = 'This file has no embedded data'
 
-    def data_get(self):
-        return self.data
-
-    def data_list_get(self):
-        return self.data_list
-
     def dictionary_get(self, key):
-        if self.params:
-            return self.params.get(key)
-        else:
-            return None
-
-    def all_dictionary(self):
-        if self.params:
-            return self.params
-        else:
-            return None
+        return self.params.get(key)
 
     def dictionary_length(self):
         return len(self.params)
-
-    def original_data_get(self):
-        return self.original_data
 
     def data_refresh(self, delete_target, add_list):
         if delete_target:
@@ -103,7 +85,7 @@ def parse_parameter(chunks, filepath, model_list=None):
 
 
 def main_status_parse(target_data):
-    target_str = target_data.data_get()
+    target_str = target_data.data
     comma_in_hyphen_regex = r'\"[^"]*"'
     if target_str == 'This file has no embedded data':
         return target_data
@@ -118,7 +100,7 @@ def main_status_parse(target_data):
 def prompt_parse(target_data):
     prompt_regex = r'([\S\s]*)(?=Steps: )'
     result = [['Positive', 'None'], ['Negative', 'None']]
-    prompt = target_data.data_get()
+    prompt = target_data.data
     if prompt == 'This file has no embedded data':
         result = [['Positive', prompt]]
         target_data.data_refresh(prompt, result)
@@ -141,7 +123,7 @@ def prompt_parse(target_data):
 
 def lora_parse(target_data):
     lora_regex = r'(?<=Lora hashes: )"[^"]*"'
-    match = re.search(lora_regex, target_data.data_get())
+    match = re.search(lora_regex, target_data.data)
     if match:
         target = match.group().replace('"', '')
         loras = [d1.split(':')[0].strip() + ' ' + '[' + d1.split(':')[1].strip() + ']' for d1 in target.split(',')]
@@ -156,7 +138,7 @@ def tiled_diffusion_parse(target_data):
     region_control_regex = r'(?<="Region control": ).*$'
     comma_between_hyphen = r'\"[^"]*"'
     region_status_list = []
-    match = re.search(tiled_diffusion_regex, target_data.data_get())
+    match = re.search(tiled_diffusion_regex, target_data.data)
     if match:
         tiled_diffusion_status = match.group()
         if 'Region' in tiled_diffusion_status:
@@ -184,7 +166,7 @@ def tiled_diffusion_parse(target_data):
 
 def control_net_parse(target_data):
     control_net_regex = r'(ControlNet.*"[^"]*",)'
-    match = re.search(control_net_regex, target_data.data_get())
+    match = re.search(control_net_regex, target_data.data)
     if match:
         result = []
         target = match.group()
