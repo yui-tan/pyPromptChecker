@@ -34,9 +34,9 @@ class ResultWindow(QMainWindow):
             chunk_data = libs.decoder.decode_text_chunk(filepath, 1)
             parameters = libs.parser.parse_parameter(chunk_data, filepath, self.models)
             self.params.append(parameters)
-        self.positive_for_copy = self.params[0].dictionary_get('Positive')
-        self.negative_for_copy = self.params[0].dictionary_get('Negative')
-        self.seed_for_copy = self.params[0].dictionary_get('Seed')
+        self.positive_for_copy = self.params[0].params.get('Positive')
+        self.negative_for_copy = self.params[0].params.get('Negative')
+        self.seed_for_copy = self.params[0].params.get('Seed')
 
         root_layout = QVBoxLayout()
         root_tab = QTabWidget()
@@ -59,23 +59,23 @@ class ResultWindow(QMainWindow):
                 if i == 0:
                     inner_page.setLayout(make_textbox_tab(tmp))
                     inner_tab.addTab(inner_page, 'Prompts')
-                if i == 1 and (tmp.dictionary_get('Hires upscale') or tmp.dictionary_get(
-                        'Face restoration') or tmp.dictionary_get('Lora')):
+                if i == 1 and (tmp.params.get('Hires upscale') or tmp.params.get(
+                        'Face restoration') or tmp.params.get('Lora')):
                     inner_page.setLayout(make_hires_lora_tab(tmp))
                     inner_tab.addTab(inner_page, 'Hires / Loras')
-                if i == 2 and tmp.dictionary_get('Tiled diffusion'):
+                if i == 2 and tmp.params.get('Tiled diffusion'):
                     inner_page.setLayout(make_tiled_diffusion_tab(tmp))
                     inner_tab.addTab(inner_page, 'Tiled diffusion')
-                if i == 3 and tmp.dictionary_get('ControlNet'):
+                if i == 3 and tmp.params.get('ControlNet'):
                     inner_page.setLayout(make_control_net_tab(tmp, 0))
                     inner_tab.addTab(inner_page, 'ControlNet Unit 0-2')
-                if i == 4 and tmp.dictionary_get('ControlNet 3'):
+                if i == 4 and tmp.params.get('ControlNet 3'):
                     inner_page.setLayout(make_control_net_tab(tmp, 3))
                     inner_tab.addTab(inner_page, 'ControlNet Unit 3-5')
-                if i == 5 and tmp.dictionary_get('ControlNet 6'):
+                if i == 5 and tmp.params.get('ControlNet 6'):
                     inner_page.setLayout(make_control_net_tab(tmp, 6))
                     inner_tab.addTab(inner_page, 'ControlNet Unit 6-8')
-                if i == 6 and tmp.dictionary_get('RP Active'):
+                if i == 6 and tmp.params.get('RP Active'):
                     inner_page.setLayout(make_regional_prompter_tab(tmp))
                     inner_tab.addTab(inner_page, 'Regional Prompter')
 
@@ -83,7 +83,7 @@ class ResultWindow(QMainWindow):
             tab_page_layout.addWidget(inner_tab)
             tab_page.setLayout(tab_page_layout)
 
-            root_tab.addTab(tab_page, tmp.dictionary_get('Filename'))
+            root_tab.addTab(tab_page, tmp.params.get('Filename'))
             root_tab.currentChanged.connect(self.tab_changed)
 
         root_layout.addWidget(root_tab)
@@ -116,9 +116,9 @@ class ResultWindow(QMainWindow):
         self.move(frame_geometry.topLeft())
 
     def tab_changed(self, index):
-        self.positive_for_copy = self.params[index].dictionary_get('Positive')
-        self.negative_for_copy = self.params[index].dictionary_get('Negative')
-        self.seed_for_copy = self.params[0].dictionary_get('Seed')
+        self.positive_for_copy = self.params[index].params.get('Positive')
+        self.negative_for_copy = self.params[index].params.get('Negative')
+        self.seed_for_copy = self.params[0].params.get('Seed')
         self.tab_index = index
 
     def button_clicked(self):
@@ -194,11 +194,11 @@ def make_label_layout(target):
     label_section_layout = QHBoxLayout()
     label_group_layout = QVBoxLayout()
     for tmp in status:
-        item = target.dictionary_get(tmp)
+        item = target.params.get(tmp)
         if item:
             if tmp == 'Filepath':
                 item = os.path.dirname(item)
-            if tmp == 'Denoising strength' and target.dictionary_get('Hires upscaler'):
+            if tmp == 'Denoising strength' and target.params.get('Hires upscaler'):
                 continue
             label_layout = QHBoxLayout()
             title = QLabel(tmp)
@@ -224,7 +224,7 @@ def make_label_layout(target):
         for i in range(15 - label_number):
             margin_label = QLabel()
             label_group_layout.addWidget(margin_label)
-    filepath = target.dictionary_get('Filepath')
+    filepath = target.params.get('Filepath')
     pixmap_label = make_pixmap_label(filepath)
     label_section_layout.addWidget(pixmap_label)
     label_section_layout.addLayout(label_group_layout)
@@ -244,11 +244,11 @@ def make_pixmap_label(filepath):
 def make_textbox_tab(target):
     textbox_tab_layout = QVBoxLayout()
     splitter = QSplitter(Qt.Orientation.Vertical)
-    positive_text = target.dictionary_get('Positive')
+    positive_text = target.params.get('Positive')
     positive_prompt = QTextEdit()
     positive_prompt.setPlainText(positive_text)
     positive_prompt.setReadOnly(True)
-    negative_text = target.dictionary_get('Negative')
+    negative_text = target.params.get('Negative')
     negative_prompt = QTextEdit()
     negative_prompt.setPlainText(negative_text)
     negative_prompt.setReadOnly(True)
@@ -279,7 +279,7 @@ def make_hires_group(target):
     hires_section_layout = QVBoxLayout()
     for tmp in hires:
         label_layout = QHBoxLayout()
-        item = target.dictionary_get(tmp)
+        item = target.params.get(tmp)
         if not item:
             if tmp == 'Hires upscaler':
                 hires_section.setDisabled(True)
@@ -302,7 +302,7 @@ def make_hires_group(target):
     face_section = QGroupBox()
     face_section.setTitle('Face restoration')
     name = 'Face restoration'
-    item = target.dictionary_get(name)
+    item = target.params.get(name)
     if not item:
         face_section.setDisabled(True)
         item = 'None'
@@ -325,15 +325,15 @@ def make_hires_group(target):
 
 def make_lora_section(target):
     label_cnt = 0
-    cnt = target.dictionary_length()
+    cnt = len(target.params)
     lora_section = QGroupBox()
-    loras = target.dictionary_get('Lora')
+    loras = target.params.get('Lora')
     section_layout = QVBoxLayout()
     if loras:
         lora_section.setTitle('Lora in prompt : ' + loras)
         for i in range(cnt):
             key = 'Lora ' + str(i)
-            item = target.dictionary_get(key)
+            item = target.params.get(key)
             if item or label_cnt < 10:
                 label_layout = QHBoxLayout()
                 if not item:
@@ -362,14 +362,14 @@ def make_addnet_section(target):
     addnet_section = QGroupBox()
     section_layout = QVBoxLayout()
     addnet_section.setTitle('Additional Networks')
-    addnet = target.dictionary_get('AddNet Enabled')
+    addnet = target.params.get('AddNet Enabled')
     if not addnet:
         addnet_section.setDisabled(True)
     for i in range(1, 6):
         for tmp in status:
             label_layout = QHBoxLayout()
             key = 'AddNet ' + tmp + ' ' + str(i)
-            item = target.dictionary_get(key)
+            item = target.params.get(key)
             if tmp == 'Module' and item:
                 title = QLabel('Module ' + str(i))
                 value = QLabel(item)
@@ -380,7 +380,7 @@ def make_addnet_section(target):
             elif tmp == 'Weight A' and item:
                 title = QLabel('UNet / TEnc')
                 item = float(item)
-                item_2 = float(target.dictionary_get('AddNet Weight B ' + str(i)))
+                item_2 = float(target.params.get('AddNet Weight B ' + str(i)))
                 item = str(item) + ' / ' + str(item_2)
                 value = QLabel(item)
             else:
@@ -428,7 +428,7 @@ def make_tiled_diffusion_group(target):
     section.setTitle('Tiled diffusion')
     section_layout = QVBoxLayout()
     for tmp in status:
-        item = target.dictionary_get(tmp)
+        item = target.params.get(tmp)
         if not item:
             if tmp == 'Keep input size':
                 item = 'False'
@@ -458,11 +458,11 @@ def make_noise_inversion_group(target):
               ]
     section = QGroupBox()
     section.setTitle('Noise inversion')
-    if not target.dictionary_get('Noise inversion'):
+    if not target.params.get('Noise inversion'):
         section.setDisabled(True)
     section_layout = QVBoxLayout()
     for tmp in status:
-        item = target.dictionary_get(tmp)
+        item = target.params.get(tmp)
         tmp = tmp.replace('Noise inversion ', '')
         if not item:
             item = 'None'
@@ -496,14 +496,14 @@ def region_control_group(target):
     region_control_tab = QTabWidget()
     for i in range(8):
         region_number = 'Region ' + str(i + 1)
-        check = target.dictionary_get(region_number + ' enable')
+        check = target.params.get(region_number + ' enable')
         if check or i == 0:
             page = QWidget()
             region_control_section_layout = QVBoxLayout()
             for tmp in status:
                 label_layout = QHBoxLayout()
                 key = region_number + ' ' + tmp
-                item = target.dictionary_get(key)
+                item = target.params.get(key)
                 title = tmp.replace('neg', 'negative').capitalize()
                 if not item:
                     item = 'None'
@@ -540,7 +540,7 @@ def make_control_net_tab(target, starts):
               'preprocessor params'
               ]
     for i in range(starts, 3):
-        control_net_enable = target.dictionary_get('ControlNet ' + str(i))
+        control_net_enable = target.params.get('ControlNet ' + str(i))
         section = QGroupBox()
         section_layout = QVBoxLayout()
         section.setTitle('ControlNet Unit ' + str(i))
@@ -549,7 +549,7 @@ def make_control_net_tab(target, starts):
         for tmp in status:
             label_layout = QHBoxLayout()
             key = 'ControlNet ' + str(i) + ' ' + tmp
-            item = target.dictionary_get(key)
+            item = target.params.get(key)
             key = tmp.capitalize()
             if key == 'Starting/ending':
                 key = 'Starting/Ending'
@@ -576,7 +576,7 @@ def make_control_net_tab(target, starts):
 
 
 def make_regional_prompter_tab(target):
-    filepath = target.dictionary_get('Filepath')
+    filepath = target.params.get('Filepath')
     pixmap = QPixmap(filepath)
     pixmap = pixmap.scaled(500, 500, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
 
@@ -584,8 +584,8 @@ def make_regional_prompter_tab(target):
     regional_prompter_group.addWidget(make_regional_prompter_status_section(target), 1)
 
     ratio_pixmap_label = QLabel()
-    str_ratios = target.dictionary_get('RP Ratios')
-    ratio_mode = target.dictionary_get('RP Matrix submode')
+    str_ratios = target.params.get('RP Ratios')
+    ratio_mode = target.params.get('RP Matrix submode')
     main, sub = regional_prompter_ratio_check(str_ratios, ratio_mode)
     if main and sub:
         pixmap = make_regional_prompter_pixmap(pixmap, ratio_mode, main, sub)
@@ -624,7 +624,7 @@ def make_regional_prompter_status_section(target):
     status_section_label_layout = QVBoxLayout()
     for tmp in status:
         label_layout = QHBoxLayout()
-        item = target.dictionary_get(tmp)
+        item = target.params.get(tmp)
         if not item:
             item = 'None'
         if tmp == 'RP Calc Mode':

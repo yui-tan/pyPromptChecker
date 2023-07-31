@@ -13,12 +13,6 @@ class ChunkData:
         if not data:
             self.data = 'This file has no embedded data'
 
-    def dictionary_get(self, key):
-        return self.params.get(key)
-
-    def dictionary_length(self):
-        return len(self.params)
-
     def data_refresh(self, delete_target, add_list):
         if delete_target:
             self.data = self.data.replace(delete_target, '')
