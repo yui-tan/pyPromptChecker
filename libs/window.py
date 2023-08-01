@@ -54,7 +54,7 @@ class ResultWindow(QMainWindow):
             label_group.setLayout(label_group_layout)
             tab_page_layout.addWidget(label_group)
 
-            for i in range(7):
+            for i in range(8):
                 inner_page = QWidget()
                 if i == 0:
                     inner_page.setLayout(make_textbox_tab(tmp))
@@ -78,6 +78,9 @@ class ResultWindow(QMainWindow):
                 if i == 6 and tmp.params.get('RP Active'):
                     inner_page.setLayout(make_regional_prompter_tab(tmp))
                     inner_tab.addTab(inner_page, 'Regional Prompter')
+                if i == 7 and tmp.params.get('Dynamic thresholding enabled'):
+                    inner_page.setLayout(make_other_tab(tmp))
+                    inner_tab.addTab(inner_page, 'Other')
 
             inner_tab.setTabPosition(QTabWidget.TabPosition.South)
             tab_page_layout.addWidget(inner_tab)
@@ -181,6 +184,7 @@ def make_label_layout(target):
               'Eta',
               'Steps',
               'CFG scale',
+              'Dynamic thresholding enabled',
               'Model',
               'Variation seed',
               'Variation seed strength',
@@ -220,6 +224,8 @@ def make_label_layout(target):
             elif tmp == 'Hires upscaler':
                 title.setText('Hires.fix')
                 value.setText('True')
+            elif tmp == 'Dynamic thresholding enabled':
+                title.setText('CFG scale fix')
     if label_number < 15:
         for i in range(15 - label_number):
             margin_label = QLabel()
@@ -729,6 +735,67 @@ def regional_prompter_ratio_check(str_ratio, divide_mode):
         return None, None
     else:
         return main_ratio, sub_ratio
+
+
+def make_other_tab(target):
+    page_layout = QHBoxLayout()
+    page_layout.addWidget(dynamic_thresholding_section(target))
+    for i in range(2):
+        page_layout.addWidget(make_dummy_section(7))
+    return page_layout
+
+
+def dynamic_thresholding_section(target):
+    status = ['CFG mode',
+              'CFG scale minimum',
+              'Mimic mode',
+              'Mimic scale',
+              'Mimic scale minimum',
+              'Scheduler value',
+              'Threshold percentile'
+              ]
+    section = QGroupBox()
+    section.setLayout(label_maker(status, target, 6, 4))
+    section.setTitle('Dynamic thresholding (CFG scale fix)')
+    return section
+
+
+def label_maker(status, target, stretch_title, stretch_value, selectable=False, remove_if_none=False):
+    section_layout = QVBoxLayout()
+    for tmp in status:
+        label_layout = QHBoxLayout()
+        item = target.params.get(tmp)
+        if not item and remove_if_none:
+            continue
+        elif not item:
+            item = 'None'
+        title = QLabel(tmp)
+        value = QLabel(item)
+        if selectable:
+            title.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            value.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        size_policy_title = title.sizePolicy()
+        size_policy_value = value.sizePolicy()
+        size_policy_title.setHorizontalStretch(stretch_title)
+        size_policy_value.setHorizontalStretch(stretch_value)
+        title.setSizePolicy(size_policy_title)
+        value.setSizePolicy(size_policy_value)
+        label_layout.addWidget(title)
+        label_layout.addWidget(value)
+        section_layout.addLayout(label_layout)
+    return section_layout
+
+
+def make_dummy_section(num):
+    section = QGroupBox()
+    section_layout = QVBoxLayout()
+    for i in range(num):
+        title = QLabel()
+        section_layout.addWidget(title)
+    section.setLayout(section_layout)
+    section.setTitle('Dummy')
+    section.setDisabled(True)
+    return section
 
 
 def savefile_choose_dialog(all_images=False):
