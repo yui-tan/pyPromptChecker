@@ -15,6 +15,9 @@ Additional and Hires status screenshot
 
 ControlNet status screenshot
 ![](https://user-images.githubusercontent.com/121333129/256966359-3030c47e-13ea-49b7-b3fa-a2845b2818fc.png)
+
+Regional prompter status screenshot
+![](https://user-images.githubusercontent.com/121333129/257389785-b9b65076-ec8d-4fea-a9ed-fddebfde641f.png)
 # Requirements  
 ***
 - PyQt6
