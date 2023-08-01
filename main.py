@@ -35,7 +35,7 @@ def check_files(target_list):
     return valid_file_list, file_is_not_found_list, this_is_directory_list, this_file_is_not_png_file_list
 
 
-if __name__ == '__main__':
+def main():
     description_text = 'Script for extracting and formatting PNG chunks.\n'
     description_text = description_text + 'If no options are specified, the script will open a file choose dialog.\n'
     description_text = description_text + 'All options are mutually exclusive.'
@@ -78,3 +78,7 @@ if __name__ == '__main__':
     print('a hoy!!!!')
     valid_filepath.sort()
     libs.window.result_window(valid_filepath)
+
+
+if __name__ == '__main__':
+    main()
