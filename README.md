@@ -15,6 +15,9 @@ Additional and Hires status screenshot
 
 ControlNet status screenshot
 ![](https://user-images.githubusercontent.com/121333129/256966359-3030c47e-13ea-49b7-b3fa-a2845b2818fc.png)
+
+Regional prompter status screenshot
+![](https://user-images.githubusercontent.com/121333129/257389785-b9b65076-ec8d-4fea-a9ed-fddebfde641f.png)
 # Requirements  
 ***
 - PyQt6
@@ -53,5 +56,7 @@ options:
  - [x] Coding Export JSON (All Images) function  
  - [x] Coding Reselect files function
  - [x] Change initial behaviour by argument
+ - [ ] Various hardcodings into a Configuration Class
+ - [ ] Make it installable using pip
  - [ ] Add support for import JSON
  - [ ] Get marry to Miku
