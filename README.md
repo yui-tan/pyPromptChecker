@@ -29,9 +29,11 @@ pip3 install PyQt6 pypng
 # Howto
 ***
 ````
-python main.py
+cd /path/to/pyPromptChecker
+pip3 install -e.
+mikkumiku
 
-usage: main.py [-h] [-a | -f [FILEPATH ...] | -d DIRECTORY]
+usage: mikkumiku [-h] [-a | -f [FILEPATH ...] | -d DIRECTORY]
 
 Script for extracting and formatting PNG chunks.
 If no options are specified, the script will open a file choose dialog.
