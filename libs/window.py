@@ -4,6 +4,7 @@ import sys
 import csv
 import libs.parser
 import libs.decoder
+import libs.configure
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout
 from PyQt6.QtWidgets import QTabWidget, QTextEdit, QPushButton, QFileDialog
 from PyQt6.QtWidgets import QSplitter, QMainWindow, QGroupBox
@@ -15,6 +16,7 @@ class ResultWindow(QMainWindow):
     def __init__(self, targets=None):
         super().__init__()
         self.setWindowTitle('PNG Prompt Data')
+#        self.config = libs.configure.Config()
         self.models = model_hashes()
         self.params = []
         self.positive_for_copy = ''
@@ -23,8 +25,8 @@ class ResultWindow(QMainWindow):
         self.tab_index = 0
         self.init_ui(targets)
 
-        window_width = 1024
-        window_height = 920
+        window_width = 1024  # self.config.get_value('Window', 'WindowWidth')
+        window_height = 920  # self.config.get_value('Window', 'WindowHeight')
 
         self.resize(window_width, window_height)
         self.center()
@@ -432,27 +434,7 @@ def make_tiled_diffusion_group(target):
               ]
     section = QGroupBox()
     section.setTitle('Tiled diffusion')
-    section_layout = QVBoxLayout()
-    for tmp in status:
-        item = target.params.get(tmp)
-        if not item:
-            if tmp == 'Keep input size':
-                item = 'False'
-            elif tmp == 'Upscaler' or tmp == 'Upscale factor':
-                item = 'None'
-        status_layout = QHBoxLayout()
-        title = QLabel(tmp)
-        value = QLabel(item)
-        size_policy_title = title.sizePolicy()
-        size_policy_value = value.sizePolicy()
-        size_policy_title.setHorizontalStretch(1)
-        size_policy_value.setHorizontalStretch(2)
-        title.setSizePolicy(size_policy_title)
-        value.setSizePolicy(size_policy_value)
-        status_layout.addWidget(title)
-        status_layout.addWidget(value)
-        section_layout.addLayout(status_layout)
-    section.setLayout(section_layout)
+    section.setLayout(label_maker(status, target, 1, 2))
     return section
 
 
@@ -466,25 +448,8 @@ def make_noise_inversion_group(target):
     section.setTitle('Noise inversion')
     if not target.params.get('Noise inversion'):
         section.setDisabled(True)
-    section_layout = QVBoxLayout()
-    for tmp in status:
-        item = target.params.get(tmp)
-        tmp = tmp.replace('Noise inversion ', '')
-        if not item:
-            item = 'None'
-        status_layout = QHBoxLayout()
-        title = QLabel(tmp)
-        value = QLabel(item)
-        size_policy_title = title.sizePolicy()
-        size_policy_value = value.sizePolicy()
-        size_policy_title.setHorizontalStretch(1)
-        size_policy_value.setHorizontalStretch(2)
-        title.setSizePolicy(size_policy_title)
-        value.setSizePolicy(size_policy_value)
-        status_layout.addWidget(title)
-        status_layout.addWidget(value)
-        section_layout.addLayout(status_layout)
-    section.setLayout(section_layout)
+    status = [[value, value.replace('Noise inversion ', '')] for value in status]
+    section.setLayout(label_maker(status, target, 1, 2))
     return section
 
 
@@ -536,55 +501,31 @@ def region_control_group(target):
 
 def make_control_net_tab(target, starts):
     page_layout = QHBoxLayout()
-    status = ['model',
-              'control mode',
-              'pixel perfect',
-              'preprocessor',
-              'resize mode',
-              'starting/ending',
-              'weight',
-              'preprocessor params'
+    status = [['model', 'Model'],
+              ['control mode', 'Control mode'],
+              ['pixel perfect', 'Pixel perfect'],
+              ['preprocessor', 'Preprocessor'],
+              ['resize mode', 'Resize mode'],
+              ['starting/ending', 'Starting/ending'],
+              ['weight', 'Weight'],
+              ['preprocessor params', 'Preproc. params'],
               ]
     for i in range(starts, 3):
         control_net_enable = target.params.get('ControlNet ' + str(i))
+        status = [['ControlNet ' + str(i) + ' ' + value[0], value[1]] for value in status]
         section = QGroupBox()
-        section_layout = QVBoxLayout()
         section.setTitle('ControlNet Unit ' + str(i))
         if not control_net_enable:
             section.setDisabled(True)
-        for tmp in status:
-            label_layout = QHBoxLayout()
-            key = 'ControlNet ' + str(i) + ' ' + tmp
-            item = target.params.get(key)
-            key = tmp.capitalize()
-            if key == 'Starting/ending':
-                key = 'Starting/Ending'
-            elif key == 'Preprocessor params':
-                key = 'Preproc. params'
-            if not item:
-                item = 'None'
-            elif key == 'Model':
-                item = item.replace(' ', '\n')
-            title = QLabel(key)
-            value = QLabel(item)
-            size_policy_title = title.sizePolicy()
-            size_policy_value = value.sizePolicy()
-            size_policy_title.setHorizontalStretch(4)
-            size_policy_value.setHorizontalStretch(6)
-            title.setSizePolicy(size_policy_title)
-            value.setSizePolicy(size_policy_value)
-            label_layout.addWidget(title)
-            label_layout.addWidget(value)
-            section_layout.addLayout(label_layout)
-        section.setLayout(section_layout)
+        section.setLayout(label_maker(status, target, 4, 6))
         page_layout.addWidget(section)
     return page_layout
 
 
-def make_regional_prompter_tab(target):
+def make_regional_prompter_tab(target, scale=500):
     filepath = target.params.get('Filepath')
     pixmap = QPixmap(filepath)
-    pixmap = pixmap.scaled(500, 500, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
+    pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
 
     regional_prompter_group = QHBoxLayout()
     regional_prompter_group.addWidget(make_regional_prompter_status_section(target), 1)
@@ -614,55 +555,20 @@ def make_regional_prompter_tab(target):
 
 
 def make_regional_prompter_status_section(target):
-    status = ['RP Calc Mode',
-              'RP Base Ratios',
-              'RP Use Base',
-              'RP Use Common',
-              'RP Use Ncommon',
-              'RP Divide mode',
-              'RP Mask submode',
-              'RP Prompt submode',
-              'RP Change AND',
-              'RP LoRA Neg U Ratios',
-              'RP LoRA Neg Te Ratios',
-              'RP threshold']
+    status = [['RP Calc Mode', 'Generation Mode'],
+              ['RP Base Ratios', 'Base prompt ratio'],
+              ['RP Use Base', 'Use base prompt'],
+              ['RP Use Common', 'Use common prompt'],
+              ['RP Use Ncommon', 'Use negative prompt'],
+              ['RP Divide mode', 'Divide mode'],
+              ['RP Mask submode', 'Mask submode'],
+              ['RP Prompt submode', 'Prompt submode'],
+              ['RP Change AND', 'Change "AND" to "BREAK"'],
+              ['RP LoRA Neg U Ratios', 'Lora negative UNet Ratio'],
+              ['RP LoRA Neg Te Ratios', 'Lora negative TEnc Ratio'],
+              ['RP threshold', 'Threshold']]
     status_section = QGroupBox()
-    status_section_label_layout = QVBoxLayout()
-    for tmp in status:
-        label_layout = QHBoxLayout()
-        item = target.params.get(tmp)
-        if not item:
-            item = 'None'
-        if tmp == 'RP Calc Mode':
-            tmp = 'Generation Mode'
-        elif tmp == 'RP Use Base':
-            tmp = 'Use base prompt'
-        elif tmp == 'RP Base Ratios':
-            tmp = 'Base ratio'
-        elif tmp == 'RP Use Common':
-            tmp = 'Use common prompt'
-        elif tmp == 'RP Use Ncommon':
-            tmp = 'Use neg. common prompt'
-        elif tmp == 'RP Change AND':
-            tmp = 'Change "AND" to "BREAK"'
-        elif tmp == 'RP LoRA Neg U Ratios':
-            tmp = 'Lora neg. UNet Ratio'
-        elif tmp == 'RP LoRA Neg Te Ratios':
-            tmp = 'Lora neg. TEnc Ratio'
-        else:
-            tmp = tmp.replace('RP ', '').capitalize()
-        title = QLabel(tmp)
-        value = QLabel(item)
-        size_policy_title = title.sizePolicy()
-        size_policy_value = value.sizePolicy()
-        size_policy_title.setHorizontalStretch(6)
-        size_policy_value.setHorizontalStretch(4)
-        title.setSizePolicy(size_policy_title)
-        value.setSizePolicy(size_policy_value)
-        label_layout.addWidget(title)
-        label_layout.addWidget(value)
-        status_section_label_layout.addLayout(label_layout)
-    status_section.setLayout(status_section_label_layout)
+    status_section.setLayout(label_maker(status, target, 6, 4))
     status_section.setTitle('Status')
     return status_section
 
@@ -764,11 +670,19 @@ def label_maker(status, target, stretch_title, stretch_value, selectable=False, 
     section_layout = QVBoxLayout()
     for tmp in status:
         label_layout = QHBoxLayout()
-        item = target.params.get(tmp)
+        if isinstance(tmp, list):
+            item = target.params.get(tmp[0])
+            if 'ControlNet' in tmp[0] and 'model' in tmp[0] and item:
+                item = item.replace(' ', '\n')
+            tmp = tmp[1]
+        else:
+            item = target.params.get(tmp)
         if not item and remove_if_none:
             continue
         elif not item:
             item = 'None'
+            if tmp == 'Keep input size':
+                item = 'False'
         title = QLabel(tmp)
         value = QLabel(item)
         if selectable:
