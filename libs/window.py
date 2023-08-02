@@ -16,7 +16,7 @@ class ResultWindow(QMainWindow):
     def __init__(self, targets=None):
         super().__init__()
         self.setWindowTitle('PNG Prompt Data')
-#        self.config = libs.configure.Config()
+        #        self.config = libs.configure.Config()
         self.models = model_hashes()
         self.params = []
         self.positive_for_copy = ''
@@ -48,18 +48,17 @@ class ResultWindow(QMainWindow):
             tab_page_layout = QVBoxLayout()
             inner_tab = QTabWidget()
 
-            label_group = QGroupBox()
-            label_group_layout = QHBoxLayout()
+            main_section = QGroupBox()
+            main_section_layout = QHBoxLayout()
 
-            label_layout = make_label_layout(tmp)
-            label_group_layout.addLayout(label_layout)
-            label_group.setLayout(label_group_layout)
-            tab_page_layout.addWidget(label_group)
+            main_section_layout.addLayout(make_main_section(tmp))
+            main_section.setLayout(main_section_layout)
+            tab_page_layout.addWidget(main_section)
 
             for i in range(8):
                 inner_page = QWidget()
                 if i == 0:
-                    inner_page.setLayout(make_textbox_tab(tmp))
+                    inner_page.setLayout(make_prompt_tab(tmp))
                     inner_tab.addTab(inner_page, 'Prompts')
                 if i == 1 and (tmp.params.get('Hires upscale') or tmp.params.get(
                         'Face restoration') or tmp.params.get('Lora')):
@@ -176,7 +175,7 @@ def model_hashes():
         return None
 
 
-def make_label_layout(target):
+def make_main_section(target):
     label_number = 0
     status = ['Filename',
               'Filepath',
@@ -186,79 +185,45 @@ def make_label_layout(target):
               'Eta',
               'Steps',
               'CFG scale',
-              'Dynamic thresholding enabled',
+              ['Dynamic thresholding enabled', 'CFG scale fix'],
               'Model',
               'Variation seed',
               'Variation seed strength',
               'Denoising strength',
               'Clip skip',
-              'Lora',
-              'Hires upscaler',
+              ['Lora', 'Lora in prompt'],
+              ['Hires upscaler', 'Hires.fix'],
               'ControlNet',
               'ENSD',
               'Version']
-    label_section_layout = QHBoxLayout()
-    label_group_layout = QVBoxLayout()
-    for tmp in status:
-        item = target.params.get(tmp)
-        if item:
-            if tmp == 'Filepath':
-                item = os.path.dirname(item)
-            if tmp == 'Denoising strength' and target.params.get('Hires upscaler'):
-                continue
-            label_layout = QHBoxLayout()
-            title = QLabel(tmp)
-            value = QLabel(item)
-            title.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-            value.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-            size_policy_title = title.sizePolicy()
-            size_policy_value = value.sizePolicy()
-            size_policy_title.setHorizontalStretch(1)
-            size_policy_value.setHorizontalStretch(2)
-            title.setSizePolicy(size_policy_title)
-            value.setSizePolicy(size_policy_value)
-            label_layout.addWidget(title)
-            label_layout.addWidget(value)
-            label_group_layout.addLayout(label_layout)
-            label_number = label_number + 1
-            if tmp == 'Lora':
-                title.setText('Lora in prompt')
-            elif tmp == 'Hires upscaler':
-                title.setText('Hires.fix')
-                value.setText('True')
-            elif tmp == 'Dynamic thresholding enabled':
-                title.setText('CFG scale fix')
-    if label_number < 15:
-        for i in range(15 - label_number):
-            margin_label = QLabel()
-            label_group_layout.addWidget(margin_label)
     filepath = target.params.get('Filepath')
+    if target.params.get('Hires upscaler'):
+        status.remove('Denoising strength')
+    main_section_layout = QHBoxLayout()
     pixmap_label = make_pixmap_label(filepath)
-    label_section_layout.addWidget(pixmap_label)
-    label_section_layout.addLayout(label_group_layout)
+    main_section_layout.addWidget(pixmap_label)
+    main_section_layout.addLayout(label_maker(status, target, 1, 2, True, True, 15))
 
-    return label_section_layout
+    return main_section_layout
 
 
-def make_pixmap_label(filepath):
+def make_pixmap_label(filepath, scale=350):
     pixmap = QPixmap(filepath)
-    pixmap = pixmap.scaled(350, 350, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
+    pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
     pixmap_label = QLabel()
     pixmap_label.setPixmap(pixmap)
     pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
     return pixmap_label
 
 
-def make_textbox_tab(target):
+def make_prompt_tab(target):
     textbox_tab_layout = QVBoxLayout()
     splitter = QSplitter(Qt.Orientation.Vertical)
     positive_text = target.params.get('Positive')
-    positive_prompt = QTextEdit()
-    positive_prompt.setPlainText(positive_text)
+    positive_prompt = QTextEdit(positive_text)
     positive_prompt.setReadOnly(True)
     negative_text = target.params.get('Negative')
-    negative_prompt = QTextEdit()
-    negative_prompt.setPlainText(negative_text)
+    negative_prompt = QTextEdit(negative_text)
     negative_prompt.setReadOnly(True)
 
     splitter.addWidget(positive_prompt)
@@ -270,7 +235,7 @@ def make_textbox_tab(target):
 
 def make_hires_lora_tab(target):
     tab_layout = QHBoxLayout()
-    hires_group = make_hires_group(target)
+    hires_group = make_hires_section(target)
     tab_layout.addLayout(hires_group, 3)
     lora_group = make_lora_section(target)
     tab_layout.addWidget(lora_group, 3)
@@ -279,130 +244,77 @@ def make_hires_lora_tab(target):
     return tab_layout
 
 
-def make_hires_group(target):
-    hires = ['Hires upscaler', 'Hires upscale', 'Hires resize', 'Hires steps', 'Denoising strength']
-    hires_group_layout = QVBoxLayout()
-    hires_section = QGroupBox()
-    hires_section.setTitle('Hires.fix')
+def make_hires_section(target):
     hires_section_layout = QVBoxLayout()
-    for tmp in hires:
-        label_layout = QHBoxLayout()
-        item = target.params.get(tmp)
-        if not item:
-            if tmp == 'Hires upscaler':
-                hires_section.setDisabled(True)
-            item = 'None'
-        tmp = tmp.replace('Hires ', '').capitalize().replace('strength', '')
-        title = QLabel(tmp)
-        value = QLabel(item)
-        size_policy_title = title.sizePolicy()
-        size_policy_value = value.sizePolicy()
-        size_policy_title.setHorizontalStretch(3)
-        size_policy_value.setHorizontalStretch(7)
-        title.setSizePolicy(size_policy_title)
-        value.setSizePolicy(size_policy_value)
-        label_layout.addWidget(title)
-        label_layout.addWidget(value)
-        hires_section_layout.addLayout(label_layout)
-    hires_section.setLayout(hires_section_layout)
 
-    label_layout = QHBoxLayout()
+    status = [['Hires upscaler', 'Upscaler'],
+              ['Hires upscale', 'Upscale'],
+              ['Hires resize', 'Resize'],
+              ['Hires steps', 'Steps'],
+              ['Denoising strength', 'Denoising']
+              ]
+    hires_group = QGroupBox()
+    hires_group.setTitle('Hires.fix')
+    if not target.params.get('Hires upscaler'):
+        hires_group.setDisabled(True)
+    else:
+        if not target.params.get(status[3][0]):
+            status[3][0] = 'Steps'
+    hires_group.setLayout(label_maker(status, target, 4, 6))
+
+    status = ['Face restoration']
     face_section = QGroupBox()
     face_section.setTitle('Face restoration')
-    name = 'Face restoration'
-    item = target.params.get(name)
+    item = target.params.get('Face restoration')
     if not item:
         face_section.setDisabled(True)
-        item = 'None'
-    title = QLabel(name)
-    value = QLabel(item)
-    size_policy_title = title.sizePolicy()
-    size_policy_value = value.sizePolicy()
-    size_policy_title.setHorizontalStretch(2)
-    size_policy_value.setHorizontalStretch(1)
-    title.setSizePolicy(size_policy_title)
-    value.setSizePolicy(size_policy_value)
-    label_layout.addWidget(title)
-    label_layout.addWidget(value)
-    face_section.setLayout(label_layout)
+    face_section.setLayout(label_maker(status, target, 2, 1, False))
 
-    hires_group_layout.addWidget(hires_section, 2)
-    hires_group_layout.addWidget(face_section, 1)
-    return hires_group_layout
+    hires_section_layout.addWidget(hires_group, 2)
+    hires_section_layout.addWidget(face_section, 1)
+    return hires_section_layout
 
 
 def make_lora_section(target):
-    label_cnt = 0
-    cnt = len(target.params)
     lora_section = QGroupBox()
-    loras = target.params.get('Lora')
     section_layout = QVBoxLayout()
-    if loras:
-        lora_section.setTitle('Lora in prompt : ' + loras)
-        for i in range(cnt):
-            key = 'Lora ' + str(i)
-            item = target.params.get(key)
-            if item or label_cnt < 10:
-                label_layout = QHBoxLayout()
-                if not item:
-                    key = ''
-                title = QLabel(key)
-                value = QLabel(item)
-                size_policy_title = title.sizePolicy()
-                size_policy_value = value.sizePolicy()
-                size_policy_title.setHorizontalStretch(1)
-                size_policy_value.setHorizontalStretch(2)
-                title.setSizePolicy(size_policy_title)
-                value.setSizePolicy(size_policy_value)
-                label_layout.addWidget(title)
-                label_layout.addWidget(value)
-                section_layout.addLayout(label_layout)
-                label_cnt = label_cnt + 1
+    lora_num = target.params.get('Lora')
+    if not lora_num:
+        caption = 'Lora in prompt : 0'
     else:
-        lora_section.setDisabled(True)
-        lora_section.setTitle('Lora : 0')
+        caption = 'Lora in prompt : ' + lora_num
+        loop_num = max(int(lora_num), 9) + 1
+        keyring = []
+        for i in range(loop_num):
+            key = 'Lora ' + str(i)
+            title = 'Lora ' + str(i + 1)
+            if target.params.get(key):
+                keyring.append([key, title])
+            else:
+                keyring.append([None, None])
+        section_layout.addLayout(label_maker(keyring, target, 3, 7))
     lora_section.setLayout(section_layout)
+    lora_section.setTitle(caption)
     return lora_section
 
 
 def make_addnet_section(target):
-    status = ['Module', 'Model', 'Weight A']
+    status = [['Module', 'Module'],
+              ['Model', 'Model'],
+              ['Weight A', 'UNet / TEnc']
+              ]
     addnet_section = QGroupBox()
-    section_layout = QVBoxLayout()
     addnet_section.setTitle('Additional Networks')
     addnet = target.params.get('AddNet Enabled')
+    section_layout = QVBoxLayout()
     if not addnet:
         addnet_section.setDisabled(True)
-    for i in range(1, 6):
-        for tmp in status:
-            label_layout = QHBoxLayout()
-            key = 'AddNet ' + tmp + ' ' + str(i)
-            item = target.params.get(key)
-            if tmp == 'Module' and item:
-                title = QLabel('Module ' + str(i))
-                value = QLabel(item)
-            elif tmp == 'Model' and item:
-                title = QLabel('Model')
-                item = item.replace('(', '[').replace(')', ']')
-                value = QLabel(item)
-            elif tmp == 'Weight A' and item:
-                title = QLabel('UNet / TEnc')
-                item = float(item)
-                item_2 = float(target.params.get('AddNet Weight B ' + str(i)))
-                item = str(item) + ' / ' + str(item_2)
-                value = QLabel(item)
-            else:
-                title = QLabel()
-                value = QLabel()
-            size_policy_title = title.sizePolicy()
-            size_policy_value = value.sizePolicy()
-            size_policy_title.setHorizontalStretch(1)
-            size_policy_value.setHorizontalStretch(3)
-            title.setSizePolicy(size_policy_title)
-            value.setSizePolicy(size_policy_value)
-            label_layout.addWidget(title)
-            label_layout.addWidget(value)
-            section_layout.addLayout(label_layout)
+    else:
+        for i in range(1, 6):
+            key = [['AddNet ' + value[0] + ' ' + str(i), value[1]] for value in status]
+            if not target.params.get(key[0][0]):
+                key = [None, None, None]
+            section_layout.addLayout(label_maker(key, target, 1, 3))
     addnet_section.setLayout(section_layout)
     return addnet_section
 
@@ -410,9 +322,9 @@ def make_addnet_section(target):
 def make_tiled_diffusion_tab(target):
     tab_layout = QHBoxLayout()
     tiled_diffusion_section = QVBoxLayout()
-    tiled_diffusion_basic_info = make_tiled_diffusion_group(target)
-    noise_inversion_info = make_noise_inversion_group(target)
-    region_control_info = region_control_group(target)
+    tiled_diffusion_basic_info = make_tiled_diffusion_section(target)
+    noise_inversion_info = make_noise_inversion_section(target)
+    region_control_info = region_control_section(target)
 
     tiled_diffusion_section.addWidget(tiled_diffusion_basic_info)
     tiled_diffusion_section.addWidget(noise_inversion_info)
@@ -422,7 +334,7 @@ def make_tiled_diffusion_tab(target):
     return tab_layout
 
 
-def make_tiled_diffusion_group(target):
+def make_tiled_diffusion_section(target):
     status = ['Method',
               'Keep input size',
               'Tile batch size',
@@ -438,7 +350,7 @@ def make_tiled_diffusion_group(target):
     return section
 
 
-def make_noise_inversion_group(target):
+def make_noise_inversion_section(target):
     status = ['Noise inversion Kernel size',
               'Noise inversion Renoise strength',
               'Noise inversion Retouch',
@@ -453,45 +365,32 @@ def make_noise_inversion_group(target):
     return section
 
 
-def region_control_group(target):
-    status = ['blend mode',
-              'feather ratio',
-              'w',
-              'h',
-              'x',
-              'y',
-              'seed',
-              'prompt',
-              'neg prompt'
+def region_control_section(target):
+    status = [['blend mode', 'Blend mode'],
+              ['feather ratio', 'Feather ratio'],
+              ['w', 'Width'],
+              ['h', 'Height'],
+              ['x', 'X'],
+              ['y', 'Y'],
+              ['seed', 'Seed'],
               ]
     region_control_tab = QTabWidget()
-    for i in range(8):
-        region_number = 'Region ' + str(i + 1)
+    for i in range(1, 9):
+        region_number = 'Region ' + str(i)
         check = target.params.get(region_number + ' enable')
-        if check or i == 0:
+        if check or i == 1:
             page = QWidget()
             region_control_section_layout = QVBoxLayout()
-            for tmp in status:
-                label_layout = QHBoxLayout()
-                key = region_number + ' ' + tmp
-                item = target.params.get(key)
-                title = tmp.replace('neg', 'negative').capitalize()
-                if not item:
-                    item = 'None'
-                if title == 'W':
-                    title = 'Width'
-                elif title == 'H':
-                    title = 'Height'
-                if 'prompt' in tmp:
-                    status_label = QTextEdit()
-                    status_label.setText(item)
-                    label_layout.addWidget(status_label)
-                else:
-                    status_label = QLabel(title)
-                    values_label = QLabel(item)
-                    label_layout.addWidget(status_label)
-                    label_layout.addWidget(values_label)
-                region_control_section_layout.addLayout(label_layout)
+            keys = [[region_number + ' ' + value[0], value[1]] for value in status]
+            region_control_section_layout.addLayout(label_maker(keys, target, 1, 1, True))
+            str_prompt = target.params.get(region_number + ' prompt')
+            prompt = QTextEdit(str_prompt)
+            prompt.setReadOnly(True)
+            region_control_section_layout.addWidget(prompt)
+            str_negative_prompt = target.params.get(region_number + ' neg prompt')
+            negative_prompt = QTextEdit(str_negative_prompt)
+            negative_prompt.setReadOnly(True)
+            region_control_section_layout.addWidget(negative_prompt)
             page.setLayout(region_control_section_layout)
             region_control_tab.addTab(page, region_number)
             if not check:
@@ -666,23 +565,36 @@ def dynamic_thresholding_section(target):
     return section
 
 
-def label_maker(status, target, stretch_title, stretch_value, selectable=False, remove_if_none=False):
+def label_maker(status, target, stretch_title, stretch_value, selectable=False, remove_if_none=False, minimums=99):
+    label_count = 0
     section_layout = QVBoxLayout()
     for tmp in status:
         label_layout = QHBoxLayout()
         if isinstance(tmp, list):
             item = target.params.get(tmp[0])
-            if 'ControlNet' in tmp[0] and 'model' in tmp[0] and item:
-                item = item.replace(' ', '\n')
+            if item:
+                if 'ControlNet' in tmp[0] and 'model' in tmp[0]:
+                    item = item.replace(' ', '\n')
+                elif 'AddNet' in tmp[0] and 'Model' in tmp[0]:
+                    item = item.replace('(', '[').replace(')', ']')
+                elif 'AddNet' in tmp[0] and 'Weight A' in tmp[0]:
+                    weight_b = target.params.get(tmp[0].replace(' A ', ' B '))
+                    item = item + ' / ' + weight_b
+                elif 'Lora ' in tmp[0]:
+                    item = item.replace(' [', '\n[')
+                elif tmp[1] == 'Hires.fix':
+                    item = 'True'
             tmp = tmp[1]
         else:
             item = target.params.get(tmp)
         if not item and remove_if_none:
             continue
-        elif not item:
+        elif tmp and not item:
             item = 'None'
             if tmp == 'Keep input size':
                 item = 'False'
+            elif tmp == 'Filepath':
+                item = os.path.dirname(item)
         title = QLabel(tmp)
         value = QLabel(item)
         if selectable:
@@ -697,6 +609,11 @@ def label_maker(status, target, stretch_title, stretch_value, selectable=False, 
         label_layout.addWidget(title)
         label_layout.addWidget(value)
         section_layout.addLayout(label_layout)
+        label_count = label_count + 1
+    if 20 > minimums > label_count:
+        for i in range(minimums - label_count):
+            margin = QLabel()
+            section_layout.addWidget(margin)
     return section_layout
 
 
