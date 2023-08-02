@@ -5,7 +5,7 @@ import csv
 import libs.parser
 import libs.decoder
 import libs.configure
-from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout
+from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout
 from PyQt6.QtWidgets import QTabWidget, QTextEdit, QPushButton, QFileDialog
 from PyQt6.QtWidgets import QSplitter, QMainWindow, QGroupBox
 from PyQt6.QtGui import QPixmap, QPainter, QColor
@@ -25,11 +25,14 @@ class ResultWindow(QMainWindow):
         self.tab_index = 0
         self.init_ui(targets)
 
-        window_width = 1024  # self.config.get_value('Window', 'WindowWidth')
-        window_height = 920  # self.config.get_value('Window', 'WindowHeight')
+        size_hint_width = self.sizeHint().width()
+        size_hint_height = self.sizeHint().height()
 
+        window_width = size_hint_width if 1024 > size_hint_width else 640
+        window_height = size_hint_height if 900 > size_hint_height else 900
         self.resize(window_width, window_height)
         self.center()
+        print(size_hint_height)
 
     def init_ui(self, targets):
         for filepath in targets:
@@ -69,13 +72,13 @@ class ResultWindow(QMainWindow):
                     inner_tab.addTab(inner_page, 'Tiled diffusion')
                 if i == 3 and tmp.params.get('ControlNet'):
                     inner_page.setLayout(make_control_net_tab(tmp, 0))
-                    inner_tab.addTab(inner_page, 'ControlNet Unit 0-2')
-                if i == 4 and tmp.params.get('ControlNet 3'):
-                    inner_page.setLayout(make_control_net_tab(tmp, 3))
-                    inner_tab.addTab(inner_page, 'ControlNet Unit 3-5')
+                    inner_tab.addTab(inner_page, 'ControlNet Unit 0-1')
+                if i == 4 and tmp.params.get('ControlNet 2'):
+                    inner_page.setLayout(make_control_net_tab(tmp, 2))
+                    inner_tab.addTab(inner_page, 'ControlNet Unit 2-3')
                 if i == 5 and tmp.params.get('ControlNet 6'):
-                    inner_page.setLayout(make_control_net_tab(tmp, 6))
-                    inner_tab.addTab(inner_page, 'ControlNet Unit 6-8')
+                    inner_page.setLayout(make_control_net_tab(tmp, 4))
+                    inner_tab.addTab(inner_page, 'ControlNet Unit 4-5')
                 if i == 6 and tmp.params.get('RP Active'):
                     inner_page.setLayout(make_regional_prompter_tab(tmp))
                     inner_tab.addTab(inner_page, 'Regional Prompter')
@@ -93,12 +96,12 @@ class ResultWindow(QMainWindow):
         root_layout.addWidget(root_tab)
 
         button_layout = QHBoxLayout()
-        button_text = ['Positive to Clipboard',
-                       'Negative to Clipboard',
-                       'Seed to Clipboard',
+        button_text = ['Copy positive',
+                       'Copy negative',
+                       'Copy seed',
                        'Export JSON (This image)',
                        'Export JSON (All images)',
-                       'Reselect files']
+                       'Reselect']
         for tmp in button_text:
             copy_button = QPushButton(tmp)
             button_layout.addWidget(copy_button)
@@ -128,13 +131,13 @@ class ResultWindow(QMainWindow):
     def button_clicked(self):
         where_from = self.sender().text()
         clipboard = QApplication.clipboard()
-        if where_from == 'Positive to Clipboard':
+        if where_from == 'Copy positive':
             if self.positive_for_copy:
                 clipboard.setText(self.positive_for_copy)
-        elif where_from == 'Negative to Clipboard':
+        elif where_from == 'Copy negative':
             if self.negative_for_copy:
                 clipboard.setText(self.negative_for_copy)
-        elif where_from == 'Seed to Clipboard':
+        elif where_from == 'Copy seed':
             if self.seed_for_copy:
                 clipboard.setText(self.seed_for_copy)
         elif where_from == 'Export JSON (This image)':
@@ -149,7 +152,7 @@ class ResultWindow(QMainWindow):
                     dict_list.append(tmp.params)
                 with open(filepath, 'w') as f:
                     json.dump(dict_list, f, sort_keys=True, indent=4, ensure_ascii=False)
-        elif where_from == 'Reselect files':
+        elif where_from == 'Reselect':
             filepath = file_choose_dialog()[0]
             if filepath:
                 self.params = []
@@ -176,7 +179,6 @@ def model_hashes():
 
 
 def make_main_section(target):
-    label_number = 0
     status = ['Filename',
               'Filepath',
               'Size',
@@ -187,8 +189,8 @@ def make_main_section(target):
               'CFG scale',
               ['Dynamic thresholding enabled', 'CFG scale fix'],
               'Model',
-              'Variation seed',
-              'Variation seed strength',
+              ['Variation seed', 'Var. seed'],
+              ['Variation seed strength', 'Var. strength'],
               'Denoising strength',
               'Clip skip',
               ['Lora', 'Lora in prompt'],
@@ -201,8 +203,8 @@ def make_main_section(target):
         status.remove('Denoising strength')
     main_section_layout = QHBoxLayout()
     pixmap_label = make_pixmap_label(filepath)
-    main_section_layout.addWidget(pixmap_label)
-    main_section_layout.addLayout(label_maker(status, target, 1, 2, True, True, 15))
+    main_section_layout.addWidget(pixmap_label, 1)
+    main_section_layout.addLayout(label_maker(status, target, 1, 1, True, True, 15), 1)
 
     return main_section_layout
 
@@ -220,10 +222,12 @@ def make_prompt_tab(target):
     textbox_tab_layout = QVBoxLayout()
     splitter = QSplitter(Qt.Orientation.Vertical)
     positive_text = target.params.get('Positive')
-    positive_prompt = QTextEdit(positive_text)
+    positive_prompt = QTextEdit()
+    positive_prompt.setPlainText(positive_text)
     positive_prompt.setReadOnly(True)
     negative_text = target.params.get('Negative')
     negative_prompt = QTextEdit(negative_text)
+    negative_prompt.setPlainText(negative_text)
     negative_prompt.setReadOnly(True)
 
     splitter.addWidget(positive_prompt)
@@ -300,8 +304,8 @@ def make_lora_section(target):
 
 def make_addnet_section(target):
     status = [['Module', 'Module'],
-              ['Model', 'Model'],
-              ['Weight A', 'UNet / TEnc']
+              ['Weight A', 'UNet / TEnc'],
+              ['Model', 'Model']
               ]
     addnet_section = QGroupBox()
     addnet_section.setTitle('Additional Networks')
@@ -314,7 +318,7 @@ def make_addnet_section(target):
             key = [['AddNet ' + value[0] + ' ' + str(i), value[1]] for value in status]
             if not target.params.get(key[0][0]):
                 key = [None, None, None]
-            section_layout.addLayout(label_maker(key, target, 1, 3))
+            section_layout.addLayout(label_maker(key, target, 1, 2))
     addnet_section.setLayout(section_layout)
     return addnet_section
 
@@ -346,7 +350,7 @@ def make_tiled_diffusion_section(target):
               ]
     section = QGroupBox()
     section.setTitle('Tiled diffusion')
-    section.setLayout(label_maker(status, target, 1, 2))
+    section.setLayout(label_maker(status, target, 2, 3))
     return section
 
 
@@ -361,7 +365,7 @@ def make_noise_inversion_section(target):
     if not target.params.get('Noise inversion'):
         section.setDisabled(True)
     status = [[value, value.replace('Noise inversion ', '')] for value in status]
-    section.setLayout(label_maker(status, target, 1, 2))
+    section.setLayout(label_maker(status, target, 2, 3))
     return section
 
 
@@ -409,7 +413,7 @@ def make_control_net_tab(target, starts):
               ['weight', 'Weight'],
               ['preprocessor params', 'Preproc. params'],
               ]
-    for i in range(starts, 3):
+    for i in range(starts, 2):
         control_net_enable = target.params.get('ControlNet ' + str(i))
         status = [['ControlNet ' + str(i) + ' ' + value[0], value[1]] for value in status]
         section = QGroupBox()
@@ -467,7 +471,7 @@ def make_regional_prompter_status_section(target):
               ['RP LoRA Neg Te Ratios', 'Lora negative TEnc Ratio'],
               ['RP threshold', 'Threshold']]
     status_section = QGroupBox()
-    status_section.setLayout(label_maker(status, target, 6, 4))
+    status_section.setLayout(label_maker(status, target, 2, 1))
     status_section.setTitle('Status')
     return status_section
 
@@ -567,16 +571,15 @@ def dynamic_thresholding_section(target):
 
 def label_maker(status, target, stretch_title, stretch_value, selectable=False, remove_if_none=False, minimums=99):
     label_count = 0
-    section_layout = QVBoxLayout()
+    section_layout = QGridLayout()
     for tmp in status:
-        label_layout = QHBoxLayout()
         if isinstance(tmp, list):
             item = target.params.get(tmp[0])
             if item:
                 if 'ControlNet' in tmp[0] and 'model' in tmp[0]:
                     item = item.replace(' ', '\n')
                 elif 'AddNet' in tmp[0] and 'Model' in tmp[0]:
-                    item = item.replace('(', '[').replace(')', ']')
+                    item = item.replace('(', '\n[').replace(')', ']')
                 elif 'AddNet' in tmp[0] and 'Weight A' in tmp[0]:
                     weight_b = target.params.get(tmp[0].replace(' A ', ' B '))
                     item = item + ' / ' + weight_b
@@ -598,7 +601,6 @@ def label_maker(status, target, stretch_title, stretch_value, selectable=False, 
         title = QLabel(tmp)
         value = QLabel(item)
         if selectable:
-            title.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
             value.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         size_policy_title = title.sizePolicy()
         size_policy_value = value.sizePolicy()
@@ -606,14 +608,14 @@ def label_maker(status, target, stretch_title, stretch_value, selectable=False, 
         size_policy_value.setHorizontalStretch(stretch_value)
         title.setSizePolicy(size_policy_title)
         value.setSizePolicy(size_policy_value)
-        label_layout.addWidget(title)
-        label_layout.addWidget(value)
-        section_layout.addLayout(label_layout)
+        section_layout.addWidget(title, label_count, 0)
+        section_layout.addWidget(value, label_count, 1)
         label_count = label_count + 1
     if 20 > minimums > label_count:
         for i in range(minimums - label_count):
             margin = QLabel()
-            section_layout.addWidget(margin)
+            section_layout.addWidget(margin, label_count, 0)
+            label_count = label_count + 1
     return section_layout
 
 
