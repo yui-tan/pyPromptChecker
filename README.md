@@ -50,7 +50,7 @@ options:
 
 # ToDo
 ***
- - [ ] Refactoring and clean up
+ - [x] Refactoring and clean up
  - [x] Add support for hires.fix status  
  - [x] Add support for ControlNet status  
  - [x] Add support for Additional Networks status  
@@ -59,6 +59,6 @@ options:
  - [x] Coding Reselect files function
  - [x] Change initial behaviour by argument
  - [ ] Various hardcodings into a Configuration Class
- - [ ] Make it installable using pip
+ - [x] Make it installable using pip
  - [ ] Add support for import JSON
  - [ ] Get marry to Miku
