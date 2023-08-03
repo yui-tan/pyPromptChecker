@@ -1,5 +1,5 @@
 # pyPromptChecker  
-***
+
 A tiny script for AI images created by AUTOMATIC/stable-diffusion-webui  
 For my personal use  
 Supported only PNG files
@@ -19,15 +19,13 @@ ControlNet status screenshot
 Regional prompter status screenshot
 ![](https://user-images.githubusercontent.com/121333129/257389785-b9b65076-ec8d-4fea-a9ed-fddebfde641f.png)
 # Requirements  
-***
+
+- Python 3.x
 - PyQt6
 - pypng  
-````
-pip3 install PyQt6 pypng
-````
 
 # Howto
-***
+
 ````
 cd /path/to/pyPromptChecker
 pip3 install -e.
@@ -49,7 +47,7 @@ options:
 ````
 
 # ToDo
-***
+
  - [x] Refactoring and clean up
  - [x] Add support for hires.fix status  
  - [x] Add support for ControlNet status  
