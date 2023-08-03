@@ -2,8 +2,9 @@ import os
 import sys
 import argparse
 import glob
-import libs.window
-import libs.decoder
+
+from pyPromptChecker.lib import decoder
+from pyPromptChecker.lib import window
 
 
 def directory_to_filelist(directory_path):
@@ -27,7 +28,7 @@ def check_files(target_list):
             file_is_not_found_list.append(filepath)
         elif not os.path.isfile(filepath):
             this_is_directory_list.append(filepath)
-        elif not libs.decoder.png_checker(filepath):
+        elif not decoder.png_checker(filepath):
             this_file_is_not_png_file_list.append(filepath)
         else:
             valid_file_list.append(filepath)
@@ -51,10 +52,10 @@ def main():
     elif args.directory:
         filepaths = directory_to_filelist(args.directory)
     elif args.ask:
-        src = libs.window.directory_choose_dialog(True)
+        src = window.directory_choose_dialog(True)
         filepaths = directory_to_filelist(src)
     else:
-        src = libs.window.file_choose_dialog(True)
+        src = window.file_choose_dialog(True)
         filepaths = src[0]
 
     valid_filepath, not_found_list, directory_list, not_png_list = check_files(filepaths)
@@ -77,7 +78,7 @@ def main():
         sys.exit()
     print('a hoy!!!!')
     valid_filepath.sort()
-    libs.window.result_window(valid_filepath)
+    window.result_window(valid_filepath)
 
 
 if __name__ == '__main__':

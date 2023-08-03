@@ -2,12 +2,11 @@ import os
 import json
 import sys
 import csv
-import libs.parser
-import libs.decoder
-import libs.configure
+import pyPromptChecker.lib.decoder
+import pyPromptChecker.lib.parser
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout
 from PyQt6.QtWidgets import QTabWidget, QTextEdit, QPushButton, QFileDialog
-from PyQt6.QtWidgets import QSplitter, QMainWindow, QGroupBox
+from PyQt6.QtWidgets import QSplitter, QMainWindow, QGroupBox, QScrollArea
 from PyQt6.QtGui import QPixmap, QPainter, QColor
 from PyQt6.QtCore import Qt
 
@@ -16,7 +15,6 @@ class ResultWindow(QMainWindow):
     def __init__(self, targets=None):
         super().__init__()
         self.setWindowTitle('PNG Prompt Data')
-        #        self.config = libs.configure.Config()
         self.models = model_hashes()
         self.params = []
         self.positive_for_copy = ''
@@ -36,8 +34,8 @@ class ResultWindow(QMainWindow):
 
     def init_ui(self, targets):
         for filepath in targets:
-            chunk_data = libs.decoder.decode_text_chunk(filepath, 1)
-            parameters = libs.parser.parse_parameter(chunk_data, filepath, self.models)
+            chunk_data = pyPromptChecker.lib.decoder.decode_text_chunk(filepath, 1)
+            parameters = pyPromptChecker.lib.parser.parse_parameter(chunk_data, filepath, self.models)
             self.params.append(parameters)
         self.positive_for_copy = self.params[0].params.get('Positive')
         self.negative_for_copy = self.params[0].params.get('Negative')
@@ -58,31 +56,27 @@ class ResultWindow(QMainWindow):
             main_section.setLayout(main_section_layout)
             tab_page_layout.addWidget(main_section)
 
-            for i in range(8):
+            for i in range(6):
                 inner_page = QWidget()
                 if i == 0:
                     inner_page.setLayout(make_prompt_tab(tmp))
                     inner_tab.addTab(inner_page, 'Prompts')
-                if i == 1 and (tmp.params.get('Hires upscale') or tmp.params.get(
-                        'Face restoration') or tmp.params.get('Lora')):
-                    inner_page.setLayout(make_hires_lora_tab(tmp))
-                    inner_tab.addTab(inner_page, 'Hires / Loras')
-                if i == 2 and tmp.params.get('Tiled diffusion'):
+                if i == 1 and (tmp.params.get('Hires upscaler') or tmp.params.get('Face restoration') or tmp.params.get('Dynamic thresholding enabled')):
+                    inner_page.setLayout(make_hires_other_tab(tmp))
+                    inner_tab.addTab(inner_page, 'Hires.fix / Other')
+                if i == 2 and (tmp.params.get('Lora')):
+                    inner_page.setLayout(make_lora_addnet_tab(tmp))
+                    inner_tab.addTab(inner_page, 'Lora')
+                if i == 3 and tmp.params.get('Tiled diffusion'):
                     inner_page.setLayout(make_tiled_diffusion_tab(tmp))
                     inner_tab.addTab(inner_page, 'Tiled diffusion')
-                if i == 3 and tmp.params.get('ControlNet'):
-                    inner_page.setLayout(make_control_net_tab(tmp, 0))
-                    inner_tab.addTab(inner_page, 'ControlNet Unit 0-1')
-                if i == 4 and tmp.params.get('ControlNet 2'):
-                    inner_page.setLayout(make_control_net_tab(tmp, 2))
-                    inner_tab.addTab(inner_page, 'ControlNet Unit 2-3')
-                if i == 5 and tmp.params.get('ControlNet 6'):
-                    inner_page.setLayout(make_control_net_tab(tmp, 4))
-                    inner_tab.addTab(inner_page, 'ControlNet Unit 4-5')
-                if i == 6 and tmp.params.get('RP Active'):
+                if i == 4 and tmp.params.get('ControlNet'):
+                    inner_page = (make_control_net_tab(tmp, 0))
+                    inner_tab.addTab(inner_page, 'ControlNet')
+                if i == 5 and tmp.params.get('RP Active'):
                     inner_page.setLayout(make_regional_prompter_tab(tmp))
                     inner_tab.addTab(inner_page, 'Regional Prompter')
-                if i == 7 and tmp.params.get('Dynamic thresholding enabled'):
+                if i == 6 and tmp.params.get('Dynamic thresholding enabled'):
                     inner_page.setLayout(make_other_tab(tmp))
                     inner_tab.addTab(inner_page, 'Other')
 
@@ -168,7 +162,7 @@ def result_window(target_data):
 
 def model_hashes():
     directory = os.path.dirname(__file__)
-    filename = os.path.join(directory, 'model_list.csv')
+    filename = os.path.join(directory, '../../model_list.csv')
     if os.path.exists(filename):
         with open(filename, encoding='utf8', newline='') as f:
             csvreader = csv.reader(f)
@@ -237,14 +231,12 @@ def make_prompt_tab(target):
     return textbox_tab_layout
 
 
-def make_hires_lora_tab(target):
+def make_hires_other_tab(target):
     tab_layout = QHBoxLayout()
-    hires_group = make_hires_section(target)
-    tab_layout.addLayout(hires_group, 3)
-    lora_group = make_lora_section(target)
-    tab_layout.addWidget(lora_group, 3)
-    addnet_group = make_addnet_section(target)
-    tab_layout.addWidget(addnet_group, 4)
+    hires_section = make_hires_section(target)
+    tab_layout.addLayout(hires_section)
+    cfg_fix_section = dynamic_thresholding_section(target)
+    tab_layout.addWidget(cfg_fix_section)
     return tab_layout
 
 
@@ -279,6 +271,32 @@ def make_hires_section(target):
     return hires_section_layout
 
 
+def dynamic_thresholding_section(target):
+    status = ['CFG mode',
+              'CFG scale minimum',
+              'Mimic mode',
+              'Mimic scale',
+              'Mimic scale minimum',
+              'Scheduler value',
+              'Threshold percentile'
+              ]
+    section = QGroupBox()
+    section.setLayout(label_maker(status, target, 6, 4))
+    section.setTitle('Dynamic thresholding (CFG scale fix)')
+    if not target.params.get('Dynamic thresholding enabled'):
+        section.setDisabled(True)
+    return section
+
+
+def make_lora_addnet_tab(target):
+    tab_layout = QHBoxLayout()
+    lora_group = make_lora_section(target)
+    tab_layout.addWidget(lora_group, 3)
+    addnet_group = make_addnet_section(target)
+    tab_layout.addWidget(addnet_group, 4)
+    return tab_layout
+
+
 def make_lora_section(target):
     lora_section = QGroupBox()
     section_layout = QVBoxLayout()
@@ -287,7 +305,7 @@ def make_lora_section(target):
         caption = 'Lora in prompt : 0'
     else:
         caption = 'Lora in prompt : ' + lora_num
-        loop_num = max(int(lora_num), 9) + 1
+        loop_num = max(int(lora_num), 14) + 1
         keyring = []
         for i in range(loop_num):
             key = 'Lora ' + str(i)
@@ -296,7 +314,7 @@ def make_lora_section(target):
                 keyring.append([key, title])
             else:
                 keyring.append([None, None])
-        section_layout.addLayout(label_maker(keyring, target, 3, 7))
+        section_layout.addLayout(label_maker(keyring, target, 1, 3))
     lora_section.setLayout(section_layout)
     lora_section.setTitle(caption)
     return lora_section
@@ -308,18 +326,21 @@ def make_addnet_section(target):
               ['Model', 'Model']
               ]
     addnet_section = QGroupBox()
-    addnet_section.setTitle('Additional Networks')
     addnet = target.params.get('AddNet Enabled')
     section_layout = QVBoxLayout()
     if not addnet:
         addnet_section.setDisabled(True)
+        cnt = 0
     else:
+        cnt = 5
         for i in range(1, 6):
             key = [['AddNet ' + value[0] + ' ' + str(i), value[1]] for value in status]
             if not target.params.get(key[0][0]):
                 key = [None, None, None]
-            section_layout.addLayout(label_maker(key, target, 1, 2))
+                cnt = cnt - 1
+            section_layout.addLayout(label_maker(key, target, 1, 3))
     addnet_section.setLayout(section_layout)
+    addnet_section.setTitle('Additional Networks : ' + str(cnt))
     return addnet_section
 
 
@@ -403,6 +424,8 @@ def region_control_section(target):
 
 
 def make_control_net_tab(target, starts):
+    control_tab = QScrollArea()
+    controlnet_widget = QWidget()
     page_layout = QHBoxLayout()
     status = [['model', 'Model'],
               ['control mode', 'Control mode'],
@@ -413,7 +436,13 @@ def make_control_net_tab(target, starts):
               ['weight', 'Weight'],
               ['preprocessor params', 'Preproc. params'],
               ]
-    for i in range(starts, 2):
+    control_tab.setWidgetResizable(True)
+    control_tab.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+    control_tab.setStyleSheet('QScrollArea {background-color:transparent;}')
+
+    unit_num = int(target.params.get('ControlNet'))
+    loop_num = 2 if 2 > unit_num else unit_num
+    for i in range(starts, loop_num):
         control_net_enable = target.params.get('ControlNet ' + str(i))
         status = [['ControlNet ' + str(i) + ' ' + value[0], value[1]] for value in status]
         section = QGroupBox()
@@ -422,7 +451,10 @@ def make_control_net_tab(target, starts):
             section.setDisabled(True)
         section.setLayout(label_maker(status, target, 4, 6))
         page_layout.addWidget(section)
-    return page_layout
+    controlnet_widget.setLayout(page_layout)
+    controlnet_widget.setStyleSheet('background-color:transparent')
+    control_tab.setWidget(controlnet_widget)
+    return control_tab
 
 
 def make_regional_prompter_tab(target, scale=500):
@@ -554,52 +586,42 @@ def make_other_tab(target):
     return page_layout
 
 
-def dynamic_thresholding_section(target):
-    status = ['CFG mode',
-              'CFG scale minimum',
-              'Mimic mode',
-              'Mimic scale',
-              'Mimic scale minimum',
-              'Scheduler value',
-              'Threshold percentile'
-              ]
-    section = QGroupBox()
-    section.setLayout(label_maker(status, target, 6, 4))
-    section.setTitle('Dynamic thresholding (CFG scale fix)')
-    return section
-
-
 def label_maker(status, target, stretch_title, stretch_value, selectable=False, remove_if_none=False, minimums=99):
     label_count = 0
     section_layout = QGridLayout()
     for tmp in status:
+        maximum_size = 15
         if isinstance(tmp, list):
             item = target.params.get(tmp[0])
             if item:
                 if 'ControlNet' in tmp[0] and 'model' in tmp[0]:
                     item = item.replace(' ', '\n')
                 elif 'AddNet' in tmp[0] and 'Model' in tmp[0]:
-                    item = item.replace('(', '\n[').replace(')', ']')
+                    item = item.replace('(', ' [').replace(')', ']')
                 elif 'AddNet' in tmp[0] and 'Weight A' in tmp[0]:
                     weight_b = target.params.get(tmp[0].replace(' A ', ' B '))
                     item = item + ' / ' + weight_b
                 elif 'Lora ' in tmp[0]:
-                    item = item.replace(' [', '\n[')
+                    item = item.replace(' [', ' [')
                 elif tmp[1] == 'Hires.fix':
                     item = 'True'
             tmp = tmp[1]
         else:
             item = target.params.get(tmp)
+        if tmp == 'Filepath':
+            item = os.path.dirname(item)
         if not item and remove_if_none:
             continue
         elif tmp and not item:
             item = 'None'
             if tmp == 'Keep input size':
                 item = 'False'
-            elif tmp == 'Filepath':
-                item = os.path.dirname(item)
         title = QLabel(tmp)
         value = QLabel(item)
+        title.setMaximumSize(1000, maximum_size)
+        if value.sizeHint().height() > 30:
+            maximum_size = maximum_size * 2
+        value.setMaximumSize(1000, maximum_size)
         if selectable:
             value.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         size_policy_title = title.sizePolicy()
