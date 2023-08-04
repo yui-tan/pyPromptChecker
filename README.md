@@ -56,7 +56,7 @@ options:
  - [x] Coding Export JSON (All Images) function  
  - [x] Coding Reselect files function
  - [x] Change initial behaviour by argument
- - [ ] Various hardcodings into a Configuration Class
+ - [x] Various hardcodings into a Configuration Class
  - [x] Make it installable using pip
  - [ ] Add support for import JSON
  - [ ] Get marry to Miku

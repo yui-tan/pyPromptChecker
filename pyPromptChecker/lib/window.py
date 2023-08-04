@@ -4,6 +4,7 @@ import sys
 import csv
 import pyPromptChecker.lib.decoder
 import pyPromptChecker.lib.parser
+import pyPromptChecker.lib.configure
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout
 from PyQt6.QtWidgets import QTabWidget, QTextEdit, QPushButton, QFileDialog
 from PyQt6.QtWidgets import QSplitter, QMainWindow, QGroupBox, QScrollArea
@@ -14,6 +15,7 @@ from PyQt6.QtCore import Qt
 class ResultWindow(QMainWindow):
     def __init__(self, targets=None):
         super().__init__()
+        self.config = pyPromptChecker.lib.configure.Configure()
         self.setWindowTitle('PNG Prompt Data')
         self.models = model_hashes()
         self.params = []
@@ -25,12 +27,13 @@ class ResultWindow(QMainWindow):
 
         size_hint_width = self.sizeHint().width()
         size_hint_height = self.sizeHint().height()
+        max_width = self.config.get_option('MaxWindowWidth')
+        max_height = self.config.get_option('MaxWindowHeight')
 
-        window_width = size_hint_width if 1024 > size_hint_width else 640
-        window_height = size_hint_height if 900 > size_hint_height else 900
+        window_width = size_hint_width if max_width > size_hint_width else max_width
+        window_height = size_hint_height if max_height > size_hint_height else max_height
         self.resize(window_width, window_height)
         self.center()
-        print(size_hint_height)
 
     def init_ui(self, targets):
         for filepath in targets:
@@ -52,33 +55,68 @@ class ResultWindow(QMainWindow):
             main_section = QGroupBox()
             main_section_layout = QHBoxLayout()
 
-            main_section_layout.addLayout(make_main_section(tmp))
+            pixmap_scale = self.config.get_option('PixmapSize')
+            main_section_layout.addLayout(make_main_section(tmp, pixmap_scale))
             main_section.setLayout(main_section_layout)
             tab_page_layout.addWidget(main_section)
 
-            for i in range(6):
-                inner_page = QWidget()
-                if i == 0:
-                    inner_page.setLayout(make_prompt_tab(tmp))
-                    inner_tab.addTab(inner_page, 'Prompts')
-                if i == 1 and (tmp.params.get('Hires upscaler') or tmp.params.get('Face restoration') or tmp.params.get('Dynamic thresholding enabled')):
-                    inner_page.setLayout(make_hires_other_tab(tmp))
-                    inner_tab.addTab(inner_page, 'Hires.fix / Other')
-                if i == 2 and (tmp.params.get('Lora')):
-                    inner_page.setLayout(make_lora_addnet_tab(tmp))
-                    inner_tab.addTab(inner_page, 'Lora')
-                if i == 3 and tmp.params.get('Tiled diffusion'):
-                    inner_page.setLayout(make_tiled_diffusion_tab(tmp))
-                    inner_tab.addTab(inner_page, 'Tiled diffusion')
-                if i == 4 and tmp.params.get('ControlNet'):
-                    inner_page = (make_control_net_tab(tmp, 0))
-                    inner_tab.addTab(inner_page, 'ControlNet')
-                if i == 5 and tmp.params.get('RP Active'):
-                    inner_page.setLayout(make_regional_prompter_tab(tmp))
-                    inner_tab.addTab(inner_page, 'Regional Prompter')
-                if i == 6 and tmp.params.get('Dynamic thresholding enabled'):
-                    inner_page.setLayout(make_other_tab(tmp))
-                    inner_tab.addTab(inner_page, 'Other')
+            hires_tab = ['Hires upscaler', 'Face restoration', 'Dynamic thresholding enabled']
+            lora_tab = ['Lora', 'AddNet Enabled']
+
+            tabs = [['Prompts', True, True],
+                    ['Hires.fix / CFG scale fix',
+                     any(key in v for v in tmp.params for key in hires_tab),
+                     self.config.get_option('HiresOthers')],
+                    ['Lora / Add networks',
+                     any(key in v for v in tmp.params for key in lora_tab),
+                     self.config.get_option('Lora')],
+                    ['Tiled diffusion',
+                     'Tiled diffusion' in tmp.params,
+                     self.config.get_option('TiledDiffusion')],
+                    ['Control net',
+                     'ControlNet' in tmp.params,
+                     self.config.get_option('ControlNet')],
+                    ['Regional prompter',
+                     'RP Active' in tmp.params,
+                     self.config.get_option('RegionalPrompter')]
+                    ]
+
+            for index, tab in enumerate(tabs):
+                if tab[1] and tab[2]:
+                    inner_page = QWidget()
+                    if index == 0:
+                        inner_page.setLayout(make_prompt_tab(tmp))
+                    if index == 1:
+                        inner_page.setLayout(make_hires_other_tab(tmp))
+                    if index == 2:
+                        inner_page.setLayout(make_lora_addnet_tab(tmp))
+                    if index == 3:
+                        inner_page.setLayout(make_tiled_diffusion_tab(tmp))
+                    if index == 4:
+                        inner_page = (make_control_net_tab(tmp, 0))
+                    if index == 5:
+                        rp_pixmap_scale = self.config.get_option('RegionalPrompterPixmapSize')
+                        inner_page.setLayout(make_regional_prompter_tab(tmp, rp_pixmap_scale))
+                    inner_tab.addTab(inner_page, tab[0])
+
+            error_list_parameter = self.config.get_option('ErrorList')
+            if not error_list_parameter == 0:
+                error_list = tmp.error_list
+                if error_list or error_list_parameter == 2:
+                    inner_page = QWidget()
+                    inner_page_layout = QVBoxLayout()
+                    original_data = tmp.original_data
+                    error = QTextEdit()
+                    error.setPlainText('-'.join(error_list))
+                    original = QTextEdit()
+                    original.setPlainText(original_data)
+                    description_text = 'If an error occurs, please share the developer data displayed here.'
+                    description = QLabel(description_text)
+                    inner_page_layout.addWidget(original)
+                    inner_page_layout.addWidget(error)
+                    inner_page_layout.addWidget(description)
+                    inner_page.setLayout(inner_page_layout)
+                    inner_tab.addTab(inner_page, 'Errors')
 
             inner_tab.setTabPosition(QTabWidget.TabPosition.South)
             tab_page_layout.addWidget(inner_tab)
@@ -136,10 +174,18 @@ class ResultWindow(QMainWindow):
                 clipboard.setText(self.seed_for_copy)
         elif where_from == 'Export JSON (This image)':
             data = self.params[self.tab_index]
-            filepath = savefile_choose_dialog()
+            filename = self.config.get_option('JsonSingle')
+            if filename == 'filename':
+                filename = self.params[self.tab_index].params.get('Filepath')
+                filename = os.path.splitext(os.path.basename(filename))[0] + '.json'
+            filepath = savefile_choose_dialog(filename)
             data.json_export(filepath)
         elif where_from == 'Export JSON (All images)':
-            filepath = savefile_choose_dialog(True)
+            filename = self.config.get_option('JsonMultiple')
+            if filename == 'directory':
+                filename = self.params[0].params.get('Filepath')
+                filename = os.path.basename(os.path.dirname(filename)) + '.json'
+            filepath = savefile_choose_dialog(filename)
             if filepath:
                 dict_list = []
                 for tmp in self.params:
@@ -154,6 +200,7 @@ class ResultWindow(QMainWindow):
 
 
 def result_window(target_data):
+    config = pyPromptChecker.lib.configure.Configure()
     app = QApplication(sys.argv)
     window = ResultWindow(target_data)
     window.show()
@@ -172,7 +219,7 @@ def model_hashes():
         return None
 
 
-def make_main_section(target):
+def make_main_section(target, scale):
     status = ['Filename',
               'Filepath',
               'Size',
@@ -185,7 +232,7 @@ def make_main_section(target):
               'Model',
               ['Variation seed', 'Var. seed'],
               ['Variation seed strength', 'Var. strength'],
-              'Denoising strength',
+              ['Denoising strength', 'Denoising'],
               'Clip skip',
               ['Lora', 'Lora in prompt'],
               ['Hires upscaler', 'Hires.fix'],
@@ -194,16 +241,16 @@ def make_main_section(target):
               'Version']
     filepath = target.params.get('Filepath')
     if target.params.get('Hires upscaler'):
-        status.remove('Denoising strength')
+        del status[12]
     main_section_layout = QHBoxLayout()
-    pixmap_label = make_pixmap_label(filepath)
+    pixmap_label = make_pixmap_label(filepath, scale)
     main_section_layout.addWidget(pixmap_label, 1)
     main_section_layout.addLayout(label_maker(status, target, 1, 1, True, True, 15), 1)
 
     return main_section_layout
 
 
-def make_pixmap_label(filepath, scale=350):
+def make_pixmap_label(filepath, scale):
     pixmap = QPixmap(filepath)
     pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
     pixmap_label = QLabel()
@@ -457,7 +504,7 @@ def make_control_net_tab(target, starts):
     return control_tab
 
 
-def make_regional_prompter_tab(target, scale=500):
+def make_regional_prompter_tab(target, scale):
     filepath = target.params.get('Filepath')
     pixmap = QPixmap(filepath)
     pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
@@ -590,7 +637,6 @@ def label_maker(status, target, stretch_title, stretch_value, selectable=False, 
     label_count = 0
     section_layout = QGridLayout()
     for tmp in status:
-        maximum_size = 15
         if isinstance(tmp, list):
             item = target.params.get(tmp[0])
             if item:
@@ -618,10 +664,6 @@ def label_maker(status, target, stretch_title, stretch_value, selectable=False, 
                 item = 'False'
         title = QLabel(tmp)
         value = QLabel(item)
-        title.setMaximumSize(1000, maximum_size)
-        if value.sizeHint().height() > 30:
-            maximum_size = maximum_size * 2
-        value.setMaximumSize(1000, maximum_size)
         if selectable:
             value.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         size_policy_title = title.sizePolicy()
@@ -653,12 +695,12 @@ def make_dummy_section(num):
     return section
 
 
-def savefile_choose_dialog(all_images=False):
+def savefile_choose_dialog(filename=None):
     caption = 'Save File'
     path = os.path.expanduser('~')
     default_filename = os.path.join(path, 'parameters.json')
-    if all_images:
-        default_filename = os.path.join(path, 'all_parameters.json')
+    if filename:
+        default_filename = os.path.join(path, filename)
     file_filter = 'JSON Files(*.json)'
     select_filter = ''
     filename, _ = QFileDialog.getSaveFileName(
