@@ -235,7 +235,9 @@ def make_main_section(target, scale):
               ['Denoising strength', 'Denoising'],
               'Clip skip',
               ['Lora', 'Lora in prompt'],
+              ['AddNet Number', 'Add network'],
               ['Hires upscaler', 'Hires.fix'],
+              'Tiled diffusion'
               'ControlNet',
               'ENSD',
               'Version']
@@ -325,7 +327,11 @@ def dynamic_thresholding_section(target):
               'Mimic scale',
               'Mimic scale minimum',
               'Scheduler value',
-              'Threshold percentile'
+              'Threshold percentile',
+              ['Separate Feature Channels', 'Separate feature channels'],
+              ['Scaling Startpoint', 'Scaling startpoint'],
+              ['Variability Measure', 'Variability measure'],
+              ['Interpolate Phi', 'Interpolate phi']
               ]
     section = QGroupBox()
     section.setLayout(label_maker(status, target, 6, 4))
