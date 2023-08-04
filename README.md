@@ -27,10 +27,11 @@ Regional prompter status screenshot
 # Howto
 
 ````
-cd /path/to/pyPromptChecker
+git clone https://github.com/yui-tan/pyPromptChecker
+cd pyPromptChecker
 pip3 install -e.
-mikkumiku
 
+mikkumiku
 usage: mikkumiku [-h] [-a | -f [FILEPATH ...] | -d DIRECTORY]
 
 Script for extracting and formatting PNG chunks.
@@ -59,4 +60,5 @@ options:
  - [x] Various hardcodings into a Configuration Class
  - [x] Make it installable using pip
  - [ ] Add support for import JSON
+ - [ ] Be able to move and delete PNG images by button
  - [ ] Get marry to Miku
