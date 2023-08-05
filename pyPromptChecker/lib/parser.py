@@ -10,6 +10,7 @@ class ChunkData:
         self.data_list = []
         self.error_list = []
         self.params = {}
+        self.used_params = {}
         if not data:
             self.data = 'This file has no embedded data'
 
@@ -36,6 +37,10 @@ class ChunkData:
         self.data_list = [[value.strip() for value in d1] for d1 in self.data_list]
         for tmp in self.data_list:
             key, value = tmp
+            if key == 'Tiled Diffusion scale factor':
+                continue
+            if key == 'Tiled Diffusion upscaler':
+                continue
             if 'NoiseInv' in key:
                 key = key.replace('NoiseInv', 'Noise inversion')
             if value == 'true':
@@ -63,6 +68,7 @@ class ChunkData:
                     if tmp[1] == model_hash:
                         model_name = tmp[0] + ' [' + tmp[1] + ']'
             self.params['Model'] = model_name
+            self.used_params['Model hash'] = True
 
     def json_export(self, filepath):
         if filepath:
@@ -90,6 +96,9 @@ def main_status_parse(target_data):
         return target_data
     if target_str:
         target_str = re.sub(comma_in_hyphen_regex, lambda match: match.group().replace(',', '<comma>'), target_str)
+        noise_match = re.search(r'\nTemplate:[\s\S]*$', target_str)
+        if noise_match:
+            target_str = target_str.replace(noise_match.group(), '')
         result = [[value.split(':')[0], value.split(':')[1]] for value in target_str.split(',')]
         result = [[d2.replace('<comma>', ',').replace('"', '').strip() for d2 in d1] for d1 in result]
         target_data.data_refresh(target_str, result)

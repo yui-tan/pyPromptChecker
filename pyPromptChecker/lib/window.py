@@ -102,12 +102,15 @@ class ResultWindow(QMainWindow):
             error_list_parameter = self.config.get_option('ErrorList')
             if not error_list_parameter == 0:
                 error_list = tmp.error_list
-                if error_list or error_list_parameter == 2:
+                difference = set(tmp.params.keys() - tmp.used_params.keys())
+                if error_list or difference or error_list_parameter == 2:
+                    diff_text = 'Diff: ' + ','.join(difference)
+                    error_text = 'Error: ' + ','.join(error_list)
                     inner_page = QWidget()
                     inner_page_layout = QVBoxLayout()
                     original_data = tmp.original_data
                     error = QTextEdit()
-                    error.setPlainText('-'.join(error_list))
+                    error.setPlainText(diff_text + '\n\n' + error_text)
                     original = QTextEdit()
                     original.setPlainText(original_data)
                     description_text = 'If an error occurs, please share the developer data displayed here.'
@@ -200,7 +203,6 @@ class ResultWindow(QMainWindow):
 
 
 def result_window(target_data):
-    config = pyPromptChecker.lib.configure.Configure()
     app = QApplication(sys.argv)
     window = ResultWindow(target_data)
     window.show()
@@ -237,7 +239,7 @@ def make_main_section(target, scale):
               ['Lora', 'Lora in prompt'],
               ['AddNet Number', 'Add network'],
               ['Hires upscaler', 'Hires.fix'],
-              'Tiled diffusion'
+              'Tiled diffusion',
               'ControlNet',
               'ENSD',
               'Version']
@@ -276,6 +278,9 @@ def make_prompt_tab(target):
     splitter.addWidget(positive_prompt)
     splitter.addWidget(negative_prompt)
     textbox_tab_layout.addWidget(splitter)
+
+    target.used_params['Positive'] = True
+    target.used_params['Negative'] = True
 
     return textbox_tab_layout
 
@@ -497,12 +502,14 @@ def make_control_net_tab(target, starts):
     loop_num = 2 if 2 > unit_num else unit_num
     for i in range(starts, loop_num):
         control_net_enable = target.params.get('ControlNet ' + str(i))
-        status = [['ControlNet ' + str(i) + ' ' + value[0], value[1]] for value in status]
+        status_key = [['ControlNet ' + str(i) + ' ' + value[0], value[1]] for value in status]
         section = QGroupBox()
         section.setTitle('ControlNet Unit ' + str(i))
         if not control_net_enable:
             section.setDisabled(True)
-        section.setLayout(label_maker(status, target, 4, 6))
+        else:
+            target.used_params['ControlNet ' + str(i)] = True
+        section.setLayout(label_maker(status_key, target, 4, 6))
         page_layout.addWidget(section)
     controlnet_widget.setLayout(page_layout)
     controlnet_widget.setStyleSheet('background-color:transparent')
@@ -558,6 +565,9 @@ def make_regional_prompter_status_section(target):
     status_section = QGroupBox()
     status_section.setLayout(label_maker(status, target, 2, 1))
     status_section.setTitle('Status')
+    target.used_params['RP Active'] = True
+    target.used_params['RP Matrix submode'] = True
+    target.used_params['RP Ratios'] = True
     return status_section
 
 
@@ -619,8 +629,14 @@ def regional_prompter_ratio_check(str_ratio, divide_mode):
     for tmp in str_ratio.split(major_splitter):
         ratio = tmp.split(minor_splitter)
         try:
-            main_ratio.append(int(ratio[0]))
-            sub_ratio.append([int(number) for number in ratio[1:]])
+            if ';' in str_ratio:
+                main_ratio.append(int(ratio[0]))
+                sub_ratio.append([int(number) for number in ratio[1:]])
+            elif divide_mode == 'Horizontal':
+                main_ratio.append(1)
+                sub_ratio.append([int(number) for number in ratio])
+            else:
+                pass
         except ValueError:
             result = False
             break
@@ -645,30 +661,30 @@ def label_maker(status, target, stretch_title, stretch_value, selectable=False, 
     for tmp in status:
         if isinstance(tmp, list):
             item = target.params.get(tmp[0])
-            if item:
-                if 'ControlNet' in tmp[0] and 'model' in tmp[0]:
-                    item = item.replace(' ', '\n')
-                elif 'AddNet' in tmp[0] and 'Model' in tmp[0]:
-                    item = item.replace('(', ' [').replace(')', ']')
-                elif 'AddNet' in tmp[0] and 'Weight A' in tmp[0]:
-                    weight_b = target.params.get(tmp[0].replace(' A ', ' B '))
-                    item = item + ' / ' + weight_b
-                elif 'Lora ' in tmp[0]:
-                    item = item.replace(' [', ' [')
-                elif tmp[1] == 'Hires.fix':
-                    item = 'True'
-            tmp = tmp[1]
+            key, name = tmp
         else:
             item = target.params.get(tmp)
-        if tmp == 'Filepath':
-            item = os.path.dirname(item)
+            key = name = tmp
+        if item:
+            if 'Filepath' in key:
+                item = os.path.dirname(item)
+            elif 'ControlNet' in key and 'model' in key:
+                item = item.replace(' ', '\n')
+            elif 'Hires.fix' in name:
+                item = 'True'
+            elif 'AddNet' in key and 'Model' in key:
+                item = item.replace('(', ' [').replace(')', ']')
+            elif 'AddNet' in key and 'Weight A' in key:
+                weight_b = target.params.get(key.replace(' A ', ' B '))
+                item = item + ' / ' + weight_b
+        else:
+            if name == 'Keep input size':
+                item = 'False'
+            elif name and not remove_if_none:
+                item = 'None'
         if not item and remove_if_none:
             continue
-        elif tmp and not item:
-            item = 'None'
-            if tmp == 'Keep input size':
-                item = 'False'
-        title = QLabel(tmp)
+        title = QLabel(name)
         value = QLabel(item)
         if selectable:
             value.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
@@ -681,6 +697,8 @@ def label_maker(status, target, stretch_title, stretch_value, selectable=False, 
         section_layout.addWidget(title, label_count, 0)
         section_layout.addWidget(value, label_count, 1)
         label_count = label_count + 1
+        if not item == 'None':
+            target.used_params[key] = True
     if 20 > minimums > label_count:
         for i in range(minimums - label_count):
             margin = QLabel()
