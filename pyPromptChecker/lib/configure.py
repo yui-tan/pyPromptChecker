@@ -19,6 +19,7 @@ class Configure:
                        'ControlNet': True,
                        'RegionalPrompter': True,
                        'ErrorList': 1,
+                       'IgnoreIfDataIsNotEmbedded': False,
                        'TargetChunkIndex': 1}
 
         self.ini_load('../../config.ini')
@@ -31,6 +32,7 @@ class Configure:
                        ['Pixmap', 'PixmapSize', 'RegionalPrompterPixmapSize'],
                        ['JSON', 'JsonSingle', 'JsonMultiple'],
                        ['Tab', 'Lora', 'hiresOthers', 'TiledDiffusion', 'ControlNet', 'RegionalPrompter'],
+                       ['Ignore', 'IgnoreIfDataIsNotEmbedded'],
                        ['Debug', 'ErrorList'],
                        ['PNG', 'TargetChunkIndex']
                        ]
@@ -57,6 +59,12 @@ class Configure:
                         value = ini_config[section].get(option)
                         if os.path.exists(value):
                             self.config[option] = value
+                    elif section == 'Ignore':
+                        try:
+                            value = ini_config[section].getboolean(option)
+                        except ValueError:
+                            continue
+                        self.config[option] = value
                     elif section == 'Debug':
                         value = ini_config[section].get(option)
                         if value == 'AlwaysOff':

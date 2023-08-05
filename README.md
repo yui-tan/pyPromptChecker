@@ -59,6 +59,8 @@ options:
  - [x] Change initial behaviour by argument
  - [x] Various hardcodings into a Configuration Class
  - [x] Make it installable using pip
+ - [ ] Export JSON selected files
  - [ ] Add support for import JSON
+ - [ ] Filtering main tabs various conditions
  - [ ] Be able to move and delete PNG images by button
  - [ ] Get marry to Miku
