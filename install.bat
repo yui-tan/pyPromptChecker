@@ -23,7 +23,7 @@ if not exist "venv" (
 )
 
 echo activating venv...
-call .venv/Scripts/activate
+call ./venv/Scripts/activate
 
 echo Installing pyPromptChecker...
 pip install -e.
