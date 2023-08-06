@@ -57,10 +57,11 @@ options:
  - [x] Coding Export JSON (All Images) function  
  - [x] Coding Reselect files function
  - [x] Change initial behaviour by argument
- - [x] Various hardcodings into a Configuration Class
+ - [x] Various hard codings into a Configuration Class
  - [x] Make it installable using pip
- - [ ] Export JSON selected files
+ - [ ] Export JSON not only single and all but selected image
  - [ ] Add support for import JSON
  - [ ] Filtering main tabs various conditions
  - [ ] Be able to move and delete PNG images by button
+ - [ ] Windows exe format (very low-priority)
  - [ ] Get marry to Miku

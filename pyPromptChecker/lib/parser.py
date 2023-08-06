@@ -32,6 +32,7 @@ class ChunkData:
         control_net = 0
         loras = 0
         add_net = 0
+        region_control = 0
         if not self.data_list:
             return None
         self.data_list = [[value.strip() for value in d1] for d1 in self.data_list]
@@ -46,11 +47,13 @@ class ChunkData:
             if value == 'true':
                 value = 'True'
             if 'ControlNet' in key and 'True' in value:
-                control_net = control_net + 1
+                control_net += 1
             if 'Lora' in key:
-                loras = loras + 1
+                loras += 1
             if 'AddNet Module' in key:
-                add_net = add_net + 1
+                add_net += 1
+            if 'Region' in key and 'enable' in key:
+                region_control += 1
             self.params[key] = value
         if control_net > 0:
             self.params['ControlNet'] = str(control_net)
@@ -58,6 +61,8 @@ class ChunkData:
             self.params['Lora'] = str(loras)
         if add_net > 0:
             self.params['AddNet Number'] = str(add_net)
+        if region_control > 0:
+            self.params['Region control'] = str(region_control)
 
     def model_name(self, model_list):
         model_hash = self.params.get('Model hash')

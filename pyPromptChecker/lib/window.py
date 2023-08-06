@@ -9,7 +9,57 @@ from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLay
 from PyQt6.QtWidgets import QTabWidget, QTextEdit, QPushButton, QFileDialog, QMessageBox
 from PyQt6.QtWidgets import QSplitter, QMainWindow, QGroupBox, QScrollArea, QProgressBar
 from PyQt6.QtGui import QPixmap, QPainter, QColor
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
+
+
+class PixmapLabel(QLabel):
+    clicked = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super(PixmapLabel, self).__init__(parent)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        return QLabel.mousePressEvent(self, event)
+
+
+class ImageWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        screen = QApplication.primaryScreen()
+        self.filepath = ''
+        self.max_screen = screen.availableGeometry()
+
+    def init_ui(self):
+        label = PixmapLabel()
+        pixmap = QPixmap(self.filepath)
+
+        screen_width = int(self.max_screen.width() * 0.95)
+        screen_height = int(self.max_screen.height() * 0.95)
+        pixmap_width = pixmap.width()
+        pixmap_height = pixmap.height()
+        width = screen_width if pixmap_width > screen_width else pixmap_width
+        height = screen_height if pixmap_height > screen_height else pixmap_height
+        pixmap = pixmap.scaled(width, height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+
+        title = 'Image: ' + str(pixmap.width()) + 'x' + str(pixmap.height())
+        self.setWindowTitle(title)
+
+        label.setPixmap(pixmap)
+        label.setScaledContents(True)
+
+        label.clicked.connect(self.clicked)
+
+        self.setCentralWidget(label)
+
+        frame_geometry = self.frameGeometry()
+        screen_center = QApplication.primaryScreen().geometry().center()
+        frame_geometry.moveCenter(screen_center)
+        self.move(frame_geometry.topLeft())
+
+    def clicked(self):
+        self.close()
 
 
 class ProgressWindow(QMainWindow):
@@ -61,6 +111,7 @@ class ResultWindow(QMainWindow):
         self.seed_for_copy = ''
         self.tab_index = 0
         self.init_ui(targets)
+        self.image_window = ImageWindow()
 
         size_hint_width = self.sizeHint().width()
         size_hint_height = self.sizeHint().height()
@@ -71,7 +122,6 @@ class ResultWindow(QMainWindow):
         window_height = size_hint_height if max_height > size_hint_height else max_height
         self.resize(window_width, window_height)
         self.center()
-#        self.progress_bar.close()
 
     def init_ui(self, targets):
         ignore = self.config.get_option('IgnoreIfDataIsNotEmbedded')
@@ -118,9 +168,11 @@ class ResultWindow(QMainWindow):
             main_section_layout = QHBoxLayout()
 
             pixmap_scale = self.config.get_option('PixmapSize')
-            main_section_layout.addLayout(make_main_section(tmp, pixmap_scale))
+            main_label_layout, pixmap_label = make_main_section(tmp, pixmap_scale)
+            main_section_layout.addLayout(main_label_layout)
             main_section.setLayout(main_section_layout)
             tab_page_layout.addWidget(main_section)
+            pixmap_label.clicked.connect(self.pixmap_clicked)
 
             hires_tab = ['Hires upscaler', 'Face restoration', 'Dynamic thresholding enabled']
             lora_tab = ['Lora', 'AddNet Enabled']
@@ -273,6 +325,11 @@ class ResultWindow(QMainWindow):
                 self.params = []
                 self.init_ui(filepath)
 
+    def pixmap_clicked(self):
+        self.image_window.filepath = self.params[self.tab_index].params.get('Filepath')
+        self.image_window.init_ui()
+        self.image_window.show()
+
 
 def result_window(target_data):
     app = QApplication(sys.argv)
@@ -307,12 +364,14 @@ def make_main_section(target, scale):
               'Model',
               ['Variation seed', 'Var. seed'],
               ['Variation seed strength', 'Var. strength'],
+              'Seed resize from',
               ['Denoising strength', 'Denoising'],
               'Clip skip',
               ['Lora', 'Lora in prompt'],
               ['AddNet Number', 'Add network'],
               ['Hires upscaler', 'Hires.fix'],
               'Tiled diffusion',
+              'Region control',
               'ControlNet',
               'ENSD',
               'Version']
@@ -324,13 +383,13 @@ def make_main_section(target, scale):
     main_section_layout.addWidget(pixmap_label, 1)
     main_section_layout.addLayout(label_maker(status, target, 1, 1, True, True, 15), 1)
 
-    return main_section_layout
+    return main_section_layout, pixmap_label
 
 
 def make_pixmap_label(filepath, scale):
     pixmap = QPixmap(filepath)
     pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
-    pixmap_label = QLabel()
+    pixmap_label = PixmapLabel()
     pixmap_label.setPixmap(pixmap)
     pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
     return pixmap_label
@@ -534,6 +593,7 @@ def region_control_section(target):
     for i in range(1, 9):
         region_number = 'Region ' + str(i)
         check = target.params.get(region_number + ' enable')
+        target.used_params[region_number + ' enable'] = True
         if check or i == 1:
             page = QWidget()
             region_control_section_layout = QVBoxLayout()
@@ -543,10 +603,12 @@ def region_control_section(target):
             prompt = QTextEdit(str_prompt)
             prompt.setReadOnly(True)
             region_control_section_layout.addWidget(prompt)
+            target.used_params[region_number + ' prompt'] = True
             str_negative_prompt = target.params.get(region_number + ' neg prompt')
             negative_prompt = QTextEdit(str_negative_prompt)
             negative_prompt.setReadOnly(True)
             region_control_section_layout.addWidget(negative_prompt)
+            target.used_params[region_number + ' neg prompt'] = True
             page.setLayout(region_control_section_layout)
             region_control_tab.addTab(page, region_number)
             if not check:
@@ -593,7 +655,7 @@ def make_control_net_tab(target, starts):
 def make_regional_prompter_tab(target, scale):
     filepath = target.params.get('Filepath')
     pixmap = QPixmap(filepath)
-    pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
+    pixmap = pixmap.scaled(scale, int(scale * 0.7), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
 
     regional_prompter_group = QHBoxLayout()
     regional_prompter_group.addWidget(make_regional_prompter_status_section(target), 1)
@@ -601,6 +663,8 @@ def make_regional_prompter_tab(target, scale):
     ratio_pixmap_label = QLabel()
     str_ratios = target.params.get('RP Ratios')
     ratio_mode = target.params.get('RP Matrix submode')
+    if not ratio_mode:
+        ratio_mode = '---'
     main, sub = regional_prompter_ratio_check(str_ratios, ratio_mode)
     if main and sub:
         pixmap = make_regional_prompter_pixmap(pixmap, ratio_mode, main, sub)
@@ -720,12 +784,24 @@ def regional_prompter_ratio_check(str_ratio, divide_mode):
         return main_ratio, sub_ratio
 
 
-def make_other_tab(target):
-    page_layout = QHBoxLayout()
-    page_layout.addWidget(dynamic_thresholding_section(target))
-    for i in range(2):
-        page_layout.addWidget(make_dummy_section(7))
-    return page_layout
+# def make_other_tab(target):
+#    page_layout = QHBoxLayout()
+#    page_layout.addWidget()
+#    for i in range(2):
+#        page_layout.addWidget(make_dummy_section(7))
+#    return page_layout
+
+
+# def make_dummy_section(num):
+#    section = QGroupBox()
+#    section_layout = QVBoxLayout()
+#    for i in range(num):
+#        title = QLabel()
+#        section_layout.addWidget(title)
+#    section.setLayout(section_layout)
+#    section.setTitle('Dummy')
+#    section.setDisabled(True)
+#    return section
 
 
 def label_maker(status, target, stretch_title, stretch_value, selectable=False, remove_if_none=False, minimums=99):
@@ -778,18 +854,6 @@ def label_maker(status, target, stretch_title, stretch_value, selectable=False, 
             section_layout.addWidget(margin, label_count, 0)
             label_count = label_count + 1
     return section_layout
-
-
-def make_dummy_section(num):
-    section = QGroupBox()
-    section_layout = QVBoxLayout()
-    for i in range(num):
-        title = QLabel()
-        section_layout.addWidget(title)
-    section.setLayout(section_layout)
-    section.setTitle('Dummy')
-    section.setDisabled(True)
-    return section
 
 
 def savefile_choose_dialog(filename=None):
@@ -847,3 +911,13 @@ def ok_only_messagebox(title, text):
     messagebox.setWindowTitle(title)
     messagebox.addButton(QMessageBox.StandardButton.Ok)
     messagebox.exec()
+
+
+def checking_progress(value):
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+    progress = ProgressWindow()
+    progress.set_bar_range(value)
+    progress.update_description('Checking files')
+    return app, progress

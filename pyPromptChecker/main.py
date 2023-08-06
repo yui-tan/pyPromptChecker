@@ -3,6 +3,7 @@ import sys
 import argparse
 import glob
 
+import pyPromptChecker.lib.window
 from pyPromptChecker.lib import decoder
 from pyPromptChecker.lib import window
 
@@ -18,10 +19,17 @@ def directory_to_filelist(directory_path):
 
 
 def check_files(target_list):
+    file_counts = len(target_list)
+    progress_enable = False
     file_is_not_found_list = []
     this_is_directory_list = []
     this_file_is_not_png_file_list = []
     valid_file_list = []
+
+    if file_counts > 20:
+        app, progress_bar = pyPromptChecker.lib.window.checking_progress(len(target_list))
+        progress_bar.show()
+        progress_enable = True
 
     for filepath in target_list:
         if not os.path.exists(filepath):
@@ -32,6 +40,11 @@ def check_files(target_list):
             this_file_is_not_png_file_list.append(filepath)
         else:
             valid_file_list.append(filepath)
+        if progress_enable:
+            progress_bar.update_bar()
+
+    if progress_enable:
+        progress_bar.close()
 
     return valid_file_list, file_is_not_found_list, this_is_directory_list, this_file_is_not_png_file_list
 
