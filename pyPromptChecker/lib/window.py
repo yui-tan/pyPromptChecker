@@ -27,9 +27,10 @@ class PixmapLabel(QLabel):
 class ImageWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        screen = QApplication.primaryScreen()
+        self.screen = QApplication.primaryScreen()
         self.filepath = ''
-        self.max_screen = screen.availableGeometry()
+        self.max_screen = self.screen.availableGeometry()
+        self.screen_center = self.screen.geometry().center()
 
     def init_ui(self):
         label = PixmapLabel()
@@ -52,10 +53,10 @@ class ImageWindow(QMainWindow):
         label.clicked.connect(self.clicked)
 
         self.setCentralWidget(label)
+        self.show()
 
         frame_geometry = self.frameGeometry()
-        screen_center = QApplication.primaryScreen().geometry().center()
-        frame_geometry.moveCenter(screen_center)
+        frame_geometry.moveCenter(self.screen_center)
         self.move(frame_geometry.topLeft())
 
     def clicked(self):
@@ -328,7 +329,6 @@ class ResultWindow(QMainWindow):
     def pixmap_clicked(self):
         self.image_window.filepath = self.params[self.tab_index].params.get('Filepath')
         self.image_window.init_ui()
-        self.image_window.show()
 
 
 def result_window(target_data):

@@ -24,13 +24,19 @@ Regional prompter status screenshot
 - PyQt6
 - pypng  
 
-# Howto
-
+# Howto  
+Highly recommend installing it in venv
 ````
 git clone https://github.com/yui-tan/pyPromptChecker
 cd pyPromptChecker
+
+## if you want to install to venv
+## python -m venv venv
+## source venv/bin/activate
+
 pip3 install -e.
 
+## /path/to/venv/bin/activate
 mikkumiku
 usage: mikkumiku [-h] [-a | -f [FILEPATH ...] | -d DIRECTORY]
 
@@ -61,6 +67,7 @@ options:
  - [x] Make it installable using pip
  - [ ] Export JSON not only single and all but selected image
  - [ ] Add support for import JSON
+ - [ ] Make it import data into Stable-Diffusion-Webui via API
  - [ ] Filtering main tabs various conditions
  - [ ] Be able to move and delete PNG images by button
  - [ ] Windows exe format (very low-priority)
