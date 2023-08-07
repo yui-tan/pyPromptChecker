@@ -14,7 +14,6 @@ if errorlevel 1 (
 	exit /b 1
 )
 
-pip install virtualenv
 python -m pip install --upgrade pip
 
 if not exist "venv" (
