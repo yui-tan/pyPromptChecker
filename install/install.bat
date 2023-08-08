@@ -3,8 +3,17 @@ setlocal
 
 set directory=%~dp0
 for %%1 in ("%directory:~0,-1%") do set current=%%~nx1
+if not "%current%" == "install" (
+	echo This script should be executed in the "pyPromptChecker/install" directory.
+	exit /b 1
+)
+
+cd ..
+
+set now=%CD%\
+for %%1 in ("%now:~0,-1%") do set current=%%~nx1
 if not "%current%" == "pyPromptChecker" (
-	echo This script should be executed in the "pyPromptChecker" directory.
+	echo This script should be executed in the "pyPromptChecker/install" directory.
 	exit /b 1
 )
 
@@ -75,6 +84,7 @@ echo you can start the processing by dragging and dropping a directory onto the 
 echo This is same as running command 'mikkumiku --directory ...'
 echo.
 echo If you are unsure of what these batch files do by looking at their contents, please refrain from moving or editing them.
+echo Finally, The command is neither "pyPromptChecker" nor "mikumiku". It's "mikkumiku"
 
 pause
 exit/b 0

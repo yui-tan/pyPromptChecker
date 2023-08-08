@@ -1,8 +1,16 @@
 #!/bin/bash
 
+# Check if the current directory is "install"
+if [[ $(basename $(pwd)) != "install" ]]; then
+    echo "This script should be executed in the 'pyPromptChecker/install' directory."
+    exit 1
+fi
+
+cd ..
+
 # Check if the current directory is "pyPromptChecker"
 if [[ $(basename $(pwd)) != "pyPromptChecker" ]]; then
-    echo "This script should be executed in the 'pyPromptChecker' directory."
+    echo "This script should be executed in the 'pyPromptChecker/install' directory."
     exit 1
 fi
 
@@ -34,6 +42,7 @@ mkdir "sh"
 
 path_to_venv=$(pwd)"/venv/bin/activate"
 path_to_sh=$(pwd)"/sh"
+path_to_icon=$(pwd)"/icon/icon.png"
 
 echo -e "#!/bin/bash\nsource ${path_to_venv}\nmikkumiku --filepath \$*" >> "${path_to_sh}/drop_files.sh"
 echo -e "#!/bin/bash\nsource ${path_to_venv}\nmikkumiku --directory \$*" >> "${path_to_sh}/drop_directory.sh"
@@ -52,13 +61,15 @@ command_name[3]="drop_directory"
 
 for i in 0 1 2 3
 do
-  echo -e "[Desktop Entry]" >> sh/${command_name[i]}.desktop
-  echo -e "Name=pyPromptChecker" >> sh/${command_name[i]}.desktop
-  echo -e "Exec=${command[i]}" >> sh/${command_name[i]}.desktop
-  echo -e "Comment=A tiny script for AI images" >> sh/${command_name[i]}.desktop
-  echo -e "Terminal=false" >> sh/${command_name[i]}.desktop
-  echo -e "Icon=mikkumiku" >> sh/${command_name[i]}.desktop
-  echo -e "Type=Application" >> sh/${command_name[i]}.desktop
+  {
+    echo -e "[Desktop Entry]"
+    echo -e "Name=pyPromptChecker"
+    echo -e "Exec=${command[i]}"
+    echo -e "Comment=A tiny script for AI images"
+    echo -e "Terminal=false"
+    echo -e "Icon=${path_to_icon}"
+    echo -e "Type=Application"
+  } >> sh/${command_name[i]}.desktop
 done
 
 # Explanation
