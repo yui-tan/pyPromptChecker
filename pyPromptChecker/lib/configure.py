@@ -4,7 +4,7 @@ import configparser
 
 class Configure:
     def __init__(self):
-        path = os.path.abspath('../../')
+        path = os.path.abspath('')
         filepath = os.path.join(path, 'model_list.csv')
         self.config = {'ModelList': filepath,
                        'MaxWindowWidth': 1024,

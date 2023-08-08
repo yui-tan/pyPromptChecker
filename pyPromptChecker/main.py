@@ -2,8 +2,8 @@ import os
 import sys
 import argparse
 import glob
+import pyPromptChecker
 
-import pyPromptChecker.lib.window
 from pyPromptChecker.lib import decoder
 from pyPromptChecker.lib import window
 
@@ -20,6 +20,7 @@ def directory_to_filelist(directory_path):
 
 def check_files(target_list):
     file_counts = len(target_list)
+    progress_bar = None
     progress_enable = False
     file_is_not_found_list = []
     this_is_directory_list = []

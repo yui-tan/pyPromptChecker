@@ -1,10 +1,9 @@
 import os
-import json
 import sys
-import csv
 import pyPromptChecker.lib.decoder
 import pyPromptChecker.lib.parser
 import pyPromptChecker.lib.configure
+import pyPromptChecker.lib.io
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout
 from PyQt6.QtWidgets import QTabWidget, QTextEdit, QPushButton, QFileDialog, QMessageBox
 from PyQt6.QtWidgets import QSplitter, QMainWindow, QGroupBox, QScrollArea, QProgressBar
@@ -105,7 +104,7 @@ class ResultWindow(QMainWindow):
         self.progress_bar.update_description('Initializing...')
         self.config = pyPromptChecker.lib.configure.Configure()
         self.setWindowTitle('PNG Prompt Data')
-        self.models = model_hashes()
+        self.models = pyPromptChecker.lib.io.import_model_list(self.config.get_option('ModelList'))
         self.params = []
         self.positive_for_copy = ''
         self.negative_for_copy = ''
@@ -113,6 +112,7 @@ class ResultWindow(QMainWindow):
         self.tab_index = 0
         self.init_ui(targets)
         self.image_window = ImageWindow()
+        self.tab_max_count = 0
 
         size_hint_width = self.sizeHint().width()
         size_hint_height = self.sizeHint().height()
@@ -248,6 +248,7 @@ class ResultWindow(QMainWindow):
             if 'File count' in tmp.params:
                 del tmp.params['File count']
 
+        self.tab_max_count = root_tab.count()
         root_layout.addWidget(root_tab)
 
         self.progress_bar.update_description('Finalizing...')
@@ -301,13 +302,13 @@ class ResultWindow(QMainWindow):
             if self.seed_for_copy:
                 clipboard.setText(self.seed_for_copy)
         elif where_from == 'Export JSON (This image)':
-            data = self.params[self.tab_index]
+            data = self.params[self.tab_index].params
             filename = self.config.get_option('JsonSingle')
             if filename == 'filename':
                 filename = self.params[self.tab_index].params.get('Filepath')
                 filename = os.path.splitext(os.path.basename(filename))[0] + '.json'
             filepath = savefile_choose_dialog(filename)
-            data.json_export(filepath)
+            pyPromptChecker.lib.io.export_json(data, filepath)
         elif where_from == 'Export JSON (All images)':
             filename = self.config.get_option('JsonMultiple')
             if filename == 'directory':
@@ -318,8 +319,7 @@ class ResultWindow(QMainWindow):
                 dict_list = []
                 for tmp in self.params:
                     dict_list.append(tmp.params)
-                with open(filepath, 'w') as f:
-                    json.dump(dict_list, f, sort_keys=True, indent=4, ensure_ascii=False)
+                pyPromptChecker.lib.io.export_json(dict_list, filepath)
         elif where_from == 'Reselect':
             filepath = file_choose_dialog()[0]
             if filepath:
@@ -336,18 +336,6 @@ def result_window(target_data):
     window = ResultWindow(target_data)
     window.show()
     sys.exit(app.exec())
-
-
-def model_hashes():
-    directory = os.path.dirname(__file__)
-    filename = os.path.join(directory, '../../model_list.csv')
-    if os.path.exists(filename):
-        with open(filename, encoding='utf8', newline='') as f:
-            csvreader = csv.reader(f)
-            model_list = [row for row in csvreader]
-        return model_list
-    else:
-        return None
 
 
 def make_main_section(target, scale):
@@ -377,7 +365,7 @@ def make_main_section(target, scale):
               'Version']
     filepath = target.params.get('Filepath')
     if target.params.get('Hires upscaler'):
-        del status[12]
+        del status[14]
     main_section_layout = QHBoxLayout()
     pixmap_label = make_pixmap_label(filepath, scale)
     main_section_layout.addWidget(pixmap_label, 1)
@@ -531,6 +519,7 @@ def make_addnet_section(target):
             section_layout.addLayout(label_maker(key, target, 1, 3))
     addnet_section.setLayout(section_layout)
     addnet_section.setTitle('Additional Networks : ' + str(cnt))
+    target.used_params['AddNet Enabled'] = True
     return addnet_section
 
 
@@ -573,6 +562,7 @@ def make_noise_inversion_section(target):
               ]
     section = QGroupBox()
     section.setTitle('Noise inversion')
+    target.used_params['Noise inversion'] = True
     if not target.params.get('Noise inversion'):
         section.setDisabled(True)
     status = [[value, value.replace('Noise inversion ', '')] for value in status]
@@ -695,9 +685,9 @@ def make_regional_prompter_status_section(target):
               ['RP Divide mode', 'Divide mode'],
               ['RP Mask submode', 'Mask submode'],
               ['RP Prompt submode', 'Prompt submode'],
-              ['RP Change AND', 'Change "AND" to "BREAK"'],
-              ['RP LoRA Neg U Ratios', 'Lora negative UNet Ratio'],
-              ['RP LoRA Neg Te Ratios', 'Lora negative TEnc Ratio'],
+              ['RP Change AND', '"AND" to "BREAK"'],
+              ['RP LoRA Neg U Ratios', 'Lora negative UNet ratio'],
+              ['RP LoRA Neg Te Ratios', 'Lora negative TEnc ratio'],
               ['RP threshold', 'Threshold']]
     status_section = QGroupBox()
     status_section.setLayout(label_maker(status, target, 2, 1))
@@ -824,8 +814,10 @@ def label_maker(status, target, stretch_title, stretch_value, selectable=False, 
             elif 'AddNet' in key and 'Model' in key:
                 item = item.replace('(', ' [').replace(')', ']')
             elif 'AddNet' in key and 'Weight A' in key:
-                weight_b = target.params.get(key.replace(' A ', ' B '))
+                weight_b_key = key.replace(' A ', ' B ')
+                weight_b = target.params.get(weight_b_key)
                 item = item + ' / ' + weight_b
+                target.used_params[weight_b_key] = True
         else:
             if name == 'Keep input size':
                 item = 'False'
@@ -837,6 +829,9 @@ def label_maker(status, target, stretch_title, stretch_value, selectable=False, 
         value = QLabel(item)
         if selectable:
             value.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        if name:
+            title.setObjectName(name + '_title')
+            value.setObjectName(name + '_value')
         size_policy_title = title.sizePolicy()
         size_policy_value = value.sizePolicy()
         size_policy_title.setHorizontalStretch(stretch_title)

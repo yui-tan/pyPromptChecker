@@ -1,6 +1,5 @@
 import os
 import re
-import json
 
 
 class ChunkData:
@@ -75,10 +74,9 @@ class ChunkData:
             self.params['Model'] = model_name
             self.used_params['Model hash'] = True
 
-    def json_export(self, filepath):
-        if filepath:
-            with open(filepath, 'w') as f:
-                json.dump(self.params, f, sort_keys=True, indent=4, ensure_ascii=False)
+    def search_value(self, target_key, target_value):
+        target_str = self.params[target_key]
+        return target_value in target_str
 
 
 def parse_parameter(chunks, filepath, model_list=None):
@@ -149,7 +147,7 @@ def tiled_diffusion_parse(target_data):
     tiled_diffusion_regex = r'Tiled Diffusion: \{.*},'
     region_regex = r'"Region [0-9][^}]*}'
     region_control_regex = r'(?<="Region control": ).*$'
-    comma_between_hyphen = r'\"[^"]*"'
+    hyphened_target = r'\"[^"]*"'
     region_status_list = []
     match = re.search(tiled_diffusion_regex, target_data.data)
     if match:
@@ -158,7 +156,8 @@ def tiled_diffusion_parse(target_data):
             region_status = re.findall(region_regex, tiled_diffusion_status)
             tiled_diffusion_status = re.sub(region_control_regex, 'True', tiled_diffusion_status)
             for tmp in region_status:
-                tmp = re.sub(comma_between_hyphen, lambda match: match.group().replace(',', '<comma>'), tmp)
+                tmp = re.sub(hyphened_target, lambda match: match.group().replace(',', '<comma>'), tmp)
+                tmp = re.sub(hyphened_target, lambda match: match.group().replace(':', '<colon>'), tmp)
                 number = tmp.split(':')[0]
                 target_str = tmp.replace(number + ':', '').replace('{', '').replace('}', '').replace('"', '')
                 target = target_str.split(',')
@@ -172,6 +171,7 @@ def tiled_diffusion_parse(target_data):
         if region_status_list:
             result = result + region_status_list
         result = [[d2.replace('<comma>', ',').strip() for d2 in d1] for d1 in result]
+        result = [[d2.replace('<colon>', ':').strip() for d2 in d1] for d1 in result]
         result = [d1 for d1 in result if any(d1)]
         target_data.data_refresh(match.group(), result)
     return target_data
