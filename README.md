@@ -1,57 +1,53 @@
-# pyPromptChecker  
+# pyPromptChecker
 
 A tiny script for AI images created by AUTOMATIC/stable-diffusion-webui  
-For my personal use  
 Supported only PNG files
   
-Screenshot
-![](https://user-images.githubusercontent.com/121333129/256966356-cf675550-ef93-4f28-a31b-a69db097d4be.png)
+- Main Screenshot
+![Main](https://github.com/yui-tan/pyPromptChecker/assets/121333129/a0c86d10-563f-44a2-bf9f-cfc207fd262f)
+- Hires.fix and CFG fix
+![Hires_cfg](https://github.com/yui-tan/pyPromptChecker/assets/121333129/e3ee643e-847f-4f76-a1a5-5b3c96c6598f)
+- Lora and Additional networks
+![Lora_Addnet](https://github.com/yui-tan/pyPromptChecker/assets/121333129/41159dca-3577-441d-9fe2-bca32c6fd129)
+- Controlnet
+![Controlnet](https://github.com/yui-tan/pyPromptChecker/assets/121333129/cb9bdcb8-49fa-46c5-9bac-547e80e992f7)
+- Tiled diffusion
+![Tiled_diffusion](https://github.com/yui-tan/pyPromptChecker/assets/121333129/38a9387d-d663-40db-92d8-6ea39954c43a)
+- Regional prompter
+![Regional_prompter](https://github.com/yui-tan/pyPromptChecker/assets/121333129/fe0c201c-09a2-4ae3-b59c-b2ff36ab7a28)
 
-Tiled diffusion status screenshot
-![](https://user-images.githubusercontent.com/121333129/256966357-6c778370-2153-45d7-b128-cdcd659f3ee7.png)
-
-Additional and Hires status screenshot
-![](https://user-images.githubusercontent.com/121333129/256966358-6fc1eac8-af03-4e2e-9ef4-0e5451f249c9.png)
-
-ControlNet status screenshot
-![](https://user-images.githubusercontent.com/121333129/256966359-3030c47e-13ea-49b7-b3fa-a2845b2818fc.png)
-
-Regional prompter status screenshot
-![](https://user-images.githubusercontent.com/121333129/257389785-b9b65076-ec8d-4fea-a9ed-fddebfde641f.png)
 # Requirements  
 
-- Python 3.x
+- **Python 3.x**
 - PyQt6
 - pypng  
 
-# Howto  
-Highly recommend installing it in venv
-````
+# Supported
+- Stable Diffusion Webui
+  - Hires.fix
+  - Dynamic Thresholding (CFG fix) extension
+  - Add Network extension
+  - ControlNet extension
+  - Tiled diffusion extension
+  - Regional prompter extension
+  
+
+- Image format
+  - PNG
+# Howto
+For Linux
+````bash
 git clone https://github.com/yui-tan/pyPromptChecker
-cd pyPromptChecker
-
-## if you want to install to venv
-## python -m venv venv
-## source venv/bin/activate
-
-pip3 install -e.
-
-## /path/to/venv/bin/activate
-mikkumiku
-usage: mikkumiku [-h] [-a | -f [FILEPATH ...] | -d DIRECTORY]
-
-Script for extracting and formatting PNG chunks.
-If no options are specified, the script will open a file choose dialog.
-All options are mutually exclusive.
-
-options:
-  -h, --help            show this help message and exit
-  -a, --ask              open directory choose dialog.
-  -f [FILEPATH ...], --filepath [FILEPATH ...]
-                              send path to files.
-  -d DIRECTORY, --directory DIRECTORY
-                              send path to directory.
+cd pyPromptChecker/install
+./install.sh
 ````
+  
+For Windows
+1. Make sure you've got Python 3.x hanging around. 
+2. Download the packages from the 'Releases'.
+3. Extract the packages to a location of your choice.
+4. Run pyPromptChecker/install/install.bat file.
+5. Don't miss a single word of the words that pop up on the screen, before going wild in the comments
 
 # ToDo
 
