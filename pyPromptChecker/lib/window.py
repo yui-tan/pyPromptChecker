@@ -41,7 +41,8 @@ class ImageWindow(QMainWindow):
         pixmap_height = pixmap.height()
         width = screen_width if pixmap_width > screen_width else pixmap_width
         height = screen_height if pixmap_height > screen_height else pixmap_height
-        pixmap = pixmap.scaled(width, height, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        pixmap = pixmap.scaled(width, height, Qt.AspectRatioMode.KeepAspectRatio,
+                               Qt.TransformationMode.SmoothTransformation)
 
         title = 'Image: ' + str(pixmap.width()) + 'x' + str(pixmap.height())
         self.setWindowTitle(title)
@@ -169,10 +170,11 @@ class ResultWindow(QMainWindow):
             main_section_layout = QHBoxLayout()
 
             pixmap_scale = self.config.get_option('PixmapSize')
-            main_label_layout, pixmap_label = make_main_section(tmp, pixmap_scale)
+            main_label_layout = make_main_section(tmp, pixmap_scale)
             main_section_layout.addLayout(main_label_layout)
             main_section.setLayout(main_section_layout)
             tab_page_layout.addWidget(main_section)
+            pixmap_label = main_section.findChild(PixmapLabel, 'Pixmap')
             pixmap_label.clicked.connect(self.pixmap_clicked)
 
             hires_tab = ['Hires upscaler', 'Face restoration', 'Dynamic thresholding enabled']
@@ -371,15 +373,23 @@ def make_main_section(target, scale):
     main_section_layout.addWidget(pixmap_label, 1)
     main_section_layout.addLayout(label_maker(status, target, 1, 1, True, True, 15), 1)
 
-    return main_section_layout, pixmap_label
+    return main_section_layout
 
 
 def make_pixmap_label(filepath, scale):
+    #    pixmap_layout = QVBoxLayout()
+    #    button_layout = QHBoxLayout()
     pixmap = QPixmap(filepath)
     pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
     pixmap_label = PixmapLabel()
     pixmap_label.setPixmap(pixmap)
+    pixmap_label.setObjectName('Pixmap')
     pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    # pixmap_layout.addWidget(pixmap_label)
+    #    for tmp in ['Add favourite', 'Delete']:
+    #        button = QPushButton(tmp)
+    #        button_layout.addWidget(button)
+    #    pixmap_layout.addLayout(button_layout)
     return pixmap_label
 
 
@@ -625,6 +635,7 @@ def make_control_net_tab(target, starts):
 
     unit_num = int(target.params.get('ControlNet'))
     loop_num = 2 if 2 > unit_num else unit_num
+    #    loop_num = 10
     for i in range(starts, loop_num):
         control_net_enable = target.params.get('ControlNet ' + str(i))
         status_key = [['ControlNet ' + str(i) + ' ' + value[0], value[1]] for value in status]
@@ -645,7 +656,8 @@ def make_control_net_tab(target, starts):
 def make_regional_prompter_tab(target, scale):
     filepath = target.params.get('Filepath')
     pixmap = QPixmap(filepath)
-    pixmap = pixmap.scaled(scale, int(scale * 0.7), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
+    pixmap = pixmap.scaled(scale, int(scale * 0.7), Qt.AspectRatioMode.KeepAspectRatio,
+                           Qt.TransformationMode.FastTransformation)
 
     regional_prompter_group = QHBoxLayout()
     regional_prompter_group.addWidget(make_regional_prompter_status_section(target), 1)

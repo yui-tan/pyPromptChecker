@@ -65,6 +65,7 @@ do
     echo -e "[Desktop Entry]"
     echo -e "Name=pyPromptChecker"
     echo -e "Exec=${command[i]}"
+    echo -e "Path=$(pwd)"
     echo -e "Comment=A tiny script for AI images"
     echo -e "Terminal=false"
     echo -e "Icon=${path_to_icon}"

@@ -4,8 +4,12 @@ import configparser
 
 class Configure:
     def __init__(self):
-        path = os.path.abspath('')
+        path = os.path.abspath('../')
         filepath = os.path.join(path, 'model_list.csv')
+        if not os.path.exists(filepath):
+            path = os.path.abspath('')
+            filepath = os.path.join(path, 'model_list.csv')
+        ini_path = os.path.join(path,'config.ini')
         self.config = {'ModelList': filepath,
                        'MaxWindowWidth': 1024,
                        'MaxWindowHeight': 920,
@@ -22,11 +26,11 @@ class Configure:
                        'IgnoreIfDataIsNotEmbedded': False,
                        'TargetChunkIndex': 1}
 
-        self.ini_load('../../config.ini')
+        self.ini_load(ini_path)
 
-    def ini_load(self, filepath):
+    def ini_load(self, ini_path):
         ini_config = configparser.ConfigParser()
-        ini_config.read('config.ini')
+        ini_config.read(ini_path)
         ini_section = [['Location', 'ModelList'],
                        ['Window', 'MaxWindowWidth', 'MaxWindowHeight'],
                        ['Pixmap', 'PixmapSize', 'RegionalPrompterPixmapSize'],
