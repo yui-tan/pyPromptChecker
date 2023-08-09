@@ -370,27 +370,27 @@ def make_main_section(target, scale):
         del status[14]
     main_section_layout = QHBoxLayout()
     pixmap_label = make_pixmap_label(filepath, scale)
-    main_section_layout.addWidget(pixmap_label, 1)
+    main_section_layout.addLayout(pixmap_label, 1)
     main_section_layout.addLayout(label_maker(status, target, 1, 1, True, True, 15), 1)
 
     return main_section_layout
 
 
 def make_pixmap_label(filepath, scale):
-    #    pixmap_layout = QVBoxLayout()
-    #    button_layout = QHBoxLayout()
+    pixmap_layout = QVBoxLayout()
+    button_layout = QHBoxLayout()
     pixmap = QPixmap(filepath)
     pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
     pixmap_label = PixmapLabel()
     pixmap_label.setPixmap(pixmap)
     pixmap_label.setObjectName('Pixmap')
     pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    # pixmap_layout.addWidget(pixmap_label)
-    #    for tmp in ['Add favourite', 'Delete']:
-    #        button = QPushButton(tmp)
-    #        button_layout.addWidget(button)
-    #    pixmap_layout.addLayout(button_layout)
-    return pixmap_label
+    pixmap_layout.addWidget(pixmap_label)
+    for tmp in ['favourite', 'Move to', 'Delete']:
+        button = QPushButton(tmp)
+        button_layout.addWidget(button)
+    pixmap_layout.addLayout(button_layout)
+    return pixmap_layout
 
 
 def make_prompt_tab(target):
