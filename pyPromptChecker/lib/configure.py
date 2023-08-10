@@ -11,6 +11,7 @@ class Configure:
             filepath = os.path.join(path, 'model_list.csv')
         ini_path = os.path.join(path,'config.ini')
         self.config = {'ModelList': filepath,
+                       'Favourites': '',
                        'MaxWindowWidth': 1024,
                        'MaxWindowHeight': 920,
                        'PixmapSize': 350,
@@ -24,21 +25,24 @@ class Configure:
                        'RegionalPrompter': True,
                        'ErrorList': 1,
                        'IgnoreIfDataIsNotEmbedded': False,
-                       'TargetChunkIndex': 1}
+                       'TargetChunkIndex': 1,
+                       'UseCopyInsteadOfMove': True,
+                       'AskIfClearTrashBin': True}
 
         self.ini_load(ini_path)
 
     def ini_load(self, ini_path):
         ini_config = configparser.ConfigParser()
         ini_config.read(ini_path)
-        ini_section = [['Location', 'ModelList'],
+        ini_section = [['Location', 'ModelList', 'Favourites'],
                        ['Window', 'MaxWindowWidth', 'MaxWindowHeight'],
                        ['Pixmap', 'PixmapSize', 'RegionalPrompterPixmapSize'],
                        ['JSON', 'JsonSingle', 'JsonMultiple'],
                        ['Tab', 'Lora', 'hiresOthers', 'TiledDiffusion', 'ControlNet', 'RegionalPrompter'],
                        ['Ignore', 'IgnoreIfDataIsNotEmbedded'],
                        ['Debug', 'ErrorList'],
-                       ['PNG', 'TargetChunkIndex']
+                       ['PNG', 'TargetChunkIndex'],
+                       ['Warning', 'UseCopyInsteadOfMove', 'AskIfClearTrashBin']
                        ]
         for d1 in ini_section:
             section = d1[0]
@@ -53,7 +57,7 @@ class Configure:
                             self.config[option] = value
                         elif section == 'Pixmap' and 99 < value < 801:
                             self.config[option] = value
-                    elif section == 'Tab':
+                    elif section == 'Tab' or section == 'ignore' or section == 'Warning':
                         try:
                             value = ini_config[section].getboolean(option)
                         except ValueError:
@@ -63,12 +67,6 @@ class Configure:
                         value = ini_config[section].get(option)
                         if os.path.exists(value):
                             self.config[option] = value
-                    elif section == 'Ignore':
-                        try:
-                            value = ini_config[section].getboolean(option)
-                        except ValueError:
-                            continue
-                        self.config[option] = value
                     elif section == 'Debug':
                         value = ini_config[section].get(option)
                         if value == 'AlwaysOff':

@@ -176,6 +176,9 @@ class ResultWindow(QMainWindow):
             tab_page_layout.addWidget(main_section)
             pixmap_label = main_section.findChild(PixmapLabel, 'Pixmap')
             pixmap_label.clicked.connect(self.pixmap_clicked)
+            for button in ['Favourite', 'Move to', 'Delete']:
+                managing_button = main_section.findChild(QPushButton, button)
+                managing_button.clicked.connect(self.managing_button_clicked)
 
             hires_tab = ['Hires upscaler', 'Face restoration', 'Dynamic thresholding enabled']
             lora_tab = ['Lora', 'AddNet Enabled']
@@ -328,6 +331,35 @@ class ResultWindow(QMainWindow):
                 self.params = []
                 self.init_ui(filepath)
 
+    def managing_button_clicked(self):
+        where_from = self.sender().text()
+        if where_from == 'Favourite':
+            source = self.params[self.tab_index].params.get('Filepath')
+            destination = self.config.get_option('Favourites')
+            is_move = not self.config.get_option('UseCopyInsteadOfMove')
+            if not os.path.exists(source):
+                text = "Can't find this image file."
+                ok_only_messagebox("Can't move", text, 'crit')
+            elif not destination:
+                text = "Can't find setting of destination directory.\nCheck setting in 'config.ini' file."
+                ok_only_messagebox("Can't move", text, 'crit')
+            elif not os.path.isdir(destination):
+                text = "Can't find destination directory.\nCheck setting in 'config.ini' file."
+                ok_only_messagebox("Can't move", text, 'crit')
+            else:
+                pyPromptChecker.lib.io.image_copy_to(source, destination, is_move)
+        elif where_from == 'Move to':
+            source = self.params[self.tab_index].params.get('Filepath')
+            destination = directory_choose_dialog()
+            is_move = not self.config.get_option('UseCopyInsteadOfMove')
+            if destination:
+                pyPromptChecker.lib.io.image_copy_to(source, destination, is_move)
+        elif where_from == 'Delete':
+            source = self.params[self.tab_index].params.get('Filepath')
+            trash_bin = os.path.join(os.path.abspath(''), '.trash')
+            os.makedirs(trash_bin, exist_ok=True)
+            pyPromptChecker.lib.io.image_copy_to(source, trash_bin, True)
+
     def pixmap_clicked(self):
         self.image_window.filepath = self.params[self.tab_index].params.get('Filepath')
         self.image_window.init_ui()
@@ -386,8 +418,9 @@ def make_pixmap_label(filepath, scale):
     pixmap_label.setObjectName('Pixmap')
     pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
     pixmap_layout.addWidget(pixmap_label)
-    for tmp in ['favourite', 'Move to', 'Delete']:
+    for tmp in ['Favourite', 'Move to', 'Delete']:
         button = QPushButton(tmp)
+        button.setObjectName(tmp)
         button_layout.addWidget(button)
     pixmap_layout.addLayout(button_layout)
     return pixmap_layout
@@ -911,9 +944,12 @@ def directory_choose_dialog(where=False):
     return directory
 
 
-def ok_only_messagebox(title, text):
+def ok_only_messagebox(title, text, kind='info'):
     messagebox = QMessageBox()
-    messagebox.setIcon(QMessageBox.Icon.Information)
+    if kind == 'info':
+        messagebox.setIcon(QMessageBox.Icon.Information)
+    elif kind == 'crit':
+        messagebox.setIcon(QMessageBox.Icon.Critical)
     messagebox.setText(text)
     messagebox.setWindowTitle(title)
     messagebox.addButton(QMessageBox.StandardButton.Ok)
