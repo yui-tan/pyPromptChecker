@@ -51,6 +51,8 @@ For Windows
 
 # ToDo
 
+ - [ ] Be able to move and delete PNG images by button
+ - [ ] Filtering main tabs various conditions
  - [x] Refactoring and clean up
  - [x] Add support for hires.fix status  
  - [x] Add support for ControlNet status  
@@ -64,7 +66,5 @@ For Windows
  - [ ] Export JSON not only single and all but selected image
  - [ ] Add support for import JSON
  - [ ] Make it import data into Stable-Diffusion-Webui via API
- - [ ] Filtering main tabs various conditions
- - [ ] Be able to move and delete PNG images by button
- - [ ] Windows exe format (very low-priority)
+ - [ ] Windows exe format (INCREDIBLY low-priority)
  - [ ] Get marry to Miku
