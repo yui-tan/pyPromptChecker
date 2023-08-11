@@ -38,7 +38,7 @@ class Configure:
                        ['Window', 'MaxWindowWidth', 'MaxWindowHeight'],
                        ['Pixmap', 'PixmapSize', 'RegionalPrompterPixmapSize'],
                        ['JSON', 'JsonSingle', 'JsonMultiple'],
-                       ['Tab', 'Lora', 'hiresOthers', 'TiledDiffusion', 'ControlNet', 'RegionalPrompter'],
+                       ['Tab', 'Lora', 'HiresOthers', 'TiledDiffusion', 'ControlNet', 'RegionalPrompter'],
                        ['Ignore', 'IgnoreIfDataIsNotEmbedded'],
                        ['Debug', 'ErrorList'],
                        ['PNG', 'TargetChunkIndex'],

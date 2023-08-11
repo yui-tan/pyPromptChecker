@@ -137,7 +137,7 @@ class ResultWindow(QMainWindow):
 
         for filepath in targets:
             self.progress_bar.update_description('Extracting PNG Chunk...')
-            chunk_data = pyPromptChecker.lib.decoder.decode_text_chunk(filepath, 1)
+            chunk_data = pyPromptChecker.lib.decoder.chunk_text_extractor(filepath, 1)
             parameters = pyPromptChecker.lib.parser.parse_parameter(chunk_data, filepath, self.models)
             if parameters.params['Positive'] == 'This file has no embedded data' and ignore:
                 valid_total = valid_total - 1
@@ -154,7 +154,7 @@ class ResultWindow(QMainWindow):
         self.seed_for_copy = self.params[0].params.get('Seed')
 
         root_layout = QVBoxLayout()
-        root_tab = QTabWidget()
+        self.root_tab = QTabWidget()
 
         for tmp in self.params:
             self.progress_bar.update_description('Formatting prompt data...')
@@ -245,16 +245,16 @@ class ResultWindow(QMainWindow):
             tab_page_layout.addWidget(inner_tab)
             tab_page.setLayout(tab_page_layout)
 
-            root_tab.addTab(tab_page, tmp.params.get('Filename'))
-            root_tab.currentChanged.connect(self.tab_changed)
+            self.root_tab.addTab(tab_page, tmp.params.get('Filename'))
+            self.root_tab.currentChanged.connect(self.tab_changed)
 
             self.progress_bar.update_bar()
             image_count = image_count + 1
             if 'File count' in tmp.params:
                 del tmp.params['File count']
 
-        self.tab_max_count = root_tab.count()
-        root_layout.addWidget(root_tab)
+        self.tab_max_count = self.root_tab.count()
+        root_layout.addWidget(self.root_tab)
 
         self.progress_bar.update_description('Finalizing...')
 
@@ -364,6 +364,18 @@ class ResultWindow(QMainWindow):
         self.image_window.filepath = self.params[self.tab_index].params.get('Filepath')
         self.image_window.init_ui()
 
+    def closeEvent(self, event):
+        trash_bin = os.path.join(os.path.abspath(''), '.trash')
+        if not pyPromptChecker.lib.io.is_directory_empty(trash_bin):
+            res = True
+            ask = self.config.get_option('AskIfClearTrashBin')
+            if ask:
+                res = ok_only_messagebox('Clear trash bin', 'Do you want to clean up trash bin ?', 'ques')
+            if res or not ask:
+                pyPromptChecker.lib.io.clear_trash_bin(trash_bin)
+        event.accept()
+        QApplication.quit()
+
 
 def result_window(target_data):
     app = QApplication(sys.argv)
@@ -403,6 +415,7 @@ def make_main_section(target, scale):
     main_section_layout = QHBoxLayout()
     pixmap_label = make_pixmap_label(filepath, scale)
     main_section_layout.addLayout(pixmap_label, 1)
+    main_section_layout.insertSpacing(1, 10)
     main_section_layout.addLayout(label_maker(status, target, 1, 1, True, True, 15), 1)
 
     return main_section_layout
@@ -946,14 +959,19 @@ def directory_choose_dialog(where=False):
 
 def ok_only_messagebox(title, text, kind='info'):
     messagebox = QMessageBox()
+    messagebox.addButton(QMessageBox.StandardButton.Ok)
     if kind == 'info':
         messagebox.setIcon(QMessageBox.Icon.Information)
     elif kind == 'crit':
         messagebox.setIcon(QMessageBox.Icon.Critical)
+    elif kind == 'ques':
+        messagebox.setIcon(QMessageBox.Icon.Question)
+        messagebox.addButton(QMessageBox.StandardButton.Cancel)
     messagebox.setText(text)
     messagebox.setWindowTitle(title)
-    messagebox.addButton(QMessageBox.StandardButton.Ok)
-    messagebox.exec()
+    ans = messagebox.exec()
+    if not ans == 1024:
+        return False
 
 
 def checking_progress(value):

@@ -37,7 +37,7 @@ def check_files(target_list):
             file_is_not_found_list.append(filepath)
         elif not os.path.isfile(filepath):
             this_is_directory_list.append(filepath)
-        elif not decoder.png_checker(filepath):
+        elif not decoder.image_format_identifier(filepath):
             this_file_is_not_png_file_list.append(filepath)
         else:
             valid_file_list.append(filepath)

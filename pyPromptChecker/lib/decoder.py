@@ -1,14 +1,24 @@
 import png
 
 
-def png_checker(filepath):
+def image_format_identifier(filepath):
     with open(filepath, 'rb') as f:
         png_signature = b'\x89PNG\r\n\x1a\n'
-        file_header = f.read(8)
-        return png_signature == file_header
+        jpeg_signature = b'\xff\xd8\xff'
+        webp_head_signature = b'\x52\x49\x46\x46'
+        webp_foot_signature = b'\x57\x45\x42\x50'
+        file_header = f.read(12)
+        if file_header.startswith(png_signature):
+            return [filepath, 0]
+        elif file_header.startswith(jpeg_signature):
+            return [filepath, 1]
+        elif file_header.startswith(webp_head_signature) and file_header.endswith(webp_foot_signature):
+            return [filepath, 2]
+        else:
+            return None
 
 
-def decode_text_chunk(target, index):
+def chunk_text_extractor(target, index):
     if index < 0:
         raise Exception('The index value {} less than 0!'.format(index))
 
