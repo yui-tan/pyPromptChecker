@@ -130,7 +130,7 @@ class ResultWindow(QMainWindow):
             self.progress_bar.setLabelText('Extracting PNG Chunk...')
 
         for filepath in targets:
-            chunk_data = pyPromptChecker.lib.decoder.decode_text_chunk(filepath, 1)
+            chunk_data = pyPromptChecker.lib.decoder.chunk_text_extractor(filepath, 1)
             parameters = pyPromptChecker.lib.parser.parse_parameter(chunk_data, filepath, self.models)
             if parameters.params['Positive'] == 'This file has no embedded data' and ignore:
                 valid_total = valid_total - 1
