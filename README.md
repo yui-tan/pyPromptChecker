@@ -53,6 +53,7 @@ For Windows
 
  - [ ] Be able to move and delete PNG images by button
  - [ ] Filtering main tabs various conditions
+ - [ ] Add support for other image file formats
  - [x] Refactoring and clean up
  - [x] Add support for hires.fix status  
  - [x] Add support for ControlNet status  
@@ -78,4 +79,21 @@ For Windows
 
 Depending on the number of files, this feature may take a significant amount of time to process.  
 Additionally, it may require more than 32 GiB of memory (not VRAM).  
-For example, in my case, it took 20 minutes to process 62 files, and the memory usage went up to 29 GiB.
+For example, in my case, it took 20 minutes to process 62 files, and the memory usage went up to 29 GiB.  
+
+If you edited 'model_list.csv', I recommend relocate 'model_list.csv' before runnning this feature.  
+This feature works in append mode, but The outputs is slightly different format than before.
+
+# About 'model_list.csv'
+
+- This script is required to locate model names.  
+- The structure is following:
+  
+| Display name | Model hash | Entire SHA215 hash | Filename | Model type |
+|:---:|:---:|:---:|:---:|:---:|
+
+- The display name in the first column is the same as the filename if freshly output from the script.
+- But there is no issue to  edit it according to your preference.  
+- The each of value must be comma-separated and the values must not be enclosed in quotation marks.  
+- The script uses the first and second columns for searching.  
+- Therefore, you can delete columns from the third onward or add something in columns from the sixth onward without any issues.  
