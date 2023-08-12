@@ -28,8 +28,8 @@ def check_files(target_list):
     valid_file_list = []
 
     if file_counts > 20:
-        app, progress_bar = pyPromptChecker.lib.window.checking_progress(len(target_list))
-        progress_bar.show()
+        app, progress_bar = pyPromptChecker.lib.window.progress_dialog()
+        progress_bar.setLabelText("Checking files...")
         progress_enable = True
 
     for filepath in target_list:
@@ -42,7 +42,7 @@ def check_files(target_list):
         else:
             valid_file_list.append(filepath)
         if progress_enable:
-            progress_bar.update_bar()
+            progress_bar.update_value()
 
     if progress_enable:
         progress_bar.close()

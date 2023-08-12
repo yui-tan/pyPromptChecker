@@ -1,3 +1,4 @@
+import datetime
 import os
 import sys
 import pyPromptChecker.lib.decoder
@@ -6,7 +7,7 @@ import pyPromptChecker.lib.configure
 import pyPromptChecker.lib.io
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout
 from PyQt6.QtWidgets import QTabWidget, QTextEdit, QPushButton, QFileDialog, QMessageBox
-from PyQt6.QtWidgets import QSplitter, QMainWindow, QGroupBox, QScrollArea, QProgressBar
+from PyQt6.QtWidgets import QSplitter, QMainWindow, QGroupBox, QScrollArea, QProgressDialog
 from PyQt6.QtGui import QPixmap, QPainter, QColor
 from PyQt6.QtCore import Qt, pyqtSignal
 
@@ -21,6 +22,31 @@ class PixmapLabel(QLabel):
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
         return QLabel.mousePressEvent(self, event)
+
+
+class ProgressDialog(QProgressDialog):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Progress")
+        self.setWindowModality(Qt.WindowModality.WindowModal)
+        self.setAutoClose(True)
+        self.setCancelButton(None)
+        self.setMinimumDuration(0)
+        self.setValue(0)
+        self.now = 0
+        self.center()
+
+    def update_value(self):
+        now = self.now + 1
+        self.setValue(now)
+        self.now = now
+
+    def center(self):
+        frame_geometry = self.frameGeometry()
+        screen_center = QApplication.primaryScreen().geometry().center()
+        frame_geometry.moveCenter(screen_center)
+        self.move(frame_geometry.topLeft())
 
 
 class ImageWindow(QMainWindow):
@@ -63,46 +89,11 @@ class ImageWindow(QMainWindow):
         self.close()
 
 
-class ProgressWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle('pyPromptChecker')
-        self.central = QWidget()
-        self.description = QLabel()
-        self.progress = QProgressBar()
-
-        central_layout = QVBoxLayout()
-        central_layout.addWidget(self.progress)
-        central_layout.addWidget(self.description)
-        self.central.setLayout(central_layout)
-
-        self.setCentralWidget(self.central)
-        self.resize(300, 50)
-        self.center()
-
-    def set_bar_range(self, value):
-        self.progress.setRange(0, value)
-
-    def update_bar(self):
-        value = self.progress.value()
-        self.progress.setValue(value + 1)
-        QApplication.processEvents()
-
-    def update_description(self, text):
-        self.description.setText(text)
-
-    def center(self):
-        frame_geometry = self.frameGeometry()
-        screen_center = QApplication.primaryScreen().geometry().center()
-        frame_geometry.moveCenter(screen_center)
-        self.move(frame_geometry.topLeft())
-
-
 class ResultWindow(QMainWindow):
     def __init__(self, targets=None):
         super().__init__()
-        self.progress_bar = ProgressWindow()
-        self.progress_bar.update_description('Initializing...')
+        self.progress_bar = None
+        self.progress_bar_enable = False
         self.config = pyPromptChecker.lib.configure.Configure()
         self.setWindowTitle('PNG Prompt Data')
         self.models = pyPromptChecker.lib.io.import_model_list(self.config.get_option('ModelList'))
@@ -126,28 +117,34 @@ class ResultWindow(QMainWindow):
         self.center()
 
     def init_ui(self, targets):
+        self.progress_bar_enable = True if len(targets) > 20 else False
         ignore = self.config.get_option('IgnoreIfDataIsNotEmbedded')
         total = len(targets)
         valid_total = total
         image_count = 1
 
-        self.progress_bar.set_bar_range(total * 2)
-        if total > 20:
-            self.progress_bar.show()
+        if self.progress_bar_enable:
+            self.progress_bar = ProgressDialog()
+            self.progress_bar.setRange(0, total * 2)
+            self.progress_bar.update_value()
+            self.progress_bar.setLabelText('Extracting PNG Chunk...')
 
         for filepath in targets:
-            self.progress_bar.update_description('Extracting PNG Chunk...')
             chunk_data = pyPromptChecker.lib.decoder.decode_text_chunk(filepath, 1)
             parameters = pyPromptChecker.lib.parser.parse_parameter(chunk_data, filepath, self.models)
             if parameters.params['Positive'] == 'This file has no embedded data' and ignore:
                 valid_total = valid_total - 1
                 continue
             self.params.append(parameters)
-            self.progress_bar.update_bar()
+            if self.progress_bar_enable:
+                self.progress_bar.update_value()
 
         if valid_total == 0:
-            ok_only_messagebox('Notice', 'There is no embedded data to parse.')
+            show_messagebox('Warning', 'There is no embedded data to parse.')
             sys.exit()
+
+        if self.progress_bar_enable:
+            self.progress_bar.setLabelText('Formatting prompt data...')
 
         self.positive_for_copy = self.params[0].params.get('Positive')
         self.negative_for_copy = self.params[0].params.get('Negative')
@@ -157,8 +154,9 @@ class ResultWindow(QMainWindow):
         root_tab = QTabWidget()
 
         for tmp in self.params:
-            self.progress_bar.update_description('Formatting prompt data...')
 
+            if self.progress_bar_enable:
+                self.progress_bar.update_value()
             if valid_total > 1:
                 tmp.params['File count'] = str(image_count) + ' / ' + str(valid_total)
 
@@ -183,10 +181,10 @@ class ResultWindow(QMainWindow):
             tabs = [['Prompts', True, True],
                     ['Hires.fix / CFG scale fix',
                      any(key in v for v in tmp.params for key in hires_tab),
-                     self.config.get_option('HiresOthers')],
+                     self.config.get_option('HiresCfg')],
                     ['Lora / Add networks',
                      any(key in v for v in tmp.params for key in lora_tab),
-                     self.config.get_option('Lora')],
+                     self.config.get_option('LoraAddNet')],
                     ['Tiled diffusion',
                      'Tiled diffusion' in tmp.params,
                      self.config.get_option('TiledDiffusion')],
@@ -245,7 +243,6 @@ class ResultWindow(QMainWindow):
             root_tab.addTab(tab_page, tmp.params.get('Filename'))
             root_tab.currentChanged.connect(self.tab_changed)
 
-            self.progress_bar.update_bar()
             image_count = image_count + 1
             if 'File count' in tmp.params:
                 del tmp.params['File count']
@@ -253,17 +250,20 @@ class ResultWindow(QMainWindow):
         self.tab_max_count = root_tab.count()
         root_layout.addWidget(root_tab)
 
-        self.progress_bar.update_description('Finalizing...')
+        if self.progress_bar_enable:
+            self.progress_bar.setLabelText('Finalizing...')
 
         button_layout = QHBoxLayout()
-        button_text = ['Copy positive',
-                       'Copy negative',
-                       'Copy seed',
-                       'Export JSON (This image)',
-                       'Export JSON (All images)',
-                       'Reselect']
+        button_text = ['Copy positive', 'Copy negative', 'Copy seed']
+        if self.config.get_option('JsonExport'):
+            button_text.extend(['Export JSON (This)', 'Export JSON (All)'])
+        button_text.append('Reselect')
+        if self.config.get_option('ModelHashExtractor'):
+            button_text.append('M')
         for tmp in button_text:
             copy_button = QPushButton(tmp)
+            if tmp == 'M':
+                copy_button.setMaximumSize(25, 25)
             button_layout.addWidget(copy_button)
             copy_button.clicked.connect(self.button_clicked)
 
@@ -276,8 +276,9 @@ class ResultWindow(QMainWindow):
             self.centralWidget().deleteLater()
         self.setCentralWidget(central_widget)
 
-        self.progress_bar.update_bar()
-        self.progress_bar.close()
+        if self.progress_bar_enable:
+            self.progress_bar.update_value()
+            self.progress_bar.close()
 
     def center(self):
         frame_geometry = self.frameGeometry()
@@ -327,6 +328,16 @@ class ResultWindow(QMainWindow):
             if filepath:
                 self.params = []
                 self.init_ui(filepath)
+        elif where_from == 'M':
+            text = 'This operation requires a significant amount of time.'
+            text = text + '\n...And more than 32GiB of memory.'
+            text = text + '\nDo you still want to run it ?'
+            if show_messagebox('Confirm', text, 'cancel', 'ques'):
+                directory = directory_choose_dialog()
+                if directory:
+                    operation_progress = ProgressDialog(self)
+                    pyPromptChecker.lib.io.model_hash_maker(directory, operation_progress)
+                    show_messagebox('Finished', 'Finished!')
 
     def pixmap_clicked(self):
         self.image_window.filepath = self.params[self.tab_index].params.get('Filepath')
@@ -344,6 +355,7 @@ def make_main_section(target, scale):
     status = [['File count', 'Number'],
               'Filename',
               'Filepath',
+              'Timestamp',
               'Size',
               'Seed',
               'Sampler',
@@ -364,13 +376,17 @@ def make_main_section(target, scale):
               'Region control',
               'ControlNet',
               'ENSD',
-              'Version']
+              'Version'
+              ]
     filepath = target.params.get('Filepath')
     if target.params.get('Hires upscaler'):
-        del status[14]
+        del status[15]
+    timestamp = datetime.datetime.fromtimestamp(os.path.getctime(filepath))
+    target.params['Timestamp'] = timestamp.strftime('%Y/%m/%d %H:%M')
     main_section_layout = QHBoxLayout()
     pixmap_label = make_pixmap_label(filepath, scale)
     main_section_layout.addWidget(pixmap_label, 1)
+    main_section_layout.insertSpacing(1, 10)
     main_section_layout.addLayout(label_maker(status, target, 1, 1, True, True, 15), 1)
 
     return main_section_layout
@@ -911,20 +927,29 @@ def directory_choose_dialog(where=False):
     return directory
 
 
-def ok_only_messagebox(title, text):
+def show_messagebox(title, text, method='', icon=''):
     messagebox = QMessageBox()
-    messagebox.setIcon(QMessageBox.Icon.Information)
+    messagebox.addButton(QMessageBox.StandardButton.Ok)
+    if icon == 'crit':
+        messagebox.setIcon(QMessageBox.Icon.Critical)
+    elif icon == 'Warn':
+        messagebox.setIcon(QMessageBox.Icon.Warning)
+    elif icon == 'ques':
+        messagebox.setIcon(QMessageBox.Icon.Question)
+    else:
+        messagebox.setIcon(QMessageBox.Icon.Information)
+    if method == 'cancel':
+        messagebox.addButton(QMessageBox.StandardButton.Cancel)
     messagebox.setText(text)
     messagebox.setWindowTitle(title)
-    messagebox.addButton(QMessageBox.StandardButton.Ok)
-    messagebox.exec()
+    if not messagebox.exec() == 1024:
+        return False
+    return True
 
 
-def checking_progress(value):
+def progress_dialog():
     app = QApplication.instance()
     if app is None:
         app = QApplication(sys.argv)
-    progress = ProgressWindow()
-    progress.set_bar_range(value)
-    progress.update_description('Checking files')
+    progress = ProgressDialog()
     return app, progress
