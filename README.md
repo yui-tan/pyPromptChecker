@@ -68,3 +68,14 @@ For Windows
  - [ ] Make it import data into Stable-Diffusion-Webui via API
  - [ ] Windows exe format (INCREDIBLY low-priority)
  - [ ] Get marry to Miku
+
+ # How to use Model hash extractor
+
+1. Open the 'config.ini' and change the value of 'ModelHashExtractor' from False to True.
+2. Run pyPromptChecker and click the 'M' button located at the bottom right.
+3. Select a directory containing the files you want to process.
+4. Highly recommended value of 'Model Hash Extractor' from True back to False for fool proof.
+
+Depending on the number of files, this feature may take a significant amount of time to process.  
+Additionally, it may require more than 32 GiB of memory (not VRAM).  
+For example, in my case, it took 20 minutes to process 62 files, and the memory usage went up to 29 GiB.
