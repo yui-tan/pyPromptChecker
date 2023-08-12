@@ -151,7 +151,7 @@ class ResultWindow(QMainWindow):
         self.seed_for_copy = self.params[0].params.get('Seed')
 
         root_layout = QVBoxLayout()
-        root_tab = QTabWidget()
+        self.root_tab = QTabWidget()
 
         for tmp in self.params:
 
@@ -174,6 +174,9 @@ class ResultWindow(QMainWindow):
             tab_page_layout.addWidget(main_section)
             pixmap_label = main_section.findChild(PixmapLabel, 'Pixmap')
             pixmap_label.clicked.connect(self.pixmap_clicked)
+            for button in ['Favourite', 'Move to', 'Delete']:
+                managing_button = main_section.findChild(QPushButton, button)
+                managing_button.clicked.connect(self.managing_button_clicked)
 
             hires_tab = ['Hires upscaler', 'Face restoration', 'Dynamic thresholding enabled']
             lora_tab = ['Lora', 'AddNet Enabled']
@@ -240,15 +243,15 @@ class ResultWindow(QMainWindow):
             tab_page_layout.addWidget(inner_tab)
             tab_page.setLayout(tab_page_layout)
 
-            root_tab.addTab(tab_page, tmp.params.get('Filename'))
-            root_tab.currentChanged.connect(self.tab_changed)
+            self.root_tab.addTab(tab_page, tmp.params.get('Filename'))
+            self.root_tab.currentChanged.connect(self.tab_changed)
 
             image_count = image_count + 1
             if 'File count' in tmp.params:
                 del tmp.params['File count']
 
-        self.tab_max_count = root_tab.count()
-        root_layout.addWidget(root_tab)
+        self.tab_max_count = self.root_tab.count()
+        root_layout.addWidget(self.root_tab)
 
         if self.progress_bar_enable:
             self.progress_bar.setLabelText('Finalizing...')
@@ -339,9 +342,50 @@ class ResultWindow(QMainWindow):
                     pyPromptChecker.lib.io.model_hash_maker(directory, operation_progress)
                     show_messagebox('Finished', 'Finished!')
 
+    def managing_button_clicked(self):
+        where_from = self.sender().text()
+        if where_from == 'Favourite':
+            source = self.params[self.tab_index].params.get('Filepath')
+            destination = self.config.get_option('Favourites')
+            is_move = not self.config.get_option('UseCopyInsteadOfMove')
+            if not os.path.exists(source):
+                text = "Can't find this image file."
+                show_messagebox("Can't move", text, 'crit')
+            elif not destination:
+                text = "Can't find setting of destination directory.\nCheck setting in 'config.ini' file."
+                show_messagebox("Can't move", text, 'crit')
+            elif not os.path.isdir(destination):
+                text = "Can't find destination directory.\nCheck setting in 'config.ini' file."
+                show_messagebox("Can't move", text, 'crit')
+            else:
+                pyPromptChecker.lib.io.image_copy_to(source, destination, is_move)
+        elif where_from == 'Move to':
+            source = self.params[self.tab_index].params.get('Filepath')
+            destination = directory_choose_dialog()
+            is_move = not self.config.get_option('UseCopyInsteadOfMove')
+            if destination:
+                pyPromptChecker.lib.io.image_copy_to(source, destination, is_move)
+        elif where_from == 'Delete':
+            source = self.params[self.tab_index].params.get('Filepath')
+            trash_bin = os.path.join(os.path.abspath(''), '.trash')
+            os.makedirs(trash_bin, exist_ok=True)
+            pyPromptChecker.lib.io.image_copy_to(source, trash_bin, True)
+
     def pixmap_clicked(self):
         self.image_window.filepath = self.params[self.tab_index].params.get('Filepath')
         self.image_window.init_ui()
+
+    def closeEvent(self, event):
+        trash_bin = os.path.join(os.path.abspath(''), '.trash')
+        if not pyPromptChecker.lib.io.is_directory_empty(trash_bin):
+            res = True
+            ask = self.config.get_option('AskIfClearTrashBin')
+            if ask:
+                res = show_messagebox('Clear trash bin', 'Do you want to clean up trash bin ?', 'ques')
+            if res or not ask:
+                pyPromptChecker.lib.io.clear_trash_bin(trash_bin)
+        event.accept()
+        QApplication.quit()
 
 
 def result_window(target_data):
@@ -385,7 +429,7 @@ def make_main_section(target, scale):
     target.params['Timestamp'] = timestamp.strftime('%Y/%m/%d %H:%M')
     main_section_layout = QHBoxLayout()
     pixmap_label = make_pixmap_label(filepath, scale)
-    main_section_layout.addWidget(pixmap_label, 1)
+    main_section_layout.addLayout(pixmap_label, 1)
     main_section_layout.insertSpacing(1, 10)
     main_section_layout.addLayout(label_maker(status, target, 1, 1, True, True, 15), 1)
 
@@ -393,20 +437,21 @@ def make_main_section(target, scale):
 
 
 def make_pixmap_label(filepath, scale):
-    #    pixmap_layout = QVBoxLayout()
-    #    button_layout = QHBoxLayout()
+    pixmap_layout = QVBoxLayout()
+    button_layout = QHBoxLayout()
     pixmap = QPixmap(filepath)
     pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
     pixmap_label = PixmapLabel()
     pixmap_label.setPixmap(pixmap)
     pixmap_label.setObjectName('Pixmap')
     pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    # pixmap_layout.addWidget(pixmap_label)
-    #    for tmp in ['Add favourite', 'Delete']:
-    #        button = QPushButton(tmp)
-    #        button_layout.addWidget(button)
-    #    pixmap_layout.addLayout(button_layout)
-    return pixmap_label
+    pixmap_layout.addWidget(pixmap_label)
+    for tmp in ['Favourite', 'Move to', 'Delete']:
+        button = QPushButton(tmp)
+        button.setObjectName(tmp)
+        button_layout.addWidget(button)
+    pixmap_layout.addLayout(button_layout)
+    return pixmap_layout
 
 
 def make_prompt_tab(target):

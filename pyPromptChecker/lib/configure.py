@@ -11,6 +11,7 @@ class Configure:
             filepath = os.path.join(path, 'model_list.csv')
         ini_path = os.path.join(path,'config.ini')
         self.config = {'ModelList': filepath,
+                       'Favourites': '',
                        'MaxWindowWidth': 1024,
                        'MaxWindowHeight': 920,
                        'PixmapSize': 350,
@@ -26,14 +27,16 @@ class Configure:
                        'RegionalPrompter': True,
                        'ErrorList': 1,
                        'IgnoreIfDataIsNotEmbedded': False,
-                       'TargetChunkIndex': 1}
+                       'TargetChunkIndex': 1,
+                       'UseCopyInsteadOfMove': True,
+                       'AskIfClearTrashBin': True}
 
         self.ini_load(ini_path)
 
     def ini_load(self, ini_path):
         ini_config = configparser.ConfigParser()
         ini_config.read(ini_path)
-        ini_section = [['Location', 'ModelList'],
+        ini_section = [['Location', 'ModelList', 'Favourites'],
                        ['Window', 'MaxWindowWidth', 'MaxWindowHeight'],
                        ['Pixmap', 'PixmapSize', 'RegionalPrompterPixmapSize'],
                        ['Features', 'JsonExport', 'JsonSingle', 'JsonMultiple', 'ModelHashExtractor'],
