@@ -30,23 +30,16 @@ class ProgressDialog(QProgressDialog):
         super().__init__(parent)
         self.setWindowTitle("Progress")
         self.setWindowModality(Qt.WindowModality.WindowModal)
-        self.setAutoClose(True)
         self.setCancelButton(None)
         self.setMinimumDuration(0)
         self.setValue(0)
         self.now = 0
-        self.center()
+        move_center(self, parent)
 
     def update_value(self):
         now = self.now + 1
         self.setValue(now)
         self.now = now
-
-    def center(self):
-        frame_geometry = self.frameGeometry()
-        screen_center = QApplication.primaryScreen().geometry().center()
-        frame_geometry.moveCenter(screen_center)
-        self.move(frame_geometry.topLeft())
 
 
 class ImageWindow(QMainWindow):
@@ -80,10 +73,7 @@ class ImageWindow(QMainWindow):
 
         self.setCentralWidget(label)
         self.show()
-
-        frame_geometry = self.frameGeometry()
-        frame_geometry.moveCenter(self.screen_center)
-        self.move(frame_geometry.topLeft())
+        move_center(self)
 
     def clicked(self):
         self.close()
@@ -92,6 +82,7 @@ class ImageWindow(QMainWindow):
 class ResultWindow(QMainWindow):
     def __init__(self, targets=None):
         super().__init__()
+        self.root_tab = None
         self.progress_bar = None
         self.progress_bar_enable = False
         self.config = pyPromptChecker.lib.configure.Configure()
@@ -124,7 +115,7 @@ class ResultWindow(QMainWindow):
         image_count = 1
 
         if self.progress_bar_enable:
-            self.progress_bar = ProgressDialog()
+            self.progress_bar = ProgressDialog(self)
             self.progress_bar.setRange(0, total * 2)
             self.progress_bar.update_value()
             self.progress_bar.setLabelText('Extracting PNG Chunk...')
@@ -253,9 +244,6 @@ class ResultWindow(QMainWindow):
         self.tab_max_count = self.root_tab.count()
         root_layout.addWidget(self.root_tab)
 
-        if self.progress_bar_enable:
-            self.progress_bar.setLabelText('Finalizing...')
-
         button_layout = QHBoxLayout()
         button_text = ['Copy positive', 'Copy negative', 'Copy seed']
         if self.config.get_option('JsonExport'):
@@ -265,6 +253,7 @@ class ResultWindow(QMainWindow):
             button_text.append('M')
         for tmp in button_text:
             copy_button = QPushButton(tmp)
+            copy_button.setObjectName(tmp)
             if tmp == 'M':
                 copy_button.setMaximumSize(25, 25)
             button_layout.addWidget(copy_button)
@@ -280,7 +269,6 @@ class ResultWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
         if self.progress_bar_enable:
-            self.progress_bar.update_value()
             self.progress_bar.close()
 
     def center(self):
@@ -296,7 +284,7 @@ class ResultWindow(QMainWindow):
         self.tab_index = index
 
     def button_clicked(self):
-        where_from = self.sender().text()
+        where_from = self.sender().objectName()
         clipboard = QApplication.clipboard()
         if where_from == 'Copy positive':
             if self.positive_for_copy:
@@ -307,15 +295,16 @@ class ResultWindow(QMainWindow):
         elif where_from == 'Copy seed':
             if self.seed_for_copy:
                 clipboard.setText(self.seed_for_copy)
-        elif where_from == 'Export JSON (This image)':
+        elif where_from == 'Export JSON (This)':
             data = self.params[self.tab_index].params
             filename = self.config.get_option('JsonSingle')
             if filename == 'filename':
                 filename = self.params[self.tab_index].params.get('Filepath')
                 filename = os.path.splitext(os.path.basename(filename))[0] + '.json'
             filepath = savefile_choose_dialog(filename)
-            pyPromptChecker.lib.io.export_json(data, filepath)
-        elif where_from == 'Export JSON (All images)':
+            if filepath:
+                pyPromptChecker.lib.io.export_json(data, filepath)
+        elif where_from == 'Export JSON (All)':
             filename = self.config.get_option('JsonMultiple')
             if filename == 'directory':
                 filename = self.params[0].params.get('Filepath')
@@ -335,7 +324,7 @@ class ResultWindow(QMainWindow):
             text = 'This operation requires a significant amount of time.'
             text = text + '\n...And more than 32GiB of memory.'
             text = text + '\nDo you still want to run it ?'
-            if show_messagebox('Confirm', text, 'cancel', 'ques'):
+            if show_messagebox('Confirm', text, 'cancel', 'ques', self):
                 directory = directory_choose_dialog()
                 if directory:
                     operation_progress = ProgressDialog(self)
@@ -386,6 +375,16 @@ class ResultWindow(QMainWindow):
                 pyPromptChecker.lib.io.clear_trash_bin(trash_bin)
         event.accept()
         QApplication.quit()
+
+
+def move_center(myself, parent=None):
+    if not parent or not parent.isVisible():
+        screen_center = QApplication.primaryScreen().geometry().center()
+    else:
+        screen_center = parent.geometry().center()
+    frame_geometry = myself.frameGeometry()
+    frame_geometry.moveCenter(screen_center)
+    myself.move(frame_geometry.topLeft())
 
 
 def result_window(target_data):
@@ -972,7 +971,7 @@ def directory_choose_dialog(where=False):
     return directory
 
 
-def show_messagebox(title, text, method='', icon=''):
+def show_messagebox(title, text, method='', icon='', parent=None):
     messagebox = QMessageBox()
     messagebox.addButton(QMessageBox.StandardButton.Ok)
     if icon == 'crit':
@@ -986,9 +985,9 @@ def show_messagebox(title, text, method='', icon=''):
     if method == 'cancel':
         messagebox.addButton(QMessageBox.StandardButton.Cancel)
     messagebox.setText(text)
-    messagebox.setWindowTitle(title)
     if not messagebox.exec() == 1024:
         return False
+    move_center(messagebox, parent)
     return True
 
 
