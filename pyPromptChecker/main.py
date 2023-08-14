@@ -45,6 +45,9 @@ def check_files(target_list):
         if progress_enable:
             progress_bar.update_value()
 
+    if progress_enable:
+        progress_bar.close()
+
     return valid_file_list, file_is_not_found_list, this_is_directory_list, this_file_is_not_png_file_list
 
 

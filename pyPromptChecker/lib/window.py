@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLay
 from PyQt6.QtWidgets import QTabWidget, QTextEdit, QPushButton, QFileDialog, QMessageBox
 from PyQt6.QtWidgets import QSplitter, QMainWindow, QGroupBox, QScrollArea, QProgressDialog
 from PyQt6.QtGui import QPixmap, QPainter, QColor
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 
 
 class PixmapLabel(QLabel):
@@ -42,9 +42,77 @@ class ProgressDialog(QProgressDialog):
         self.now = now
 
 
+class Toast(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.timer = None
+        self.message_label = QLabel()
+        self.setWindowTitle("Toast")
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowDoesNotAcceptFocus)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setStyleSheet("background-color: rgba(50, 50, 50, 150); color: white; padding: 10px; border-radius: 5px;")
+        self.hide()
+
+        toast_layout = QVBoxLayout()
+        toast_layout.addWidget(self.message_label)
+        self.setLayout(toast_layout)
+
+    def init_ui(self, message, geometry, duration=2000, adjust=False):
+        self.message_label.setText(message)
+        self.show()
+        self.adjustSize()
+        if adjust:
+            self.move(geometry.x(), geometry.y() - (geometry.height() + 25))
+        else:
+            self.move(geometry.x(), geometry.y())
+
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.close_toast)
+        self.timer.start(duration)
+
+    def close_toast(self):
+        self.timer.stop()
+        self.close()
+
+
+class MessageBox(QMessageBox):
+    def __init__(self, text, title='pyPromptChecker', style='ok', icon='info', parent=None):
+        super().__init__(parent)
+        self.success = False
+        self.setText(text)
+        self.setWindowTitle(title)
+        self.set_style(style)
+        self.add_icon(icon)
+
+        self.result = self.exec()
+
+        if self.result == QMessageBox.StandardButton.Ok:
+            self.success = True
+
+    def set_style(self, style):
+        if 'ok' in style:
+            self.addButton(QMessageBox.StandardButton.Ok)
+        if 'no' in style:
+            self.addButton(QMessageBox.StandardButton.No)
+        if 'cancel' in style:
+            self.addButton(QMessageBox.StandardButton.Cancel)
+
+    def add_icon(self, icon):
+        if icon == 'critical':
+            self.setIcon(QMessageBox.Icon.Critical)
+        elif icon == 'warning':
+            self.setIcon(QMessageBox.Icon.Warning)
+        elif icon == 'question':
+            self.setIcon(QMessageBox.Icon.Question)
+        elif icon == 'no':
+            self.setIcon(QMessageBox.Icon.NoIcon)
+        else:
+            self.setIcon(QMessageBox.Icon.Information)
+
+
 class ImageWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.screen = QApplication.primaryScreen()
         self.filepath = ''
         self.max_screen = self.screen.availableGeometry()
@@ -94,7 +162,8 @@ class ResultWindow(QMainWindow):
         self.seed_for_copy = ''
         self.tab_index = 0
         self.init_ui(targets)
-        self.image_window = ImageWindow()
+        self.toast_window = Toast(self)
+        self.image_window = ImageWindow(self)
         self.tab_max_count = 0
 
         size_hint_width = self.sizeHint().width()
@@ -131,7 +200,7 @@ class ResultWindow(QMainWindow):
                 self.progress_bar.update_value()
 
         if valid_total == 0:
-            show_messagebox('Warning', 'There is no embedded data to parse.')
+            MessageBox('There is no data to parse.', 'Oops!')
             sys.exit()
 
         if self.progress_bar_enable:
@@ -289,12 +358,15 @@ class ResultWindow(QMainWindow):
         if where_from == 'Copy positive':
             if self.positive_for_copy:
                 clipboard.setText(self.positive_for_copy)
+                self.toast_window.init_ui('Positive Copied!', self.sender().geometry(), 1000, True)
         elif where_from == 'Copy negative':
             if self.negative_for_copy:
                 clipboard.setText(self.negative_for_copy)
+                self.toast_window.init_ui('Negative Copied!', self.sender().geometry(), 1000, True)
         elif where_from == 'Copy seed':
             if self.seed_for_copy:
                 clipboard.setText(self.seed_for_copy)
+                self.toast_window.init_ui('Seed Copied!', self.sender().geometry(), 1000, True)
         elif where_from == 'Export JSON (This)':
             data = self.params[self.tab_index].params
             filename = self.config.get_option('JsonSingle')
@@ -324,41 +396,55 @@ class ResultWindow(QMainWindow):
             text = 'This operation requires a significant amount of time.'
             text = text + '\n...And more than 32GiB of memory.'
             text = text + '\nDo you still want to run it ?'
-            if show_messagebox('Confirm', text, 'cancel', 'ques', self):
+            result = MessageBox(text, 'Confirm', 'okcancel', 'question',self)
+            if result.success:
                 directory = directory_choose_dialog()
                 if directory:
                     operation_progress = ProgressDialog(self)
                     pyPromptChecker.lib.io.model_hash_maker(directory, operation_progress)
-                    show_messagebox('Finished', 'Finished!')
+                    MessageBox('Finished', "I'm knackered")
 
     def managing_button_clicked(self):
-        where_from = self.sender().text()
-        if where_from == 'Favourite':
-            source = self.params[self.tab_index].params.get('Filepath')
+        where_from = self.sender().objectName()
+        is_move = not self.config.get_option('UseCopyInsteadOfMove')
+        source = self.params[self.tab_index].params.get('Filepath')
+        current_page = self.root_tab.currentWidget()
+        if not os.path.exists(source):
+            text = "Couldn't find this image file."
+            MessageBox(text, 'Error', 'ok', 'critical', self)
+        elif where_from == 'Favourite':
             destination = self.config.get_option('Favourites')
-            is_move = not self.config.get_option('UseCopyInsteadOfMove')
-            if not os.path.exists(source):
-                text = "Can't find this image file."
-                show_messagebox("Can't move", text, 'crit')
-            elif not destination:
+            if not destination:
                 text = "Can't find setting of destination directory.\nCheck setting in 'config.ini' file."
-                show_messagebox("Can't move", text, 'crit')
+                MessageBox(text, 'Error', 'ok', 'critical', self)
             elif not os.path.isdir(destination):
                 text = "Can't find destination directory.\nCheck setting in 'config.ini' file."
-                show_messagebox("Can't move", text, 'crit')
+                MessageBox(text, 'Error', 'ok', 'critical', self)
             else:
                 pyPromptChecker.lib.io.image_copy_to(source, destination, is_move)
+                self.root_tab.tabBar().setTabTextColor(self.tab_index, Qt.GlobalColor.blue)
+                filepath_label = current_page.findChild(QLabel, 'Filepath_value')
+                filepath_label.setStyleSheet("color: blue;")
+                filepath_label.setText(destination)
+                self.toast_window.init_ui('Added Favourite!', self.sender().geometry(), 1000, True)
         elif where_from == 'Move to':
-            source = self.params[self.tab_index].params.get('Filepath')
             destination = directory_choose_dialog()
-            is_move = not self.config.get_option('UseCopyInsteadOfMove')
             if destination:
                 pyPromptChecker.lib.io.image_copy_to(source, destination, is_move)
+                self.root_tab.tabBar().setTabTextColor(self.tab_index, Qt.GlobalColor.blue)
+                filepath_label = current_page.findChild(QLabel, 'Filepath_value')
+                filepath_label.setStyleSheet("color: blue;")
+                filepath_label.setText(destination)
+                self.toast_window.init_ui('Moved!', self.sender().geometry(), 1000, True)
         elif where_from == 'Delete':
-            source = self.params[self.tab_index].params.get('Filepath')
-            trash_bin = os.path.join(os.path.abspath(''), '.trash')
-            os.makedirs(trash_bin, exist_ok=True)
-            pyPromptChecker.lib.io.image_copy_to(source, trash_bin, True)
+            destination = os.path.join(os.path.abspath(''), '.trash')
+            os.makedirs(destination, exist_ok=True)
+            pyPromptChecker.lib.io.image_copy_to(source, destination, True)
+            filepath_label = current_page.findChild(QLabel, 'Filepath_value')
+            filepath_label.setStyleSheet("color: red;")
+            filepath_label.setText(destination)
+            self.root_tab.tabBar().setTabTextColor(self.tab_index, Qt.GlobalColor.red)
+            self.toast_window.init_ui('Deleted!', self.sender().geometry(), 1000)
 
     def pixmap_clicked(self):
         self.image_window.filepath = self.params[self.tab_index].params.get('Filepath')
@@ -367,11 +453,12 @@ class ResultWindow(QMainWindow):
     def closeEvent(self, event):
         trash_bin = os.path.join(os.path.abspath(''), '.trash')
         if not pyPromptChecker.lib.io.is_directory_empty(trash_bin):
-            res = True
+            answer = None
             ask = self.config.get_option('AskIfClearTrashBin')
             if ask:
-                res = show_messagebox('Clear trash bin', 'Do you want to clean up trash bin ?', 'ques')
-            if res or not ask:
+                text = 'Do you want to obliterate files in the trash bin ?'
+                answer = MessageBox(text, 'pyPromptChecker', 'okcancel', 'question', self)
+            if answer.success or not ask:
                 pyPromptChecker.lib.io.clear_trash_bin(trash_bin)
         event.accept()
         QApplication.quit()
@@ -846,26 +933,6 @@ def regional_prompter_ratio_check(str_ratio, divide_mode):
         return main_ratio, sub_ratio
 
 
-# def make_other_tab(target):
-#    page_layout = QHBoxLayout()
-#    page_layout.addWidget()
-#    for i in range(2):
-#        page_layout.addWidget(make_dummy_section(7))
-#    return page_layout
-
-
-# def make_dummy_section(num):
-#    section = QGroupBox()
-#    section_layout = QVBoxLayout()
-#    for i in range(num):
-#        title = QLabel()
-#        section_layout.addWidget(title)
-#    section.setLayout(section_layout)
-#    section.setTitle('Dummy')
-#    section.setDisabled(True)
-#    return section
-
-
 def label_maker(status, target, stretch_title, stretch_value, selectable=False, remove_if_none=False, minimums=99):
     label_count = 0
     section_layout = QGridLayout()
@@ -969,26 +1036,6 @@ def directory_choose_dialog(where=False):
         default_dir,
     )
     return directory
-
-
-def show_messagebox(title, text, method='', icon='', parent=None):
-    messagebox = QMessageBox()
-    messagebox.addButton(QMessageBox.StandardButton.Ok)
-    if icon == 'crit':
-        messagebox.setIcon(QMessageBox.Icon.Critical)
-    elif icon == 'Warn':
-        messagebox.setIcon(QMessageBox.Icon.Warning)
-    elif icon == 'ques':
-        messagebox.setIcon(QMessageBox.Icon.Question)
-    else:
-        messagebox.setIcon(QMessageBox.Icon.Information)
-    if method == 'cancel':
-        messagebox.addButton(QMessageBox.StandardButton.Cancel)
-    messagebox.setText(text)
-    if not messagebox.exec() == 1024:
-        return False
-    move_center(messagebox, parent)
-    return True
 
 
 def progress_dialog():
