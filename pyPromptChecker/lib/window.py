@@ -24,6 +24,36 @@ class PixmapLabel(QLabel):
         return QLabel.mousePressEvent(self, event)
 
 
+class Dialog(QFileDialog):
+
+    def __init__(self, category, title, filename=None, file_filter=None, parent=None):
+        super().__init__(parent)
+        self.result = None
+        self.dir = os.path.expanduser('~')
+
+        if file_filter == 'JSON':
+            self.file_filter = 'JSON Files(*.json)'
+        elif file_filter == 'PNG':
+            self.file_filter = 'PNG Images(*.png)'
+        else:
+            self.file_filter = 'All files(*.*)'
+
+        if filename:
+            self.filename = os.path.join(self.dir, filename)
+
+        self.set_category(category, title)
+
+    def set_category(self, category, title):
+        if category == 'save-file':
+            result = QFileDialog.getSaveFileName(None, title, self.filename, self.file_filter)
+            self.result = result[0]
+        elif category == 'choose-files':
+            result = QFileDialog.getOpenFileNames(None, title, self.dir, self.file_filter)
+            self.result = result[0]
+        elif category == 'choose-directory':
+            self.result = QFileDialog.getExistingDirectory(None, title, self.dir)
+
+
 class ProgressDialog(QProgressDialog):
 
     def __init__(self, parent=None):
@@ -48,7 +78,8 @@ class Toast(QWidget):
         self.timer = None
         self.message_label = QLabel()
         self.setWindowTitle("Toast")
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowDoesNotAcceptFocus)
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowDoesNotAcceptFocus)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setStyleSheet("background-color: rgba(50, 50, 50, 150); color: white; padding: 10px; border-radius: 5px;")
         self.hide()
@@ -186,7 +217,6 @@ class ResultWindow(QMainWindow):
         if self.progress_bar_enable:
             self.progress_bar = ProgressDialog(self)
             self.progress_bar.setRange(0, total * 2)
-            self.progress_bar.update_value()
             self.progress_bar.setLabelText('Extracting PNG Chunk...')
 
         for filepath in targets:
@@ -373,7 +403,7 @@ class ResultWindow(QMainWindow):
             if filename == 'filename':
                 filename = self.params[self.tab_index].params.get('Filepath')
                 filename = os.path.splitext(os.path.basename(filename))[0] + '.json'
-            filepath = savefile_choose_dialog(filename)
+            filepath = Dialog('save-file', 'Save JSON', filename, 'PNG').result
             if filepath:
                 pyPromptChecker.lib.io.export_json(data, filepath)
         elif where_from == 'Export JSON (All)':
@@ -381,14 +411,14 @@ class ResultWindow(QMainWindow):
             if filename == 'directory':
                 filename = self.params[0].params.get('Filepath')
                 filename = os.path.basename(os.path.dirname(filename)) + '.json'
-            filepath = savefile_choose_dialog(filename)
+            filepath = Dialog('save-file', 'Save JSON', filename, 'PNG').result
             if filepath:
                 dict_list = []
                 for tmp in self.params:
                     dict_list.append(tmp.params)
                 pyPromptChecker.lib.io.export_json(dict_list, filepath)
         elif where_from == 'Reselect':
-            filepath = file_choose_dialog()[0]
+            filepath = Dialog('choose-files', 'Select files', None, 'PNG').result
             if filepath:
                 self.params = []
                 self.init_ui(filepath)
@@ -396,9 +426,9 @@ class ResultWindow(QMainWindow):
             text = 'This operation requires a significant amount of time.'
             text = text + '\n...And more than 32GiB of memory.'
             text = text + '\nDo you still want to run it ?'
-            result = MessageBox(text, 'Confirm', 'okcancel', 'question',self)
+            result = MessageBox(text, 'Confirm', 'okcancel', 'question', self)
             if result.success:
-                directory = directory_choose_dialog()
+                directory = Dialog('choose-directory', 'Select Directory', None, '', self).result
                 if directory:
                     operation_progress = ProgressDialog(self)
                     pyPromptChecker.lib.io.model_hash_maker(directory, operation_progress)
@@ -428,7 +458,7 @@ class ResultWindow(QMainWindow):
                 filepath_label.setText(destination)
                 self.toast_window.init_ui('Added Favourite!', self.sender().geometry(), 1000, True)
         elif where_from == 'Move to':
-            destination = directory_choose_dialog()
+            destination = Dialog('choose-directory', 'Select Directory', None, '', self).result
             if destination:
                 pyPromptChecker.lib.io.image_copy_to(source, destination, is_move)
                 self.root_tab.tabBar().setTabTextColor(self.tab_index, Qt.GlobalColor.blue)
@@ -475,7 +505,9 @@ def move_center(myself, parent=None):
 
 
 def result_window(target_data):
-    app = QApplication(sys.argv)
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
     window = ResultWindow(target_data)
     window.show()
     sys.exit(app.exec())
@@ -782,7 +814,6 @@ def make_control_net_tab(target, starts):
 
     unit_num = int(target.params.get('ControlNet'))
     loop_num = 2 if 2 > unit_num else unit_num
-    #    loop_num = 10
     for i in range(starts, loop_num):
         control_net_enable = target.params.get('ControlNet ' + str(i))
         status_key = [['ControlNet ' + str(i) + ' ' + value[0], value[1]] for value in status]
@@ -990,57 +1021,22 @@ def label_maker(status, target, stretch_title, stretch_value, selectable=False, 
     return section_layout
 
 
-def savefile_choose_dialog(filename=None):
-    caption = 'Save File'
-    path = os.path.expanduser('~')
-    default_filename = os.path.join(path, 'parameters.json')
-    if filename:
-        default_filename = os.path.join(path, filename)
-    file_filter = 'JSON Files(*.json)'
-    select_filter = ''
-    filename, _ = QFileDialog.getSaveFileName(
-        None,
-        caption,
-        default_filename,
-        file_filter,
-        select_filter
-    )
-    return filename
-
-
-def file_choose_dialog(where=False):
-    if where:
+def from_main(directory=False, progress=False, bar=None):
+    if directory:
         app = QApplication(sys.argv)
-    caption = 'Select Files'
-    default_dir = os.path.expanduser('~')
-    file_filter = 'PNG Images(*.png)'
-    select_filter = ''
-    filenames = QFileDialog.getOpenFileNames(
-        None,
-        caption,
-        default_dir,
-        file_filter,
-        select_filter
-    )
-    return filenames
-
-
-def directory_choose_dialog(where=False):
-    if where:
+        result = Dialog('choose-directory', 'Select directory').result
+        return result
+    elif progress:
+        if not bar:
+            app = QApplication.instance()
+            if app is None:
+                app = QApplication(sys.argv)
+            progress = ProgressDialog()
+            return app, progress
+        else:
+            bar.close()
+            QApplication.processEvents()
+    else:
         app = QApplication(sys.argv)
-    caption = 'Select Directory'
-    default_dir = os.path.expanduser('~')
-    directory = QFileDialog.getExistingDirectory(
-        None,
-        caption,
-        default_dir,
-    )
-    return directory
-
-
-def progress_dialog():
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication(sys.argv)
-    progress = ProgressDialog()
-    return app, progress
+        result = Dialog('choose-files', 'Select files', None, 'PNG').result
+        return result
