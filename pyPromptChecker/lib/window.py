@@ -182,18 +182,14 @@ class ResultWindow(QMainWindow):
     def __init__(self, targets=None):
         super().__init__()
         self.root_tab = None
+        self.toast_window = None
         self.progress_bar = None
         self.progress_bar_enable = False
         self.config = pyPromptChecker.lib.configure.Configure()
         self.setWindowTitle('PNG Prompt Data')
         self.models = pyPromptChecker.lib.io.import_model_list(self.config.get_option('ModelList'))
         self.params = []
-        self.positive_for_copy = ''
-        self.negative_for_copy = ''
-        self.seed_for_copy = ''
-        self.tab_index = 0
         self.init_ui(targets)
-        self.toast_window = Toast(self)
         self.image_window = ImageWindow(self)
         self.tab_max_count = 0
 
@@ -235,10 +231,6 @@ class ResultWindow(QMainWindow):
 
         if self.progress_bar_enable:
             self.progress_bar.setLabelText('Formatting prompt data...')
-
-        self.positive_for_copy = self.params[0].params.get('Positive')
-        self.negative_for_copy = self.params[0].params.get('Negative')
-        self.seed_for_copy = self.params[0].params.get('Seed')
 
         root_layout = QVBoxLayout()
         self.root_tab = QTabWidget()
@@ -334,7 +326,6 @@ class ResultWindow(QMainWindow):
             tab_page.setLayout(tab_page_layout)
 
             self.root_tab.addTab(tab_page, tmp.params.get('Filename'))
-            self.root_tab.currentChanged.connect(self.tab_changed)
 
             image_count = image_count + 1
             if 'File count' in tmp.params:
@@ -370,38 +361,39 @@ class ResultWindow(QMainWindow):
         if self.progress_bar_enable:
             self.progress_bar.close()
 
+        self.toast_window = Toast(self)
+
     def center(self):
         frame_geometry = self.frameGeometry()
         screen_center = QApplication.primaryScreen().geometry().center()
         frame_geometry.moveCenter(screen_center)
         self.move(frame_geometry.topLeft())
 
-    def tab_changed(self, index):
-        self.positive_for_copy = self.params[index].params.get('Positive')
-        self.negative_for_copy = self.params[index].params.get('Negative')
-        self.seed_for_copy = self.params[0].params.get('Seed')
-        self.tab_index = index
-
     def button_clicked(self):
         where_from = self.sender().objectName()
         clipboard = QApplication.clipboard()
+        current_page = self.root_tab.currentWidget()
+        current_index = self.root_tab.currentIndex()
         if where_from == 'Copy positive':
-            if self.positive_for_copy:
-                clipboard.setText(self.positive_for_copy)
+            text = current_page.findChild(QTextEdit, 'Positive').toPlainText()
+            if text:
+                clipboard.setText(text)
                 self.toast_window.init_ui('Positive Copied!', self.sender().geometry(), 1000, True)
         elif where_from == 'Copy negative':
-            if self.negative_for_copy:
-                clipboard.setText(self.negative_for_copy)
+            text = current_page.findChild(QTextEdit, 'Negative').toPlainText()
+            if text:
+                clipboard.setText(text)
                 self.toast_window.init_ui('Negative Copied!', self.sender().geometry(), 1000, True)
         elif where_from == 'Copy seed':
-            if self.seed_for_copy:
-                clipboard.setText(self.seed_for_copy)
+            text = current_page.findChild(QLabel, 'Seed_value').text()
+            if text:
+                clipboard.setText(text)
                 self.toast_window.init_ui('Seed Copied!', self.sender().geometry(), 1000, True)
         elif where_from == 'Export JSON (This)':
-            data = self.params[self.tab_index].params
+            data = self.params[current_index].params
             filename = self.config.get_option('JsonSingle')
             if filename == 'filename':
-                filename = self.params[self.tab_index].params.get('Filepath')
+                filename = self.params[current_index].params.get('Filepath')
                 filename = os.path.splitext(os.path.basename(filename))[0] + '.json'
             filepath = Dialog('save-file', 'Save JSON', filename, 'PNG').result
             if filepath:
@@ -436,9 +428,10 @@ class ResultWindow(QMainWindow):
 
     def managing_button_clicked(self):
         where_from = self.sender().objectName()
-        is_move = not self.config.get_option('UseCopyInsteadOfMove')
-        source = self.params[self.tab_index].params.get('Filepath')
         current_page = self.root_tab.currentWidget()
+        current_index = self.root_tab.currentIndex()
+        is_move = not self.config.get_option('UseCopyInsteadOfMove')
+        source = self.params[current_index].params.get('Filepath')
         if not os.path.exists(source):
             text = "Couldn't find this image file."
             MessageBox(text, 'Error', 'ok', 'critical', self)
@@ -452,20 +445,20 @@ class ResultWindow(QMainWindow):
                 MessageBox(text, 'Error', 'ok', 'critical', self)
             else:
                 pyPromptChecker.lib.io.image_copy_to(source, destination, is_move)
-                self.root_tab.tabBar().setTabTextColor(self.tab_index, Qt.GlobalColor.blue)
+                self.root_tab.tabBar().setTabTextColor(current_index, Qt.GlobalColor.blue)
                 filepath_label = current_page.findChild(QLabel, 'Filepath_value')
                 filepath_label.setStyleSheet("color: blue;")
                 filepath_label.setText(destination)
-                self.toast_window.init_ui('Added Favourite!', self.sender().geometry(), 1000, True)
+                self.toast_window.init_ui('Added Favourite!', self.sender().geometry(), 1000)
         elif where_from == 'Move to':
             destination = Dialog('choose-directory', 'Select Directory', None, '', self).result
             if destination:
                 pyPromptChecker.lib.io.image_copy_to(source, destination, is_move)
-                self.root_tab.tabBar().setTabTextColor(self.tab_index, Qt.GlobalColor.blue)
+                self.root_tab.tabBar().setTabTextColor(current_index, Qt.GlobalColor.blue)
                 filepath_label = current_page.findChild(QLabel, 'Filepath_value')
                 filepath_label.setStyleSheet("color: blue;")
                 filepath_label.setText(destination)
-                self.toast_window.init_ui('Moved!', self.sender().geometry(), 1000, True)
+                self.toast_window.init_ui('Moved!', self.sender().geometry(), 1000)
         elif where_from == 'Delete':
             destination = os.path.join(os.path.abspath(''), '.trash')
             os.makedirs(destination, exist_ok=True)
@@ -473,11 +466,12 @@ class ResultWindow(QMainWindow):
             filepath_label = current_page.findChild(QLabel, 'Filepath_value')
             filepath_label.setStyleSheet("color: red;")
             filepath_label.setText(destination)
-            self.root_tab.tabBar().setTabTextColor(self.tab_index, Qt.GlobalColor.red)
+            self.root_tab.tabBar().setTabTextColor(current_index, Qt.GlobalColor.red)
             self.toast_window.init_ui('Deleted!', self.sender().geometry(), 1000)
 
     def pixmap_clicked(self):
-        self.image_window.filepath = self.params[self.tab_index].params.get('Filepath')
+        current_index = self.root_tab.currentIndex()
+        self.image_window.filepath = self.params[current_index].params.get('Filepath')
         self.image_window.init_ui()
 
     def closeEvent(self, event):
@@ -579,10 +573,12 @@ def make_prompt_tab(target):
     positive_prompt = QTextEdit()
     positive_prompt.setPlainText(positive_text)
     positive_prompt.setReadOnly(True)
+    positive_prompt.setObjectName('Positive')
     negative_text = target.params.get('Negative')
     negative_prompt = QTextEdit(negative_text)
     negative_prompt.setPlainText(negative_text)
     negative_prompt.setReadOnly(True)
+    negative_prompt.setObjectName('Negative')
 
     splitter.addWidget(positive_prompt)
     splitter.addWidget(negative_prompt)
