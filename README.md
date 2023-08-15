@@ -89,7 +89,7 @@ This feature works in append mode, but The outputs is slightly different format 
 - This script is required to locate model names.  
 - The structure is following:
   
-| Display name | Model hash | Entire SHA215 hash | Filename | Model type |
+| Display name | Model hash | Entire SHA256 hash | Filename | Model type |
 |:---:|:---:|:---:|:---:|:---:|
 
 - The display name in the first column is the same as the filename if freshly output from the script.
