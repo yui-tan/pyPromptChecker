@@ -32,7 +32,7 @@ class Configure:
                        'UseCopyInsteadOfMove': True,
                        'AskIfDelete': True,
                        'AskIfClearTrashBin': True,
-                       'TabJump': False
+                       'TabNavigation': False
                        }
 
         self.ini_load(ini_path)
@@ -46,7 +46,7 @@ class Configure:
                        ['Features', 'ModelHashExtractor'],
                        ['Features', 'JsonExport', 'JsonSingle', 'JsonMultiple'],
                        ['Features', 'MoveDelete', 'UseCopyInsteadOfMove', 'AskIfDelete', 'AskIfClearTrashBin'],
-                       ['Features', 'TabJump'],
+                       ['Features', 'TabNavigation'],
                        ['Tab', 'LoraAddNet', 'HiresCfg', 'TiledDiffusion', 'ControlNet', 'RegionalPrompter'],
                        ['Ignore', 'IgnoreIfDataIsNotEmbedded'],
                        ['Debug', 'ErrorList'],

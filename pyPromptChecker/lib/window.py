@@ -29,39 +29,34 @@ class Dialog(QFileDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.result = None
-        self.filename = None
-        self.dir = os.path.expanduser('~')
+        self.setDirectory(os.path.expanduser('~'))
         self.file_filter = 'All files(*.*)'
 
     def init_dialog(self, category, title, filename=None, file_filter=None):
         self.result = None
-        if filename:
-            self.filename = os.path.join(self.dir, filename)
-        else:
-            self.filename = None
         self.setWindowTitle(title)
         self.set_filter(file_filter)
-        self.set_category(category)
+        self.set_category(category, filename)
 
         if self.exec():
             self.result = self.selectedFiles()
 
-    def set_category(self, category):
+    def set_category(self, category, filename):
         if category == 'save-file':
             self.setFileMode(QFileDialog.FileMode.AnyFile)
             self.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
             self.setNameFilter(self.file_filter)
-            self.selectFile(self.filename)
             self.setOption(QFileDialog.Option.ShowDirsOnly, False)
+            self.selectFile(filename)
         elif category == 'choose-files':
+            self.selectFile('PNG Images(*.png)')
             self.setFileMode(QFileDialog.FileMode.ExistingFiles)
             self.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
             self.setNameFilter(self.file_filter)
-            self.setDirectory(self.dir)
             self.setOption(QFileDialog.Option.ShowDirsOnly, False)
         elif category == 'choose-directory':
+            self.selectFile('Directory')
             self.setFileMode(QFileDialog.FileMode.Directory)
-            self.setDirectory(self.dir)
             self.setOption(QFileDialog.Option.ShowDirsOnly, True)
 
     def set_filter(self, str_filter):
@@ -228,7 +223,7 @@ class ResultWindow(QMainWindow):
         move_delete_enable = self.config.get_option('MoveDelete')
         json_export_enable = self.config.get_option('JsonExport')
         model_hash_extractor_enable = self.config.get_option('ModelHashExtractor')
-        tab_jump_enable = self.config.get_option('TabJump')
+        tab_jump_enable = self.config.get_option('TabNavigation')
         tab_search_enable = self.config.get_option('TabSearch')
         error_list_parameter = self.config.get_option('ErrorList')
         total = len(targets)
