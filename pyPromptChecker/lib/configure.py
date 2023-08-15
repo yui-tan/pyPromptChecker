@@ -28,8 +28,12 @@ class Configure:
                        'ErrorList': 1,
                        'IgnoreIfDataIsNotEmbedded': False,
                        'TargetChunkIndex': 1,
+                       'MoveDelete': False,
                        'UseCopyInsteadOfMove': True,
-                       'AskIfClearTrashBin': True}
+                       'AskIfDelete': True,
+                       'AskIfClearTrashBin': True,
+                       'TabJump': False
+                       }
 
         self.ini_load(ini_path)
 
@@ -39,7 +43,10 @@ class Configure:
         ini_section = [['Location', 'ModelList', 'Favourites'],
                        ['Window', 'MaxWindowWidth', 'MaxWindowHeight'],
                        ['Pixmap', 'PixmapSize', 'RegionalPrompterPixmapSize'],
-                       ['Features', 'JsonExport', 'JsonSingle', 'JsonMultiple', 'ModelHashExtractor'],
+                       ['Features', 'ModelHashExtractor'],
+                       ['Features', 'JsonExport', 'JsonSingle', 'JsonMultiple'],
+                       ['Features', 'MoveDelete', 'UseCopyInsteadOfMove', 'AskIfDelete', 'AskIfClearTrashBin'],
+                       ['Features', 'TabJump'],
                        ['Tab', 'LoraAddNet', 'HiresCfg', 'TiledDiffusion', 'ControlNet', 'RegionalPrompter'],
                        ['Ignore', 'IgnoreIfDataIsNotEmbedded'],
                        ['Debug', 'ErrorList'],

@@ -8,8 +8,12 @@ from PyQt6.QtWidgets import QApplication
 
 
 def export_json(target_json, filepath):
-    with open(filepath, 'w') as f:
-        json.dump(target_json, f, sort_keys=True, indent=4, ensure_ascii=False)
+    try:
+        with open(filepath, 'w') as f:
+            json.dump(target_json, f, sort_keys=True, indent=4, ensure_ascii=False)
+            return True, None
+    except Exception as e:
+        return 'Error occurred during writing JSON.', e
 
 
 def import_json():
@@ -31,16 +35,16 @@ def image_copy_to(source, destination, is_move=False):
         shutil.copy(source, destination)
         if os.path.exists(destination) and is_move:
             os.remove(source)
-            return True
-        return False
+            return True, None
+        return True, None
     except Exception as e:
-        return False, e
+        return 'Error occurred moving/copying files.', e
 
 
-def clear_trash_bin(dirpath):
-    file_list = os.listdir(dirpath)
+def clear_trash_bin(directory_path):
+    file_list = os.listdir(directory_path)
     for filename in file_list:
-        filepath = os.path.join(dirpath, filename)
+        filepath = os.path.join(directory_path, filename)
         try:
             os.remove(filepath)
         except Exception as e:
@@ -48,8 +52,8 @@ def clear_trash_bin(dirpath):
     return True
 
 
-def is_directory_empty(dirpath):
-    file_list = os.listdir(dirpath)
+def is_directory_empty(directory_path):
+    file_list = os.listdir(directory_path)
     return len(file_list) == 0
 
 

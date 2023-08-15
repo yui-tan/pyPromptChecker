@@ -9,17 +9,17 @@ from pyPromptChecker.lib import window
 
 
 def directory_to_filelist(directory_path):
-    if not os.path.isdir(directory_path):
+    if not os.path.isdir(directory_path[0]):
         print('This is not a directory')
         print("It's all thanks to you there's no work to do :))")
         sys.exit()
-    directory = os.path.join(directory_path, '*')
+    directory = os.path.join(directory_path[0], '*')
     file_list = glob.glob(directory)
     return file_list
 
 
 def check_files(target_list):
-    file_counts = len(target_list)
+    file_counts = len(target_list) if target_list else 0
     progress_bar = None
     progress_enable = False
     file_is_not_found_list = []
@@ -68,31 +68,32 @@ def main():
         filepaths = directory_to_filelist(args.directory)
     elif args.ask:
         src = pyPromptChecker.lib.window.from_main(True)
-        filepaths = directory_to_filelist(src)
+        filepaths = directory_to_filelist(src) if src else None
     else:
         filepaths = pyPromptChecker.lib.window.from_main()
 
-    valid_filepath, not_found_list, directory_list, not_png_list = check_files(filepaths)
+    if filepaths:
+        valid_filepath, not_found_list, directory_list, not_png_list = check_files(filepaths)
 
-    if not_found_list:
-        print('\n'.join(not_found_list))
-        print('These files are not found')
-        print('Go ahead make my day.\n')
-    if directory_list:
-        print('\n'.join(directory_list))
-        print('This is directory')
-        print('Do I have to start explaining the difference between files and directories?\n')
-    if not_png_list:
-        print('\n'.join(not_png_list))
-        print('These files are not PNG images.')
-        print("You'd better to learn or relearn what a PNG file is.\n")
-    if not valid_filepath:
-        print('There is no valid file to parse')
-        print("It's all thanks to you there's no work to do :))")
-        sys.exit()
-    print('a hoy!!!!')
-    valid_filepath.sort()
-    window.result_window(valid_filepath)
+        if not_found_list:
+            print('\n'.join(not_found_list))
+            print('These files are not found')
+            print('Go ahead make my day.\n')
+        if directory_list:
+            print('\n'.join(directory_list))
+            print('This is directory')
+            print('Do I have to start explaining the difference between files and directories?\n')
+        if not_png_list:
+            print('\n'.join(not_png_list))
+            print('These files are not PNG images.')
+            print("You'd better to learn or relearn what a PNG file is.\n")
+        if not valid_filepath:
+            print('There is no valid file to parse')
+            print("It's all thanks to you there's no work to do :))")
+            sys.exit()
+        print('a hoy!!!!')
+        valid_filepath.sort()
+        window.result_window(valid_filepath)
 
 
 if __name__ == '__main__':
