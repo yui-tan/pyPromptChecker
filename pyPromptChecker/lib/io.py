@@ -18,8 +18,13 @@ def export_json(target_json, filepath):
         return 'Error occurred during writing JSON.', e
 
 
-def import_json():
-    pass
+def import_json(filepath):
+    try:
+        with open(filepath) as j:
+            json_data = json.load(j)
+            return json_data, None
+    except Exception as e:
+        return 'Error occurred during loading JSON.', e
 
 
 def import_model_list(filepath):
@@ -85,3 +90,7 @@ def model_hash_maker(directory, progress):
         writer = csv.writer(w, lineterminator='\n')
         writer.writerows(model_hash_data)
     progress.close()
+
+
+# def test():
+#     dict_array = [data.params for data in data_array]

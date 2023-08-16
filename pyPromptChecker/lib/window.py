@@ -644,10 +644,14 @@ def make_main_section(target, scale, enable=False):
 def make_pixmap_label(filepath, scale, enable=False):
     pixmap_layout = QVBoxLayout()
     button_layout = QHBoxLayout()
-    pixmap = QPixmap(filepath)
-    pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
-    pixmap_label = PixmapLabel()
-    pixmap_label.setPixmap(pixmap)
+    if os.path.exists(filepath):
+        pixmap = QPixmap(filepath)
+        pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
+        pixmap_label = PixmapLabel()
+        pixmap_label.setPixmap(pixmap)
+    else:
+        pixmap_label = QLabel("Couldn't load image")
+        pixmap_label.setMinimumSize(233, 350)
     pixmap_label.setObjectName('Pixmap')
     pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
     pixmap_layout.addWidget(pixmap_label)
