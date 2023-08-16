@@ -51,7 +51,7 @@ For Windows
 
 # ToDo
 
- - [ ] Be able to move and delete PNG images by button
+ - [x] Be able to move and delete PNG images by button
  - [ ] Filtering main tabs various conditions
  - [ ] Add support for other image file formats
  - [x] Refactoring and clean up
