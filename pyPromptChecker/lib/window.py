@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import datetime
 import os
 import sys
@@ -7,9 +9,9 @@ import pyPromptChecker.lib.configure
 import pyPromptChecker.lib.io
 from PyQt6.QtWidgets import QApplication, QLabel, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout
 from PyQt6.QtWidgets import QTabWidget, QTextEdit, QPushButton, QFileDialog, QMessageBox
-from PyQt6.QtWidgets import QSplitter, QMainWindow, QGroupBox, QScrollArea, QProgressDialog
+from PyQt6.QtWidgets import QSplitter, QMainWindow, QGroupBox, QScrollArea, QProgressDialog, QComboBox
 from PyQt6.QtGui import QPixmap, QPainter, QColor
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 
 
 class PixmapLabel(QLabel):
@@ -22,6 +24,48 @@ class PixmapLabel(QLabel):
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
         return QLabel.mousePressEvent(self, event)
+
+
+class Dialog(QFileDialog):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.result = None
+        self.setDirectory(os.path.expanduser('~'))
+        self.file_filter = 'All files(*.*)'
+
+    def init_dialog(self, category, title, filename=None, file_filter=None):
+        self.result = None
+        self.setWindowTitle(title)
+        self.set_filter(file_filter)
+        self.set_category(category, filename)
+
+        if self.exec():
+            self.result = self.selectedFiles()
+
+    def set_category(self, category, filename):
+        if category == 'save-file':
+            self.setFileMode(QFileDialog.FileMode.AnyFile)
+            self.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
+            self.setNameFilter(self.file_filter)
+            self.setOption(QFileDialog.Option.ShowDirsOnly, False)
+            self.selectFile(filename)
+        elif category == 'choose-files':
+            self.selectFile('*.png')
+            self.setFileMode(QFileDialog.FileMode.ExistingFiles)
+            self.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
+            self.setNameFilter(self.file_filter)
+            self.setOption(QFileDialog.Option.ShowDirsOnly, False)
+        elif category == 'choose-directory':
+            self.selectFile('*')
+            self.setFileMode(QFileDialog.FileMode.Directory)
+            self.setOption(QFileDialog.Option.ShowDirsOnly, True)
+
+    def set_filter(self, str_filter):
+        if str_filter == 'JSON':
+            self.file_filter = 'JSON Files(*.json)'
+        elif str_filter == 'PNG':
+            self.file_filter = 'PNG Images(*.png)'
 
 
 class ProgressDialog(QProgressDialog):
@@ -42,9 +86,78 @@ class ProgressDialog(QProgressDialog):
         self.now = now
 
 
+class Toast(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.timer = None
+        self.message_label = QLabel()
+        self.setWindowTitle("Toast")
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowDoesNotAcceptFocus)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setStyleSheet("background-color: rgba(50, 50, 50, 150); color: white; padding: 10px; border-radius: 5px;")
+        self.hide()
+
+        toast_layout = QVBoxLayout()
+        toast_layout.addWidget(self.message_label)
+        self.setLayout(toast_layout)
+
+    def init_ui(self, message, geometry, duration=2000, adjust=False):
+        self.message_label.setText(message)
+        self.show()
+        self.adjustSize()
+        if adjust:
+            self.move(geometry.x(), geometry.y() - (geometry.height() + 25))
+        else:
+            self.move(geometry.x(), geometry.y())
+
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.close_toast)
+        self.timer.start(duration)
+
+    def close_toast(self):
+        self.timer.stop()
+        self.close()
+
+
+class MessageBox(QMessageBox):
+    def __init__(self, text, title='pyPromptChecker', style='ok', icon='info', parent=None):
+        super().__init__(parent)
+        self.success = False
+        self.setText(text)
+        self.setWindowTitle(title)
+        self.set_style(style)
+        self.add_icon(icon)
+
+        self.result = self.exec()
+
+        if self.result == QMessageBox.StandardButton.Ok:
+            self.success = True
+
+    def set_style(self, style):
+        if 'ok' in style:
+            self.addButton(QMessageBox.StandardButton.Ok)
+        if 'no' in style:
+            self.addButton(QMessageBox.StandardButton.No)
+        if 'cancel' in style:
+            self.addButton(QMessageBox.StandardButton.Cancel)
+
+    def add_icon(self, icon):
+        if icon == 'critical':
+            self.setIcon(QMessageBox.Icon.Critical)
+        elif icon == 'warning':
+            self.setIcon(QMessageBox.Icon.Warning)
+        elif icon == 'question':
+            self.setIcon(QMessageBox.Icon.Question)
+        elif icon == 'no':
+            self.setIcon(QMessageBox.Icon.NoIcon)
+        else:
+            self.setIcon(QMessageBox.Icon.Information)
+
+
 class ImageWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.screen = QApplication.primaryScreen()
         self.filepath = ''
         self.max_screen = self.screen.availableGeometry()
@@ -83,18 +196,16 @@ class ResultWindow(QMainWindow):
     def __init__(self, targets=None):
         super().__init__()
         self.root_tab = None
+        self.dialog = None
+        self.toast_window = None
         self.progress_bar = None
         self.progress_bar_enable = False
         self.config = pyPromptChecker.lib.configure.Configure()
         self.setWindowTitle('PNG Prompt Data')
         self.models = pyPromptChecker.lib.io.import_model_list(self.config.get_option('ModelList'))
         self.params = []
-        self.positive_for_copy = ''
-        self.negative_for_copy = ''
-        self.seed_for_copy = ''
-        self.tab_index = 0
         self.init_ui(targets)
-        self.image_window = ImageWindow()
+        self.image_window = ImageWindow(self)
         self.tab_max_count = 0
 
         size_hint_width = self.sizeHint().width()
@@ -110,6 +221,13 @@ class ResultWindow(QMainWindow):
     def init_ui(self, targets):
         self.progress_bar_enable = True if len(targets) > 20 else False
         ignore = self.config.get_option('IgnoreIfDataIsNotEmbedded')
+        pixmap_scale = self.config.get_option('PixmapSize')
+        move_delete_enable = self.config.get_option('MoveDelete')
+        json_export_enable = self.config.get_option('JsonExport')
+        model_hash_extractor_enable = self.config.get_option('ModelHashExtractor')
+        tab_jump_enable = self.config.get_option('TabNavigation')
+        tab_search_enable = self.config.get_option('TabSearch')
+        error_list_parameter = self.config.get_option('ErrorList')
         total = len(targets)
         valid_total = total
         image_count = 1
@@ -117,11 +235,10 @@ class ResultWindow(QMainWindow):
         if self.progress_bar_enable:
             self.progress_bar = ProgressDialog(self)
             self.progress_bar.setRange(0, total * 2)
-            self.progress_bar.update_value()
             self.progress_bar.setLabelText('Extracting PNG Chunk...')
 
         for filepath in targets:
-            chunk_data = pyPromptChecker.lib.decoder.decode_text_chunk(filepath, 1)
+            chunk_data = pyPromptChecker.lib.decoder.chunk_text_extractor(filepath, 1)
             parameters = pyPromptChecker.lib.parser.parse_parameter(chunk_data, filepath, self.models)
             if parameters.params['Positive'] == 'This file has no embedded data' and ignore:
                 valid_total = valid_total - 1
@@ -131,18 +248,16 @@ class ResultWindow(QMainWindow):
                 self.progress_bar.update_value()
 
         if valid_total == 0:
-            show_messagebox('Warning', 'There is no embedded data to parse.')
+            MessageBox('There is no data to parse.', 'Oops!')
+            if self.centralWidget():
+                return
             sys.exit()
 
         if self.progress_bar_enable:
             self.progress_bar.setLabelText('Formatting prompt data...')
 
-        self.positive_for_copy = self.params[0].params.get('Positive')
-        self.negative_for_copy = self.params[0].params.get('Negative')
-        self.seed_for_copy = self.params[0].params.get('Seed')
-
         root_layout = QVBoxLayout()
-        root_tab = QTabWidget()
+        self.root_tab = QTabWidget()
 
         for tmp in self.params:
 
@@ -158,13 +273,18 @@ class ResultWindow(QMainWindow):
             main_section = QGroupBox()
             main_section_layout = QHBoxLayout()
 
-            pixmap_scale = self.config.get_option('PixmapSize')
-            main_label_layout = make_main_section(tmp, pixmap_scale)
+            main_label_layout = make_main_section(tmp, pixmap_scale, move_delete_enable)
             main_section_layout.addLayout(main_label_layout)
             main_section.setLayout(main_section_layout)
             tab_page_layout.addWidget(main_section)
+
             pixmap_label = main_section.findChild(PixmapLabel, 'Pixmap')
             pixmap_label.clicked.connect(self.pixmap_clicked)
+
+            if move_delete_enable:
+                for button in ['Favourite', 'Move to', 'Delete']:
+                    managing_button = main_section.findChild(QPushButton, button)
+                    managing_button.clicked.connect(self.managing_button_clicked)
 
             hires_tab = ['Hires upscaler', 'Face restoration', 'Dynamic thresholding enabled']
             lora_tab = ['Lora', 'AddNet Enabled']
@@ -205,58 +325,40 @@ class ResultWindow(QMainWindow):
                         inner_page.setLayout(make_regional_prompter_tab(tmp, rp_pixmap_scale))
                     inner_tab.addTab(inner_page, tab[0])
 
-            error_list_parameter = self.config.get_option('ErrorList')
             if not error_list_parameter == 0:
-                error_list = tmp.error_list
-                difference = set(tmp.params.keys() - tmp.used_params.keys())
-                if error_list or difference or error_list_parameter == 2:
-                    diff_text = 'Diff: ' + ','.join(difference)
-                    error_text = 'Error: ' + ','.join(error_list)
-                    inner_page = QWidget()
-                    inner_page_layout = QVBoxLayout()
-                    original_data = tmp.original_data
-                    error = QTextEdit()
-                    error.setPlainText(diff_text + '\n\n' + error_text)
-                    original = QTextEdit()
-                    original.setPlainText(original_data)
-                    description_text = 'If an error occurs, please share the developer data displayed here.'
-                    description = QLabel(description_text)
-                    inner_page_layout.addWidget(original)
-                    inner_page_layout.addWidget(error)
-                    inner_page_layout.addWidget(description)
-                    inner_page.setLayout(inner_page_layout)
-                    inner_tab.addTab(inner_page, 'Errors')
+                error_page = make_error_tab(tmp, error_list_parameter)
+                inner_tab.addTab(error_page, 'Errors')
 
             inner_tab.setTabPosition(QTabWidget.TabPosition.South)
             tab_page_layout.addWidget(inner_tab)
             tab_page.setLayout(tab_page_layout)
 
-            root_tab.addTab(tab_page, tmp.params.get('Filename'))
-            root_tab.currentChanged.connect(self.tab_changed)
+            self.root_tab.addTab(tab_page, tmp.params.get('Filename'))
 
             image_count = image_count + 1
+
             if 'File count' in tmp.params:
                 del tmp.params['File count']
 
-        self.tab_max_count = root_tab.count()
-        root_layout.addWidget(root_tab)
+        self.tab_max_count = self.root_tab.count()
 
-        button_layout = QHBoxLayout()
-        button_text = ['Copy positive', 'Copy negative', 'Copy seed']
-        if self.config.get_option('JsonExport'):
-            button_text.extend(['Export JSON (This)', 'Export JSON (All)'])
-        button_text.append('Reselect')
-        if self.config.get_option('ModelHashExtractor'):
-            button_text.append('M')
-        for tmp in button_text:
-            copy_button = QPushButton(tmp)
-            copy_button.setObjectName(tmp)
-            if tmp == 'M':
-                copy_button.setMaximumSize(25, 25)
-            button_layout.addWidget(copy_button)
-            copy_button.clicked.connect(self.button_clicked)
+        footer_layout = make_footer_area(json_export_enable, model_hash_extractor_enable)
+        for i in range(footer_layout.count()):
+            widget = footer_layout.itemAt(i).widget()
+            if isinstance(widget, QPushButton):
+                widget.clicked.connect(self.button_clicked)
 
-        root_layout.addLayout(button_layout)
+        if tab_jump_enable and self.root_tab.count() > 5:
+            filename_list = [item.params['Filename'] for item in self.params]
+            header_layout = make_header_area(filename_list)
+            for i in range(header_layout.count()):
+                widget = header_layout.itemAt(i).widget()
+                if isinstance(widget, QPushButton):
+                    widget.clicked.connect(self.header_button_clicked)
+            root_layout.addLayout(header_layout)
+
+        root_layout.addWidget(self.root_tab)
+        root_layout.addLayout(footer_layout)
 
         central_widget = QWidget()
         central_widget.setLayout(root_layout)
@@ -268,52 +370,86 @@ class ResultWindow(QMainWindow):
         if self.progress_bar_enable:
             self.progress_bar.close()
 
+        self.toast_window = Toast(self)
+        self.dialog = Dialog(self)
+
     def center(self):
         frame_geometry = self.frameGeometry()
         screen_center = QApplication.primaryScreen().geometry().center()
         frame_geometry.moveCenter(screen_center)
         self.move(frame_geometry.topLeft())
 
-    def tab_changed(self, index):
-        self.positive_for_copy = self.params[index].params.get('Positive')
-        self.negative_for_copy = self.params[index].params.get('Negative')
-        self.seed_for_copy = self.params[0].params.get('Seed')
-        self.tab_index = index
+    def header_button_clicked(self):
+        where_from = self.sender().objectName()
+        if where_from == 'Jump to':
+            combo_box = self.centralWidget().findChild(QComboBox, 'target_tab')
+            target_tab = combo_box.currentText()
+            print('here!')
+            for index in range(self.root_tab.count()):
+                if self.root_tab.tabText(index) == target_tab:
+                    self.root_tab.setCurrentIndex(index)
+                    break
+        elif where_from == 'Search':
+            pass
 
     def button_clicked(self):
         where_from = self.sender().objectName()
         clipboard = QApplication.clipboard()
+        current_page = self.root_tab.currentWidget()
+        current_index = self.root_tab.currentIndex()
         if where_from == 'Copy positive':
-            if self.positive_for_copy:
-                clipboard.setText(self.positive_for_copy)
+            text_edit = current_page.findChild(QTextEdit, 'Positive')
+            if text_edit:
+                text = text_edit.toPlainText()
+                if text and not text == 'This file has no embedded data':
+                    clipboard.setText(text)
+                    self.toast_window.init_ui('Positive Copied!', self.sender().geometry(), 1000, True)
         elif where_from == 'Copy negative':
-            if self.negative_for_copy:
-                clipboard.setText(self.negative_for_copy)
+            text_edit = current_page.findChild(QTextEdit, 'Negative')
+            if text_edit:
+                text = text_edit.toPlainText()
+                if text:
+                    clipboard.setText(text)
+                    self.toast_window.init_ui('Negative Copied!', self.sender().geometry(), 1000, True)
         elif where_from == 'Copy seed':
-            if self.seed_for_copy:
-                clipboard.setText(self.seed_for_copy)
+            label = current_page.findChild(QLabel, 'Seed_value')
+            if label:
+                text = label.text()
+                clipboard.setText(text)
+                self.toast_window.init_ui('Seed Copied!', self.sender().geometry(), 1000, True)
         elif where_from == 'Export JSON (This)':
-            data = self.params[self.tab_index].params
+            data = self.params[current_index].params
             filename = self.config.get_option('JsonSingle')
             if filename == 'filename':
-                filename = self.params[self.tab_index].params.get('Filepath')
+                filename = self.params[current_index].params.get('Filepath')
                 filename = os.path.splitext(os.path.basename(filename))[0] + '.json'
-            filepath = savefile_choose_dialog(filename)
+            self.dialog.init_dialog('save-file', 'Save JSON', filename, 'JSON')
+            filepath = self.dialog.result[0] if self.dialog.result else None
             if filepath:
-                pyPromptChecker.lib.io.export_json(data, filepath)
+                result, e = pyPromptChecker.lib.io.export_json(data, filepath)
+                if not e:
+                    self.toast_window.init_ui('Saved!', self.sender().geometry(), 1000, True)
+                else:
+                    MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
         elif where_from == 'Export JSON (All)':
             filename = self.config.get_option('JsonMultiple')
             if filename == 'directory':
                 filename = self.params[0].params.get('Filepath')
                 filename = os.path.basename(os.path.dirname(filename)) + '.json'
-            filepath = savefile_choose_dialog(filename)
+            self.dialog.init_dialog('save-file', 'Save JSON', filename, 'JSON')
+            filepath = self.dialog.result[0] if self.dialog.result else None
             if filepath:
                 dict_list = []
                 for tmp in self.params:
                     dict_list.append(tmp.params)
-                pyPromptChecker.lib.io.export_json(dict_list, filepath)
+                result, e = pyPromptChecker.lib.io.export_json(dict_list, filepath)
+                if not e:
+                    self.toast_window.init_ui('Saved!', self.sender().geometry(), 1000, True)
+                else:
+                    MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
         elif where_from == 'Reselect':
-            filepath = file_choose_dialog()[0]
+            self.dialog.init_dialog('choose-files', 'Select files', None, 'PNG')
+            filepath = self.dialog.result
             if filepath:
                 self.params = []
                 self.init_ui(filepath)
@@ -321,16 +457,94 @@ class ResultWindow(QMainWindow):
             text = 'This operation requires a significant amount of time.'
             text = text + '\n...And more than 32GiB of memory.'
             text = text + '\nDo you still want to run it ?'
-            if show_messagebox('Confirm', text, 'cancel', 'ques', self):
-                directory = directory_choose_dialog()
+            result = MessageBox(text, 'Confirm', 'okcancel', 'question', self)
+            if result.success:
+                self.dialog.init_dialog('choose-directory', 'Select Directory', None, '')
+                directory = self.dialog.result[0] if self.dialog.result else None
                 if directory:
                     operation_progress = ProgressDialog(self)
                     pyPromptChecker.lib.io.model_hash_maker(directory, operation_progress)
-                    show_messagebox('Finished', 'Finished!')
+                    MessageBox('Finished', "I'm knackered")
+
+    def managing_button_clicked(self):
+        where_from = self.sender().objectName()
+        current_page = self.root_tab.currentWidget()
+        current_index = self.root_tab.currentIndex()
+        is_move = not self.config.get_option('UseCopyInsteadOfMove')
+        source = self.params[current_index].params.get('Filepath')
+        filename = self.params[current_index].params.get('Filename')
+        if not os.path.exists(source):
+            text = "Couldn't find this image file."
+            MessageBox(text, 'Error', 'ok', 'critical', self)
+        elif where_from == 'Favourite':
+            destination = self.config.get_option('Favourites')
+            if not destination:
+                text = "Couldn't find setting of destination directory.\nPlease Check setting in 'config.ini' file."
+                MessageBox(text, 'Error', 'ok', 'critical', self)
+            elif not os.path.isdir(destination):
+                text = "Couldn't find destination directory.\nPlease Check setting in 'config.ini' file."
+                MessageBox(text, 'Error', 'ok', 'critical', self)
+            else:
+                result, e = pyPromptChecker.lib.io.image_copy_to(source, destination, is_move)
+                if not e:
+                    self.root_tab.tabBar().setTabTextColor(current_index, Qt.GlobalColor.blue)
+                    filepath_label = current_page.findChild(QLabel, 'Filepath_value')
+                    filepath_label.setStyleSheet("color: blue;")
+                    filepath_label.setText(destination)
+                    self.params[current_index].params['Filepath'] = os.path.join(destination, filename)
+                    self.toast_window.init_ui('Added Favourite!', self.sender().geometry(), 1000)
+                else:
+                    MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
+        elif where_from == 'Move to':
+            self.dialog.init_dialog('choose-directory', 'Select Directory')
+            destination = self.dialog.result[0] if self.dialog.result else None
+            if destination:
+                result, e = pyPromptChecker.lib.io.image_copy_to(source, destination, is_move)
+                if not e:
+                    self.root_tab.tabBar().setTabTextColor(current_index, Qt.GlobalColor.blue)
+                    filepath_label = current_page.findChild(QLabel, 'Filepath_value')
+                    filepath_label.setStyleSheet("color: blue;")
+                    filepath_label.setText(destination)
+                    self.params[current_index].params['Filepath'] = os.path.join(destination, filename)
+                    self.toast_window.init_ui('Moved!', self.sender().geometry(), 1000)
+                else:
+                    MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
+        elif where_from == 'Delete':
+            destination = os.path.join(os.path.abspath(''), '.trash')
+            os.makedirs(destination, exist_ok=True)
+            if self.config.get_option('AskIfDelete'):
+                result = MessageBox('Really?', 'Confirm', 'okcancel', 'question', self)
+                if not result.success:
+                    return
+            result, e = pyPromptChecker.lib.io.image_copy_to(source, destination, True)
+            if not e:
+                filepath_label = current_page.findChild(QLabel, 'Filepath_value')
+                filepath_label.setStyleSheet("color: red;")
+                filepath_label.setText(destination)
+                self.root_tab.tabBar().setTabTextColor(current_index, Qt.GlobalColor.red)
+                self.params[current_index].params['Filepath'] = os.path.join(destination, filename)
+                self.toast_window.init_ui('Deleted!', self.sender().geometry(), 1000)
+            else:
+                MessageBox(result.replace('moving/copying', 'deleting') + '\n' + str(e), 'Error', 'ok', 'critical', self)
 
     def pixmap_clicked(self):
-        self.image_window.filepath = self.params[self.tab_index].params.get('Filepath')
-        self.image_window.init_ui()
+        if not self.image_window.isVisible():
+            current_index = self.root_tab.currentIndex()
+            self.image_window.filepath = self.params[current_index].params.get('Filepath')
+            self.image_window.init_ui()
+
+    def closeEvent(self, event):
+        trash_bin = os.path.join(os.path.abspath(''), '.trash')
+        ask = self.config.get_option('AskIfClearTrashBin')
+        if not pyPromptChecker.lib.io.is_directory_empty(trash_bin):
+            answer = None
+            if ask:
+                text = 'Do you want to obliterate files in the trash bin ?'
+                answer = MessageBox(text, 'pyPromptChecker', 'okcancel', 'question', self)
+            if answer.success or not ask:
+                pyPromptChecker.lib.io.clear_trash_bin(trash_bin)
+        event.accept()
+        QApplication.quit()
 
 
 def move_center(myself, parent=None):
@@ -344,13 +558,49 @@ def move_center(myself, parent=None):
 
 
 def result_window(target_data):
-    app = QApplication(sys.argv)
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
     window = ResultWindow(target_data)
     window.show()
     sys.exit(app.exec())
 
 
-def make_main_section(target, scale):
+def make_footer_area(json_export_enable, model_hash_extractor_enable):
+    footer_layout = QHBoxLayout()
+    button_text = ['Copy positive', 'Copy negative', 'Copy seed']
+    if json_export_enable:
+        button_text.extend(['Export JSON (This)', 'Export JSON (All)'])
+    button_text.append('Reselect')
+    if model_hash_extractor_enable:
+        button_text.append('M')
+    for tmp in button_text:
+        copy_button = QPushButton(tmp)
+        copy_button.setObjectName(tmp)
+        footer_layout.addWidget(copy_button)
+        if tmp == 'M':
+            copy_button.setMaximumSize(25, 25)
+    return footer_layout
+
+
+def make_header_area(filename_list, tab_search=False):
+    header_layout = QHBoxLayout()
+    dropdown_box = QComboBox()
+    dropdown_box.setObjectName('target_tab')
+    dropdown_box.addItems(filename_list)
+    dropdown_box.setEditable(True)
+    jump_to_button = QPushButton('Jump to')
+    jump_to_button.setObjectName('Jump to')
+    if tab_search:
+        search_button = QPushButton('Search')
+        search_button.setObjectName('Search')
+        header_layout.addWidget(search_button, 1)
+    header_layout.addWidget(dropdown_box, 5)
+    header_layout.addWidget(jump_to_button, 1)
+    return header_layout
+
+
+def make_main_section(target, scale, enable=False):
     status = [['File count', 'Number'],
               'Filename',
               'Filepath',
@@ -383,29 +633,31 @@ def make_main_section(target, scale):
     timestamp = datetime.datetime.fromtimestamp(os.path.getctime(filepath))
     target.params['Timestamp'] = timestamp.strftime('%Y/%m/%d %H:%M')
     main_section_layout = QHBoxLayout()
-    pixmap_label = make_pixmap_label(filepath, scale)
-    main_section_layout.addWidget(pixmap_label, 1)
+    pixmap_label = make_pixmap_label(filepath, scale, enable)
+    main_section_layout.addLayout(pixmap_label, 1)
     main_section_layout.insertSpacing(1, 10)
     main_section_layout.addLayout(label_maker(status, target, 1, 1, True, True, 15), 1)
 
     return main_section_layout
 
 
-def make_pixmap_label(filepath, scale):
-    #    pixmap_layout = QVBoxLayout()
-    #    button_layout = QHBoxLayout()
+def make_pixmap_label(filepath, scale, enable=False):
+    pixmap_layout = QVBoxLayout()
+    button_layout = QHBoxLayout()
     pixmap = QPixmap(filepath)
     pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
     pixmap_label = PixmapLabel()
     pixmap_label.setPixmap(pixmap)
     pixmap_label.setObjectName('Pixmap')
     pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    # pixmap_layout.addWidget(pixmap_label)
-    #    for tmp in ['Add favourite', 'Delete']:
-    #        button = QPushButton(tmp)
-    #        button_layout.addWidget(button)
-    #    pixmap_layout.addLayout(button_layout)
-    return pixmap_label
+    pixmap_layout.addWidget(pixmap_label)
+    if enable:
+        for tmp in ['Favourite', 'Move to', 'Delete']:
+            button = QPushButton(tmp)
+            button.setObjectName(tmp)
+            button_layout.addWidget(button)
+        pixmap_layout.addLayout(button_layout)
+    return pixmap_layout
 
 
 def make_prompt_tab(target):
@@ -415,10 +667,12 @@ def make_prompt_tab(target):
     positive_prompt = QTextEdit()
     positive_prompt.setPlainText(positive_text)
     positive_prompt.setReadOnly(True)
+    positive_prompt.setObjectName('Positive')
     negative_text = target.params.get('Negative')
     negative_prompt = QTextEdit(negative_text)
     negative_prompt.setPlainText(negative_text)
     negative_prompt.setReadOnly(True)
+    negative_prompt.setObjectName('Negative')
 
     splitter.addWidget(positive_prompt)
     splitter.addWidget(negative_prompt)
@@ -650,7 +904,6 @@ def make_control_net_tab(target, starts):
 
     unit_num = int(target.params.get('ControlNet'))
     loop_num = 2 if 2 > unit_num else unit_num
-    #    loop_num = 10
     for i in range(starts, loop_num):
         control_net_enable = target.params.get('ControlNet ' + str(i))
         status_key = [['ControlNet ' + str(i) + ' ' + value[0], value[1]] for value in status]
@@ -801,24 +1054,26 @@ def regional_prompter_ratio_check(str_ratio, divide_mode):
         return main_ratio, sub_ratio
 
 
-# def make_other_tab(target):
-#    page_layout = QHBoxLayout()
-#    page_layout.addWidget()
-#    for i in range(2):
-#        page_layout.addWidget(make_dummy_section(7))
-#    return page_layout
-
-
-# def make_dummy_section(num):
-#    section = QGroupBox()
-#    section_layout = QVBoxLayout()
-#    for i in range(num):
-#        title = QLabel()
-#        section_layout.addWidget(title)
-#    section.setLayout(section_layout)
-#    section.setTitle('Dummy')
-#    section.setDisabled(True)
-#    return section
+def make_error_tab(target, parameter):
+    error_list = target.error_list
+    difference = set(target.params.keys() - target.used_params.keys())
+    if error_list or difference or parameter == 2:
+        diff_text = 'Diff: ' + ','.join(difference)
+        error_text = 'Error: ' + ','.join(error_list)
+        inner_page = QWidget()
+        inner_page_layout = QVBoxLayout()
+        original_data = target.original_data
+        error = QTextEdit()
+        error.setPlainText(diff_text + '\n\n' + error_text)
+        original = QTextEdit()
+        original.setPlainText(original_data)
+        description_text = 'If an error occurs, please share the developer data displayed here.'
+        description = QLabel(description_text)
+        inner_page_layout.addWidget(original)
+        inner_page_layout.addWidget(error)
+        inner_page_layout.addWidget(description)
+        inner_page.setLayout(inner_page_layout)
+        return inner_page
 
 
 def label_maker(status, target, stretch_title, stretch_value, selectable=False, remove_if_none=False, minimums=99):
@@ -878,77 +1133,26 @@ def label_maker(status, target, stretch_title, stretch_value, selectable=False, 
     return section_layout
 
 
-def savefile_choose_dialog(filename=None):
-    caption = 'Save File'
-    path = os.path.expanduser('~')
-    default_filename = os.path.join(path, 'parameters.json')
-    if filename:
-        default_filename = os.path.join(path, filename)
-    file_filter = 'JSON Files(*.json)'
-    select_filter = ''
-    filename, _ = QFileDialog.getSaveFileName(
-        None,
-        caption,
-        default_filename,
-        file_filter,
-        select_filter
-    )
-    return filename
-
-
-def file_choose_dialog(where=False):
-    if where:
+def from_main(directory=False, progress=False, bar=None):
+    if directory:
         app = QApplication(sys.argv)
-    caption = 'Select Files'
-    default_dir = os.path.expanduser('~')
-    file_filter = 'PNG Images(*.png)'
-    select_filter = ''
-    filenames = QFileDialog.getOpenFileNames(
-        None,
-        caption,
-        default_dir,
-        file_filter,
-        select_filter
-    )
-    return filenames
-
-
-def directory_choose_dialog(where=False):
-    if where:
-        app = QApplication(sys.argv)
-    caption = 'Select Directory'
-    default_dir = os.path.expanduser('~')
-    directory = QFileDialog.getExistingDirectory(
-        None,
-        caption,
-        default_dir,
-    )
-    return directory
-
-
-def show_messagebox(title, text, method='', icon='', parent=None):
-    messagebox = QMessageBox()
-    messagebox.addButton(QMessageBox.StandardButton.Ok)
-    if icon == 'crit':
-        messagebox.setIcon(QMessageBox.Icon.Critical)
-    elif icon == 'Warn':
-        messagebox.setIcon(QMessageBox.Icon.Warning)
-    elif icon == 'ques':
-        messagebox.setIcon(QMessageBox.Icon.Question)
+        open_directory = Dialog()
+        open_directory.init_dialog('choose-directory', 'Select directory')
+        result = open_directory.result
+        return result
+    elif progress:
+        if not bar:
+            app = QApplication.instance()
+            if app is None:
+                app = QApplication(sys.argv)
+            progress = ProgressDialog()
+            return app, progress
+        else:
+            bar.close()
+            QApplication.processEvents()
     else:
-        messagebox.setIcon(QMessageBox.Icon.Information)
-    if method == 'cancel':
-        messagebox.addButton(QMessageBox.StandardButton.Cancel)
-    messagebox.setText(text)
-    if not messagebox.exec() == 1024:
-        return False
-    move_center(messagebox, parent)
-    return True
-
-
-def progress_dialog():
-    app = QApplication.instance()
-    if app is None:
         app = QApplication(sys.argv)
-    progress = ProgressDialog()
-    return app, progress
+        open_files = Dialog()
+        open_files.init_dialog('choose-files', 'Select files', None, 'PNG')
+        result = open_files.result
+        return result
