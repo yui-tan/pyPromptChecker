@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import os
 import configparser
 
@@ -39,7 +41,7 @@ class Configure:
 
     def ini_load(self, ini_path):
         ini_config = configparser.ConfigParser()
-        ini_config.read(ini_path)
+        ini_config.read(ini_path, encoding='utf-8')
         ini_section = [['Location', 'ModelList', 'Favourites'],
                        ['Window', 'MaxWindowWidth', 'MaxWindowHeight'],
                        ['Pixmap', 'PixmapSize', 'RegionalPrompterPixmapSize'],
@@ -58,6 +60,8 @@ class Configure:
                 if ini_config.has_option(section, option):
                     if section == 'Location':
                         value = ini_config[section].get(option)
+                        if '\\' in value:
+                            value = value.replace('\\\\', '\\')
                         if os.path.exists(value):
                             self.config[option] = value
                     elif section == 'Window' or section == 'Pixmap':

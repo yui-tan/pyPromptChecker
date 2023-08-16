@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import datetime
 import os
 import sys
@@ -49,13 +51,13 @@ class Dialog(QFileDialog):
             self.setOption(QFileDialog.Option.ShowDirsOnly, False)
             self.selectFile(filename)
         elif category == 'choose-files':
-            self.selectFile('PNG Images(*.png)')
+            self.selectFile('*.png')
             self.setFileMode(QFileDialog.FileMode.ExistingFiles)
             self.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
             self.setNameFilter(self.file_filter)
             self.setOption(QFileDialog.Option.ShowDirsOnly, False)
         elif category == 'choose-directory':
-            self.selectFile('Directory')
+            self.selectFile('*')
             self.setFileMode(QFileDialog.FileMode.Directory)
             self.setOption(QFileDialog.Option.ShowDirsOnly, True)
 
@@ -396,18 +398,23 @@ class ResultWindow(QMainWindow):
         current_page = self.root_tab.currentWidget()
         current_index = self.root_tab.currentIndex()
         if where_from == 'Copy positive':
-            text = current_page.findChild(QTextEdit, 'Positive').toPlainText()
-            if text:
-                clipboard.setText(text)
-                self.toast_window.init_ui('Positive Copied!', self.sender().geometry(), 1000, True)
+            text_edit = current_page.findChild(QTextEdit, 'Positive')
+            if text_edit:
+                text = text_edit.toPlainText()
+                if text and not text == 'This file has no embedded data':
+                    clipboard.setText(text)
+                    self.toast_window.init_ui('Positive Copied!', self.sender().geometry(), 1000, True)
         elif where_from == 'Copy negative':
-            text = current_page.findChild(QTextEdit, 'Negative').toPlainText()
-            if text:
-                clipboard.setText(text)
-                self.toast_window.init_ui('Negative Copied!', self.sender().geometry(), 1000, True)
+            text_edit = current_page.findChild(QTextEdit, 'Negative')
+            if text_edit:
+                text = text_edit.toPlainText()
+                if text:
+                    clipboard.setText(text)
+                    self.toast_window.init_ui('Negative Copied!', self.sender().geometry(), 1000, True)
         elif where_from == 'Copy seed':
-            text = current_page.findChild(QLabel, 'Seed_value').text()
-            if text:
+            label = current_page.findChild(QLabel, 'Seed_value')
+            if label:
+                text = label.text()
                 clipboard.setText(text)
                 self.toast_window.init_ui('Seed Copied!', self.sender().geometry(), 1000, True)
         elif where_from == 'Export JSON (This)':

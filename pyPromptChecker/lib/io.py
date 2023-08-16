@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import csv
 import json
 import os
@@ -31,14 +33,18 @@ def import_model_list(filepath):
 
 
 def image_copy_to(source, destination, is_move=False):
-    try:
-        shutil.copy(source, destination)
-        if os.path.exists(destination) and is_move:
-            os.remove(source)
+    destination_path = os.path.join(destination, os.path.basename(source))
+    if not os.path.exists(destination_path):
+        try:
+            shutil.copy(source, destination)
+            if os.path.exists(destination) and is_move:
+                os.remove(source)
+                return True, None
             return True, None
-        return True, None
-    except Exception as e:
-        return 'Error occurred moving/copying files.', e
+        except Exception as e:
+            return 'Error occurred moving/copying files.', e
+    else:
+        return 'The same files already exists in destination.', 'AlreadyExistsError'
 
 
 def clear_trash_bin(directory_path):
