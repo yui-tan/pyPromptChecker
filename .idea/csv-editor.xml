@@ -10,7 +10,7 @@
             </Attribute>
           </value>
         </entry>
-        <entry key="diff.csv">
+        <entry key="/pyPromptChecker-bin/model_list.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />

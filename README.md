@@ -1,40 +1,46 @@
 # pyPromptChecker
+"pyPromptChecker" is a script designed for analyzing AI-generated images created by AUTOMATIC/stable-diffusion-webui.  
+It extracts incomprehensible strings embedded within image files, formatting them into human-readable.  
+The formatted data can be exported as JSON and subsequently imported from the JSON output.  
+Additionally, the script offers in-data search and basic file management functionalities.  
+All of these features are accessible even without AUTOMATIC/stable-diffusion-webui.
 
-A tiny script for AI images created by AUTOMATIC/stable-diffusion-webui  
-Supported only PNG files
-  
-- ## Main Screenshot  
+
+# Screenshots
 ![Main](https://github.com/yui-tan/pyPromptChecker/assets/121333129/a0c86d10-563f-44a2-bf9f-cfc207fd262f)
-- ## Hires.fix and CFG fix  
-![Hires_cfg](https://github.com/yui-tan/pyPromptChecker/assets/121333129/e3ee643e-847f-4f76-a1a5-5b3c96c6598f)
-- ## Lora and Additional networks  
-![Lora_Addnet](https://github.com/yui-tan/pyPromptChecker/assets/121333129/41159dca-3577-441d-9fe2-bca32c6fd129)
-- ## Controlnet  
-![Controlnet](https://github.com/yui-tan/pyPromptChecker/assets/121333129/cb9bdcb8-49fa-46c5-9bac-547e80e992f7)
-- ## Tiled diffusion  
-![Tiled_diffusion](https://github.com/yui-tan/pyPromptChecker/assets/121333129/38a9387d-d663-40db-92d8-6ea39954c43a)
-- ## Regional prompter  
-![Regional_prompter](https://github.com/yui-tan/pyPromptChecker/assets/121333129/fe0c201c-09a2-4ae3-b59c-b2ff36ab7a28)
-  
+
+More screenshots here.
+
+# Features
+
+- Extract creation data, formatting and display it.
+- Any number of files can be processed simultaneously (Tested up to 1500 files).
+- Image file move and delete with single click.
+- JSON export and import.
+- Make List of model hash from .safetensors and .ckpt files.
+- Tab navigation with filename or thumbnails.
+- Search with various conditions.
+
+See more details here. 
+
+
 # Requirements  
-
-- ### **Python 3.x**
+### pyPromptChecker binary edition no longer has any requirements.  
+But old-fashioned versions still has requirements as follows.
+- Python 3.x
+- pypng
 - PyQt6
-- pypng  
 
-# Supported
-- Stable Diffusion Webui
-  - Hires.fix
-  - Dynamic Thresholding (CFG fix) extension
-  - Add Network extension
-  - ControlNet extension
-  - Tiled diffusion extension
-  - Regional prompter extension
-  
+# Installation
+### pyPromptChecker binary edition (both Linux and Windows)  
+1. Download the binary packages from the 'Releases'.
+2. Extract pyPromptChecker-bin directory anywhere you want.
+3. Double click pyPromptChecker.exe / pyPromptChecker.
+4. Provide shortcuts / .desktop file for drag-and-drop if you want.
+5. Done
 
-- Image format
-  - PNG
-# Howto
+### Old-fashioned pyPromptChecker
+
 For Linux
 ````bash
 git clone https://github.com/yui-tan/pyPromptChecker
@@ -49,26 +55,26 @@ For Windows
 4. Run pyPromptChecker/install/install.bat file.
 5. Don't miss a single word of the words that pop up on the screen, before going wild in the comments
 
-# ToDo
+# Roadmap
 
- - [x] Be able to move and delete PNG images by button
- - [ ] Filtering main tabs various conditions
+ - [ ] Filtering and searching tabs various conditions
  - [ ] Add support for other image file formats
- - [x] Refactoring and clean up
- - [x] Add support for hires.fix status  
- - [x] Add support for ControlNet status  
- - [x] Add support for Additional Networks status  
- - [x] Add support for Regional Prompter status  
- - [x] Coding Export JSON (All Images) function  
- - [x] Coding Reselect files function
- - [x] Change initial behaviour by argument
- - [x] Various hard codings into a Configuration Class
- - [x] Make it installable using pip
- - [ ] Export JSON not only single and all but selected image
+    - [ ] jpeg
+    - [ ] webp
+    - [ ] heif
  - [ ] Add support for import JSON
- - [ ] Make it import data into Stable-Diffusion-Webui via API
- - [ ] Windows exe format (INCREDIBLY low-priority)
+ - [ ] Export Data to Stable-Diffusion-Webui via API
  - [ ] Get marry to Miku
+
+ # Author
+ ### Yui-tan
+ Nutjob who loves Hatsune Miku.  
+ napier2.718281828@gmail.com  
+ https://civitai.com/user/Yui_tan  
+ https://chichi-pui.com/users/yuiyui20170927
+
+ # Licence
+This script created under [GPLv3](https://www.gnu.org/licenses/gpl-3.0.html).
 
  # How to use Model hash extractor
 

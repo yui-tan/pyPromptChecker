@@ -11,7 +11,7 @@ class Configure:
         if not os.path.exists(filepath):
             path = os.path.abspath('')
             filepath = os.path.join(path, 'model_list.csv')
-        ini_path = os.path.join(path,'config.ini')
+        ini_path = os.path.join(path, 'config.ini')
         self.config = {'ModelList': filepath,
                        'Favourites': '',
                        'MaxWindowWidth': 1024,
