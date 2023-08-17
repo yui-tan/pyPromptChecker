@@ -51,7 +51,7 @@ For Windows
 
 # ToDo
 
- - [ ] Be able to move and delete PNG images by button
+ - [x] Be able to move and delete PNG images by button
  - [ ] Filtering main tabs various conditions
  - [ ] Add support for other image file formats
  - [x] Refactoring and clean up
@@ -89,7 +89,7 @@ This feature works in append mode, but The outputs is slightly different format 
 - This script is required to locate model names.  
 - The structure is following:
   
-| Display name | Model hash | Entire SHA215 hash | Filename | Model type |
+| Display name | Model hash | Entire SHA256 hash | Filename | Model type |
 |:---:|:---:|:---:|:---:|:---:|
 
 - The display name in the first column is the same as the filename if freshly output from the script.

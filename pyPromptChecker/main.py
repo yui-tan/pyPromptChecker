@@ -32,6 +32,7 @@ def check_files(target_list):
     if file_counts > 20:
         app, progress_bar = pyPromptChecker.lib.window.from_main(False, True)
         progress_bar.setLabelText("Checking files...")
+        progress_bar.setRange(0, file_counts)
         pyPromptChecker.lib.window.move_center(progress_bar)
         progress_enable = True
 
