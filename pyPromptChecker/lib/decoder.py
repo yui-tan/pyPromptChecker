@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import png
+import pyexiv2
 
 
 def image_format_identifier(filepath):
@@ -45,3 +46,14 @@ def chunk_text_extractor(target, index):
 
     except Exception as e:
         raise Exception('An error occurred while decoding: {}', format(target))
+
+
+def jpeg_text_extractor(filepath):
+    img = pyexiv2.Image(filepath)
+    metadata = img.read_exif()
+    text = metadata.get('Exif.Photo.UserComment')
+    mark = 'charset=Unicode '
+    if mark in text:
+        return text.replace(mark, '')
+    else:
+        return None

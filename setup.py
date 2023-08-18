@@ -7,7 +7,8 @@ setup(
     package_data={'pyPromptChecker': ['lib/*.py']},
     install_requires=[
         'pyQt6',
-        'pypng'
+        'pypng',
+        'pyexiv2'
     ],
     entry_points={
         'console_scripts': [

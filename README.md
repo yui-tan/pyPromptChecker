@@ -34,10 +34,9 @@ But old-fashioned versions still has requirements as follows.
 # Installation
 ### pyPromptChecker binary edition (both Linux and Windows)  
 1. Download the binary packages from the 'Releases'.
-2. Extract pyPromptChecker-bin directory anywhere you want.
-3. Double click pyPromptChecker.exe / pyPromptChecker.
-4. Provide shortcuts / .desktop file for drag-and-drop if you want.
-5. Done
+2. Extract pyPromptChecker-bin directory to any location of your choice.
+3. Optionally, shortcuts or .desktop files for enable drag-and-drop functionality.
+4. Execute pyPromptChecker.exe / pyPromptChecker by double-click.
 
 ### Old-fashioned pyPromptChecker
 
@@ -54,20 +53,37 @@ For Windows
 3. Extract the packages to a location of your choice as 'pyPromptChecker'.
 4. Run pyPromptChecker/install/install.bat file.
 5. Don't miss a single word of the words that pop up on the screen, before going wild in the comments
-
+# Usage
+### Binary edition
+```bash
+pyPromptChecker -a, --ask  
+# Open directory choose dialog.
+pyPromptChecker -f [FILEPATH ...], --filepath [FILEPATH ...]  
+# Send filepaths to the script.
+pyPromptChecker -d DIRECTORY, --directory DIRECTORY  
+# Send directory paths to the script.
+```
+### Old-fashioned edition
+```bash
+mikkumiku -a, --ask  
+# Open directory choose dialog.
+mikkumiku -f [FILEPATH ...], --filepath [FILEPATH ...]  
+# Send filepaths to the script.
+mikkumiku -d DIRECTORY, --directory DIRECTORY  
+# Send directory paths to the script.
+```
 # Roadmap
-
+ - [ ] Tab navigation with thumbnails
  - [ ] Filtering and searching tabs various conditions
  - [ ] Add support for other image file formats
     - [ ] jpeg
-    - [ ] webp
-    - [ ] heif
+    - [ ] else
  - [ ] Add support for import JSON
  - [ ] Export Data to Stable-Diffusion-Webui via API
  - [ ] Get marry to Miku
 
  # Author
- ### Yui-tan
+ ### Yui-tan / Yuiyui
  Nutjob who loves Hatsune Miku.  
  napier2.718281828@gmail.com  
  https://civitai.com/user/Yui_tan  
