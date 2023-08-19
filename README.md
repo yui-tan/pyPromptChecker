@@ -1,5 +1,5 @@
 # pyPromptChecker
-"pyPromptChecker" is a script designed for analyzing AI-generated images created by AUTOMATIC/stable-diffusion-webui.  
+A small script designed for analyzing AI-generated images created by AUTOMATIC/stable-diffusion-webui.  
 It extracts incomprehensible strings embedded within image files, formatting them into human-readable.  
 The formatted data can be exported as JSON and subsequently imported from the JSON output.  
 Additionally, the script offers in-data search and basic file management functionalities.  
@@ -28,6 +28,7 @@ See more details here.
 ### pyPromptChecker binary edition no longer has any requirements.  
 But old-fashioned versions still has requirements as follows.
 - Python 3.x
+- pillow (PIL)
 - pypng
 - PyQt6
 
@@ -73,10 +74,10 @@ mikkumiku -d DIRECTORY, --directory DIRECTORY
 # Send directory paths to the script.
 ```
 # Roadmap
- - [ ] Tab navigation with thumbnails
+ - [x] Tab navigation with thumbnails
  - [ ] Filtering and searching tabs various conditions
  - [ ] Add support for other image file formats
-    - [ ] jpeg
+    - [x] jpeg
     - [ ] else
  - [ ] Add support for import JSON
  - [ ] Export Data to Stable-Diffusion-Webui via API
@@ -91,31 +92,3 @@ mikkumiku -d DIRECTORY, --directory DIRECTORY
 
  # Licence
 This script created under [GPLv3](https://www.gnu.org/licenses/gpl-3.0.html).
-
- # How to use Model hash extractor
-
-1. Open the 'config.ini' and change the value of 'ModelHashExtractor' from False to True.
-2. Run pyPromptChecker and click the 'M' button located at the bottom right.
-3. Select a directory containing the files you want to process.
-4. Highly recommended value of 'Model Hash Extractor' from True back to False for fool proof.
-
-Depending on the number of files, this feature may take a significant amount of time to process.  
-Additionally, it may require more than 32 GiB of memory (not VRAM).  
-For example, in my case, it took 20 minutes to process 62 files, and the memory usage went up to 29 GiB.  
-
-If you edited 'model_list.csv', I recommend relocate 'model_list.csv' before runnning this feature.  
-This feature works in append mode, but The outputs is slightly different format than before.
-
-# About 'model_list.csv'
-
-- This script is required to locate model names.  
-- The structure is following:
-  
-| Display name | Model hash | Entire SHA256 hash | Filename | Model type |
-|:---:|:---:|:---:|:---:|:---:|
-
-- The display name in the first column is the same as the filename if freshly output from the script.
-- But there is no issue to  edit it according to your preference.  
-- The each of value must be comma-separated and the values must not be enclosed in quotation marks.  
-- The script uses the first and second columns for searching.  
-- Therefore, you can delete columns from the third onward or add something in columns from the sixth onward without any issues.  

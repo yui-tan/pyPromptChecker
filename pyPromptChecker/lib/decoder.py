@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import png
-import pyexiv2
+from PIL import Image
 
 
 def image_format_identifier(filepath):
@@ -21,39 +21,48 @@ def image_format_identifier(filepath):
             return None
 
 
-def chunk_text_extractor(target, index):
-    if index < 0:
-        raise Exception('The index value {} less than 0!'.format(index))
+def chunk_text_extractor(target, method, index=1):
+    if method == 0:
+        index = max(index, 1)
+        try:
+            reader = png.Reader(filename=target)
+            chunks = reader.chunks()
+            chunk_list = list(chunks)
 
-    try:
-        reader = png.Reader(filename=target)
-        chunks = reader.chunks()
-        chunk_list = list(chunks)
+            if index >= len(chunk_list):
+                print('The index value {} is greater than the number of chunks in the file!'.format(index))
+                return None
 
-        if index >= len(chunk_list):
-            raise Exception('The index value {} is greater than the number of chunks in the file!'.format(index))
+            chunk_data = chunk_list[index][1]
+            text = chunk_data.decode('utf-8', errors='ignore').replace("\x00", "")
 
-        chunk_data = chunk_list[index][1]
-        text = chunk_data.decode('utf-8', errors='ignore').replace("\x00", "")
+            if text.startswith('parameters'):
+                return text
+            else:
+                print('{} has not valid parameters'.format(target))
+                return None
 
-        if 'parameters' in text:
-            return text
-        else:
+        except Exception as e:
+            print('An error occurred while decoding: {}\n{}'.format(target, str(e)))
             return None
 
-    except FileNotFoundError as e:
-        raise Exception('The file "{}" was not found', format(target))
+    elif method == 1:
+        try:
+            img = Image.open(target)
+            exif = img._getexif()
+            binary = exif.get(37510, b'')
+            text = binary.decode('utf-8', errors='ignore').replace("\x00", "")
 
-    except Exception as e:
-        raise Exception('An error occurred while decoding: {}', format(target))
+            if text.startswith('UNICODE'):
+                return text
+            else:
+                print('{} has not valid parameters'.format(target))
+                return None
 
+        except Exception as e:
+            print('An error occurred while decoding: {}\n{}'.format(target, str(e)))
+            return None
 
-def jpeg_text_extractor(filepath):
-    img = pyexiv2.Image(filepath)
-    metadata = img.read_exif()
-    text = metadata.get('Exif.Photo.UserComment')
-    mark = 'charset=Unicode '
-    if mark in text:
-        return text.replace(mark, '')
     else:
+        print("couldn't extract parameter from {}\nBecause this feature is not yet implemented.".format(target))
         return None

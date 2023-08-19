@@ -8,7 +8,7 @@ setup(
     install_requires=[
         'pyQt6',
         'pypng',
-        'pyexiv2'
+        'pillow'
     ],
     entry_points={
         'console_scripts': [

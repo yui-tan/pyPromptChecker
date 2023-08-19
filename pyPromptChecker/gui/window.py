@@ -6,8 +6,9 @@ from pyPromptChecker.lib import *
 from .dialog import *
 from .subwindow import *
 from .widget import *
+from .menu import *
 from PyQt6.QtWidgets import QApplication, QLabel, QTabWidget, QHBoxLayout, QPushButton, QComboBox, QTextEdit
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QPoint
 
 
 class ResultWindow(QMainWindow):
@@ -23,6 +24,8 @@ class ResultWindow(QMainWindow):
         self.params = []
         self.init_ui(targets)
         self.image_window = ImageWindow(self)
+        self.thumbnail = ThumbnailView(self)
+        self.main_menu = MainMenu(self)
         self.tab_max_count = 0
 
         size_hint_width = self.sizeHint().width()
@@ -33,17 +36,12 @@ class ResultWindow(QMainWindow):
         window_width = size_hint_width if max_width > size_hint_width else max_width
         window_height = size_hint_height if max_height > size_hint_height else max_height
         self.resize(window_width, window_height)
-        move_center(self)
+        self.move_centre_main()
 
     def init_ui(self, targets):
         self.progress_bar_enable = True if len(targets) > 20 else False
         ignore = config.get('IgnoreIfDataIsNotEmbedded')
-        pixmap_scale = config.get('PixmapSize')
-        move_delete_enable = config.get('MoveDelete')
-        json_export_enable = config.get('JsonExport')
-        model_hash_extractor_enable = config.get('ModelHashExtractor')
         tab_jump_enable = config.get('TabNavigation')
-        tab_search_enable = config.get('TabSearch')
         error_list_parameter = config.get('ErrorList')
         total = len(targets)
         valid_total = total
@@ -54,8 +52,9 @@ class ResultWindow(QMainWindow):
             self.progress_bar.setRange(0, total * 2)
             self.progress_bar.setLabelText('Extracting PNG Chunk...')
 
-        for filepath in targets:
-            chunk_data = chunk_text_extractor(filepath, 1)
+        for array in targets:
+            filepath, filetype = array
+            chunk_data = chunk_text_extractor(filepath, filetype, 1)
             parameters = parse_parameter(chunk_data, filepath, self.models)
             if parameters.params['Positive'] == 'This file has no embedded data' and ignore:
                 valid_total = valid_total - 1
@@ -90,17 +89,16 @@ class ResultWindow(QMainWindow):
             main_section = QGroupBox()
             main_section_layout = QHBoxLayout()
 
-            main_label_layout = make_main_section(tmp, pixmap_scale, move_delete_enable)
+            main_label_layout = make_main_section(tmp)
             main_section_layout.addLayout(main_label_layout)
             main_section.setLayout(main_section_layout)
             tab_page_layout.addWidget(main_section)
 
             pixmap_label = main_section.findChild(PixmapLabel, 'Pixmap')
             pixmap_label.clicked.connect(self.pixmap_clicked)
-
-            if move_delete_enable:
-                for button in ['Favourite', 'Move to', 'Delete']:
-                    managing_button = main_section.findChild(QPushButton, button)
+            for button in ['Favourite', 'Move to', 'Delete']:
+                managing_button = main_section.findChild(QPushButton, button)
+                if managing_button:
                     managing_button.clicked.connect(self.managing_button_clicked)
 
             hires_tab = ['Hires upscaler', 'Face restoration', 'Dynamic thresholding enabled']
@@ -136,10 +134,9 @@ class ResultWindow(QMainWindow):
                     if index == 3:
                         inner_page.setLayout(make_tiled_diffusion_tab(tmp))
                     if index == 4:
-                        inner_page = (make_control_net_tab(tmp, 0))
+                        inner_page = make_control_net_tab(tmp, 0)
                     if index == 5:
-                        rp_pixmap_scale = config.get('RegionalPrompterPixmapSize')
-                        inner_page.setLayout(make_regional_prompter_tab(tmp, rp_pixmap_scale))
+                        inner_page.setLayout(make_regional_prompter_tab(tmp))
                     inner_tab.addTab(inner_page, tab[0])
 
             if not error_list_parameter == 0:
@@ -159,19 +156,21 @@ class ResultWindow(QMainWindow):
 
         self.tab_max_count = self.root_tab.count()
 
-        footer_layout = make_footer_area(json_export_enable, model_hash_extractor_enable)
+        footer_layout = make_footer_area()
         for i in range(footer_layout.count()):
             widget = footer_layout.itemAt(i).widget()
             if isinstance(widget, QPushButton):
                 widget.clicked.connect(self.button_clicked)
 
         if tab_jump_enable and self.root_tab.count() > 5:
-            filename_list = [item.params['Filename'] for item in self.params]
-            header_layout = make_header_area(filename_list)
+            self.filename_list = [[item.params['Filepath'], item.params['Filename']] for item in self.params]
+            header_layout = tab_navigation(self.filename_list)
             for i in range(header_layout.count()):
                 widget = header_layout.itemAt(i).widget()
                 if isinstance(widget, QPushButton):
                     widget.clicked.connect(self.header_button_clicked)
+                elif isinstance(widget, QComboBox):
+                    widget.currentIndexChanged.connect(self.header_button_clicked)
             root_layout.addLayout(header_layout)
 
         root_layout.addWidget(self.root_tab)
@@ -192,89 +191,50 @@ class ResultWindow(QMainWindow):
 
     def header_button_clicked(self):
         where_from = self.sender().objectName()
-        if where_from == 'Jump to':
-            combo_box = self.centralWidget().findChild(QComboBox, 'target_tab')
+        if where_from == 'Jump to' or where_from == 'Combo':
+            combo_box = self.centralWidget().findChild(QComboBox, 'Combo')
             target_tab = combo_box.currentText()
-            for index in range(self.root_tab.count()):
-                if self.root_tab.tabText(index) == target_tab:
-                    self.root_tab.setCurrentIndex(index)
-                    break
+            self.root_tab_change(target_tab)
+        elif where_from == 'Thumbnail':
+            self.thumbnail.init_thumbnail(self.filename_list)
         elif where_from == 'Search':
-            pass
+            self.not_yet_implemented()
 
     def button_clicked(self):
         where_from = self.sender().objectName()
         clipboard = QApplication.clipboard()
         current_page = self.root_tab.currentWidget()
-        current_index = self.root_tab.currentIndex()
         if where_from == 'Copy positive':
             text_edit = current_page.findChild(QTextEdit, 'Positive')
             if text_edit:
                 text = text_edit.toPlainText()
                 if text and not text == 'This file has no embedded data':
                     clipboard.setText(text)
-                    self.toast_window.init_ui('Positive Copied!', self.sender().geometry(), 1000, True)
+                    self.toast_window.init_toast('Positive Copied!', 1000)
         elif where_from == 'Copy negative':
             text_edit = current_page.findChild(QTextEdit, 'Negative')
             if text_edit:
                 text = text_edit.toPlainText()
                 if text:
                     clipboard.setText(text)
-                    self.toast_window.init_ui('Negative Copied!', self.sender().geometry(), 1000, True)
+                    self.toast_window.init_toast('Negative Copied!', 1000)
         elif where_from == 'Copy seed':
             label = current_page.findChild(QLabel, 'Seed_value')
             if label:
                 text = label.text()
                 clipboard.setText(text)
-                self.toast_window.init_ui('Seed Copied!', self.sender().geometry(), 1000, True)
+                self.toast_window.init_toast('Seed Copied!', 1000)
         elif where_from == 'Export JSON (This)':
-            data = self.params[current_index].params
-            filename = config.get('JsonSingle')
-            if filename == 'filename':
-                filename = self.params[current_index].params.get('Filepath')
-                filename = os.path.splitext(os.path.basename(filename))[0] + '.json'
-            self.dialog.init_dialog('save-file', 'Save JSON', filename, 'JSON')
-            filepath = self.dialog.result[0] if self.dialog.result else None
-            if filepath:
-                result, e = io.export_json(data, filepath)
-                if not e:
-                    self.toast_window.init_ui('Saved!', self.sender().geometry(), 1000, True)
-                else:
-                    MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
+            self.export_json_single()
         elif where_from == 'Export JSON (All)':
-            filename = config.get('JsonMultiple')
-            if filename == 'directory':
-                filename = self.params[0].params.get('Filepath')
-                filename = os.path.basename(os.path.dirname(filename)) + '.json'
-            self.dialog.init_dialog('save-file', 'Save JSON', filename, 'JSON')
-            filepath = self.dialog.result[0] if self.dialog.result else None
-            if filepath:
-                dict_list = []
-                for tmp in self.params:
-                    dict_list.append(tmp.params)
-                result, e = io.export_json(dict_list, filepath)
-                if not e:
-                    self.toast_window.init_ui('Saved!', self.sender().geometry(), 1000, True)
-                else:
-                    MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
+            self.export_json_all()
         elif where_from == 'Reselect':
-            self.dialog.init_dialog('choose-files', 'Select files', None, 'PNG')
-            filepath = self.dialog.result
-            if filepath:
-                self.params = []
-                self.init_ui(filepath)
-        elif where_from == 'M':
-            text = 'This operation requires a significant amount of time.'
-            text = text + '\n...And more than 32GiB of memory.'
-            text = text + '\nDo you still want to run it ?'
-            result = MessageBox(text, 'Confirm', 'okcancel', 'question', self)
-            if result.success:
-                self.dialog.init_dialog('choose-directory', 'Select Directory', None, '')
-                directory = self.dialog.result[0] if self.dialog.result else None
-                if directory:
-                    operation_progress = ProgressDialog(self)
-                    io.model_hash_maker(directory, operation_progress)
-                    MessageBox('Finished', "I'm knackered")
+            self.reselect_files()
+        elif where_from == 'Menu':
+            x = self.sender().mapToGlobal(self.sender().rect().topLeft()).x()
+            y = self.sender().mapToGlobal(self.sender().rect().topLeft()).y() - self.main_menu.sizeHint().height()
+            adjusted_pos = QPoint(x, y)
+            self.main_menu.exec(adjusted_pos)
 
     def managing_button_clicked(self):
         where_from = self.sender().objectName()
@@ -301,8 +261,9 @@ class ResultWindow(QMainWindow):
                     filepath_label = current_page.findChild(QLabel, 'Filepath_value')
                     filepath_label.setStyleSheet("color: blue;")
                     filepath_label.setText(destination)
+                    filepath_label.setToolTip(destination)
                     self.params[current_index].params['Filepath'] = os.path.join(destination, filename)
-                    self.toast_window.init_ui('Added Favourite!', self.sender().geometry(), 1000)
+                    self.toast_window.init_toast('Added!', 1000)
                 else:
                     MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
         elif where_from == 'Move to':
@@ -315,8 +276,9 @@ class ResultWindow(QMainWindow):
                     filepath_label = current_page.findChild(QLabel, 'Filepath_value')
                     filepath_label.setStyleSheet("color: blue;")
                     filepath_label.setText(destination)
+                    filepath_label.setToolTip(destination)
                     self.params[current_index].params['Filepath'] = os.path.join(destination, filename)
-                    self.toast_window.init_ui('Moved!', self.sender().geometry(), 1000)
+                    self.toast_window.init_toast('Moved!', 1000)
                 else:
                     MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
         elif where_from == 'Delete':
@@ -331,9 +293,10 @@ class ResultWindow(QMainWindow):
                 filepath_label = current_page.findChild(QLabel, 'Filepath_value')
                 filepath_label.setStyleSheet("color: red;")
                 filepath_label.setText(destination)
+                filepath_label.setToolTip(destination)
                 self.root_tab.tabBar().setTabTextColor(current_index, Qt.GlobalColor.red)
                 self.params[current_index].params['Filepath'] = os.path.join(destination, filename)
-                self.toast_window.init_ui('Deleted!', self.sender().geometry(), 1000)
+                self.toast_window.init_toast('Deleted!', 1000)
             else:
                 MessageBox(result.replace('moving/copying', 'deleting') + '\n' + str(e), 'Error', 'ok', 'critical',
                            self)
@@ -344,28 +307,98 @@ class ResultWindow(QMainWindow):
             self.image_window.filepath = self.params[current_index].params.get('Filepath')
             self.image_window.init_ui()
 
+    def move_centre_main(self):
+        screen_center = QApplication.primaryScreen().geometry().center()
+        frame_geometry = self.frameGeometry()
+        frame_geometry.moveCenter(screen_center)
+        self.move(frame_geometry.topLeft())
+
+    def root_tab_change(self, tab_title):
+        for index in range(self.root_tab.count()):
+            if self.root_tab.tabText(index) == tab_title:
+                self.root_tab.setCurrentIndex(index)
+                break
+
+    def export_json_single(self):
+        current_index = self.root_tab.currentIndex()
+        data = self.params[current_index].params
+        filename = config.get('JsonSingle')
+        if filename == 'filename':
+            filename = self.params[current_index].params.get('Filepath')
+            filename = os.path.splitext(os.path.basename(filename))[0] + '.json'
+        self.dialog.init_dialog('save-file', 'Save JSON', filename, 'JSON')
+        filepath = self.dialog.result[0] if self.dialog.result else None
+        if filepath:
+            result, e = io.export_json(data, filepath)
+            if not e:
+                self.toast_window.init_toast('Saved!', 1000)
+            else:
+                MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
+
+    def export_json_all(self):
+        filename = config.get('JsonMultiple')
+        if filename == 'directory':
+            filename = self.params[0].params.get('Filepath')
+            filename = os.path.basename(os.path.dirname(filename)) + '.json'
+        self.dialog.init_dialog('save-file', 'Save JSON', filename, 'JSON')
+        filepath = self.dialog.result[0] if self.dialog.result else None
+        if filepath:
+            dict_list = []
+            for tmp in self.params:
+                dict_list.append(tmp.params)
+            result, e = io.export_json(dict_list, filepath)
+            if not e:
+                self.toast_window.init_toast('Saved!', 1000)
+            else:
+                MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
+
+    def export_json_selected(self):
+        pass
+
+    def reselect_files(self):
+        self.dialog.init_dialog('choose-files', 'Select files', None, 'PNG')
+        filepath = self.dialog.result
+        result_list = []
+        for tmp in filepath:
+            result = image_format_identifier(tmp)
+            if result:
+                result_list.append(result)
+        if filepath:
+            self.params = []
+            self.init_ui(result_list)
+
+    def reselect_directory(self):
+        pass
+
+    def model_hash_extractor(self):
+        text = 'This operation requires a significant amount of time.' \
+               '\n...And more than 32GiB of memory.' \
+               '\nDo you still want to run it ?'
+        result = MessageBox(text, 'Confirm', 'okcancel', 'question', self)
+        if result.success:
+            self.dialog.init_dialog('choose-directory', 'Select Directory', None, '')
+            directory = self.dialog.result[0] if self.dialog.result else None
+            if directory:
+                operation_progress = ProgressDialog(self)
+                io.model_hash_maker(directory, operation_progress)
+                MessageBox('Finished', "I'm knackered", 'ok', 'info', self)
+
+    def not_yet_implemented(self):
+        MessageBox('Sorry, not yet implemented...', 'pyPromptChecker', 'ok', 'info', self)
+
     def closeEvent(self, event):
         trash_bin = os.path.join(os.path.abspath(''), '.trash')
-        ask = config.get('AskIfClearTrashBin')
-        if not io.is_directory_empty(trash_bin):
-            answer = None
-            if ask:
-                text = 'Do you want to obliterate files in the trash bin ?'
-                answer = MessageBox(text, 'pyPromptChecker', 'okcancel', 'question', self)
-            if answer.success or not ask:
-                io.clear_trash_bin(trash_bin)
+        if os.path.exists(trash_bin):
+            ask = config.get('AskIfClearTrashBin')
+            if not io.is_directory_empty(trash_bin):
+                answer = None
+                if ask:
+                    text = 'Do you want to obliterate files in the trash bin ?'
+                    answer = MessageBox(text, 'pyPromptChecker', 'okcancel', 'question', self)
+                if answer.success or not ask:
+                    io.clear_trash_bin(trash_bin)
         event.accept()
         QApplication.quit()
-
-
-def move_center(myself, parent=None):
-    if not parent or not parent.isVisible():
-        screen_center = QApplication.primaryScreen().geometry().center()
-    else:
-        screen_center = parent.geometry().center()
-    frame_geometry = myself.frameGeometry()
-    frame_geometry.moveCenter(screen_center)
-    myself.move(frame_geometry.topLeft())
 
 
 def from_main(purpose, target_data=None):

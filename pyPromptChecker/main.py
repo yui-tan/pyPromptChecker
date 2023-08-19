@@ -25,14 +25,13 @@ def check_files(target_list):
     progress_enable = False
     file_is_not_found_list = []
     this_is_directory_list = []
-    this_file_is_not_png_file_list = []
+    this_file_is_not_image_file_list = []
     valid_file_list = []
 
     if file_counts > 20:
         app, progress_bar = window.from_main('progress')
         progress_bar.setLabelText("Checking files...")
         progress_bar.setRange(0, file_counts)
-        window.move_center(progress_bar)
         progress_enable = True
 
     for filepath in target_list:
@@ -40,17 +39,21 @@ def check_files(target_list):
             file_is_not_found_list.append(filepath)
         elif not os.path.isfile(filepath):
             this_is_directory_list.append(filepath)
-        elif not decoder.image_format_identifier(filepath):
-            this_file_is_not_png_file_list.append(filepath)
+
+        result = decoder.image_format_identifier(filepath)
+
+        if not result:
+            this_file_is_not_image_file_list.append(filepath)
         else:
-            valid_file_list.append(filepath)
+            valid_file_list.append(result)
+
         if progress_enable:
             progress_bar.update_value()
 
     if progress_enable:
         progress_bar.close()
 
-    return valid_file_list, file_is_not_found_list, this_is_directory_list, this_file_is_not_png_file_list
+    return valid_file_list, file_is_not_found_list, this_is_directory_list, this_file_is_not_image_file_list
 
 
 def main():

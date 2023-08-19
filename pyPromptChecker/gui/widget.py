@@ -2,6 +2,7 @@
 
 import datetime
 import os
+from . import config
 from .dialog import PixmapLabel
 from PyQt6.QtWidgets import QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QComboBox, QTextEdit
 from PyQt6.QtWidgets import QGroupBox, QTabWidget, QScrollArea, QSplitter, QGridLayout, QWidget
@@ -9,29 +10,34 @@ from PyQt6.QtGui import QPixmap, QPainter, QColor
 from PyQt6.QtCore import Qt
 
 
-def make_footer_area(json_export_enable, model_hash_extractor_enable):
+def make_footer_area():
+    json_export_enable = config.get('JsonExport', False)
+    model_hash_extractor_enable = config.get('ModelHashExtractor', False)
     footer_layout = QHBoxLayout()
     button_text = ['Copy positive', 'Copy negative', 'Copy seed']
     if json_export_enable:
         button_text.extend(['Export JSON (This)', 'Export JSON (All)'])
     button_text.append('Reselect')
     if model_hash_extractor_enable:
-        button_text.append('M')
+        button_text.append('Menu')
     for tmp in button_text:
-        copy_button = QPushButton(tmp)
-        copy_button.setObjectName(tmp)
-        footer_layout.addWidget(copy_button)
-        if tmp == 'M':
-            copy_button.setMaximumSize(25, 25)
+        footer_button = QPushButton(tmp)
+        footer_button.setObjectName(tmp)
+        footer_layout.addWidget(footer_button)
+        if tmp == 'Menu':
+            footer_button.setText('▲ Menu')
     return footer_layout
 
 
-def make_header_area(filename_list, tab_search=False):
+def tab_navigation(filename_list):
+    filename_list = [array[1] for array in filename_list]
+    tab_search = config.get('TabSearch', False)
+    thumbnails = config.get('TabNavigationWithThumbnails', True)
     header_layout = QHBoxLayout()
     dropdown_box = QComboBox()
-    dropdown_box.setObjectName('target_tab')
     dropdown_box.addItems(filename_list)
     dropdown_box.setEditable(True)
+    dropdown_box.setObjectName('Combo')
     jump_to_button = QPushButton('Jump to')
     jump_to_button.setObjectName('Jump to')
     if tab_search:
@@ -40,10 +46,14 @@ def make_header_area(filename_list, tab_search=False):
         header_layout.addWidget(search_button, 1)
     header_layout.addWidget(dropdown_box, 5)
     header_layout.addWidget(jump_to_button, 1)
+    if thumbnails:
+        thumbnail_button = QPushButton('Thumbnail')
+        thumbnail_button.setObjectName('Thumbnail')
+        header_layout.addWidget(thumbnail_button, 1)
     return header_layout
 
 
-def make_main_section(target, scale, enable=False):
+def make_main_section(target):
     status = [['File count', 'Number'],
               'Filename',
               'Filepath',
@@ -76,7 +86,7 @@ def make_main_section(target, scale, enable=False):
     timestamp = datetime.datetime.fromtimestamp(os.path.getctime(filepath))
     target.params['Timestamp'] = timestamp.strftime('%Y/%m/%d %H:%M')
     main_section_layout = QHBoxLayout()
-    pixmap_label = make_pixmap_label(filepath, scale, enable)
+    pixmap_label = make_pixmap_label(filepath)
     main_section_layout.addLayout(pixmap_label, 1)
     main_section_layout.insertSpacing(1, 10)
     main_section_layout.addLayout(label_maker(status, target, 1, 1, True, True, 15), 1)
@@ -84,7 +94,9 @@ def make_main_section(target, scale, enable=False):
     return main_section_layout
 
 
-def make_pixmap_label(filepath, scale, enable=False):
+def make_pixmap_label(filepath):
+    scale = config.get('PixmapSize', 350)
+    enable = config.get('MoveDelete', False)
     pixmap_layout = QVBoxLayout()
     button_layout = QHBoxLayout()
     if os.path.exists(filepath):
@@ -368,8 +380,9 @@ def make_control_net_tab(target, starts):
     return control_tab
 
 
-def make_regional_prompter_tab(target, scale):
+def make_regional_prompter_tab(target):
     filepath = target.params.get('Filepath')
+    scale = config.get('RegionalPrompterPixmapSize', 350)
     pixmap = QPixmap(filepath)
     pixmap = pixmap.scaled(scale, int(scale * 0.7), Qt.AspectRatioMode.KeepAspectRatio,
                            Qt.TransformationMode.FastTransformation)

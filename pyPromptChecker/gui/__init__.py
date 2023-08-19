@@ -25,7 +25,8 @@ config = {'ModelList': '',
           'UseCopyInsteadOfMove': True,
           'AskIfDelete': True,
           'AskIfClearTrashBin': True,
-          'TabNavigation': False
+          'TabNavigation': False,
+          'TabSearch': False
           }
 
 ini_config = configparser.ConfigParser()
@@ -36,7 +37,7 @@ ini_section = [['Location', 'ModelList', 'Favourites'],
                ['Features', 'ModelHashExtractor'],
                ['Features', 'JsonExport', 'JsonSingle', 'JsonMultiple'],
                ['Features', 'MoveDelete', 'UseCopyInsteadOfMove', 'AskIfDelete', 'AskIfClearTrashBin'],
-               ['Features', 'TabNavigation'],
+               ['Features', 'TabNavigation', 'TabSearch'],
                ['Tab', 'LoraAddNet', 'HiresCfg', 'TiledDiffusion', 'ControlNet', 'RegionalPrompter'],
                ['Ignore', 'IgnoreIfDataIsNotEmbedded'],
                ['Debug', 'ErrorList'],

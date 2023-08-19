@@ -42,7 +42,7 @@ class Dialog(QFileDialog):
             self.setOption(QFileDialog.Option.ShowDirsOnly, False)
             self.selectFile(filename)
         elif category == 'choose-files':
-            self.selectFile('*.png')
+            self.selectFile('*.png *.jpg *.jpeg')
             self.setFileMode(QFileDialog.FileMode.ExistingFiles)
             self.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
             self.setNameFilter(self.file_filter)
@@ -56,7 +56,7 @@ class Dialog(QFileDialog):
         if str_filter == 'JSON':
             self.file_filter = 'JSON Files(*.json)'
         elif str_filter == 'PNG':
-            self.file_filter = 'Image files(*.png)'
+            self.file_filter = 'Image files(*.png *.jpg *.jpeg)'
 
 
 class ProgressDialog(QProgressDialog):
@@ -69,12 +69,21 @@ class ProgressDialog(QProgressDialog):
         self.setMinimumDuration(0)
         self.setValue(0)
         self.now = 0
-        move_center(self, parent)
+        self.move_centre(parent)
 
     def update_value(self):
         now = self.now + 1
         self.setValue(now)
         self.now = now
+
+    def move_centre(self, parent=None):
+        if not parent or not parent.isVisible():
+            screen_center = QApplication.primaryScreen().geometry().center()
+        else:
+            screen_center = parent.geometry().center()
+        frame_geometry = self.frameGeometry()
+        frame_geometry.moveCenter(screen_center)
+        self.move(frame_geometry.topLeft())
 
 
 class MessageBox(QMessageBox):
@@ -118,7 +127,8 @@ class Toast(QWidget):
         self.timer = None
         self.message_label = QLabel()
         self.setWindowTitle("Toast")
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowDoesNotAcceptFocus)
+        self.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowDoesNotAcceptFocus)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setStyleSheet("background-color: rgba(50, 50, 50, 150); color: white; padding: 10px; border-radius: 5px;")
         self.hide()
@@ -127,14 +137,19 @@ class Toast(QWidget):
         toast_layout.addWidget(self.message_label)
         self.setLayout(toast_layout)
 
-    def init_ui(self, message, geometry, duration=2000, adjust=False):
+    def init_toast(self, message, duration=2000):
         self.message_label.setText(message)
         self.show()
         self.adjustSize()
-        if adjust:
-            self.move(geometry.x(), geometry.y() - (geometry.height() + 25))
-        else:
-            self.move(geometry.x(), geometry.y())
+        adjust_x = int(self.sizeHint().width() / 2)
+        adjust_y = int(self.sizeHint().height() / 2)
+        x = self.parent().mapToGlobal(self.parent().rect().topLeft()).x()
+        y = self.parent().mapToGlobal(self.parent().rect().topLeft()).y()
+        width = self.parent().rect().width()
+        height = self.parent().rect().height()
+        x = + int(width / 2)
+        y = + int(height / 2)
+        self.move(x - adjust_x, y - adjust_y)
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.close_toast)
@@ -143,13 +158,3 @@ class Toast(QWidget):
     def close_toast(self):
         self.timer.stop()
         self.close()
-
-
-def move_center(myself, parent=None):
-    if not parent or not parent.isVisible():
-        screen_center = QApplication.primaryScreen().geometry().center()
-    else:
-        screen_center = parent.geometry().center()
-    frame_geometry = myself.frameGeometry()
-    frame_geometry.moveCenter(screen_center)
-    myself.move(frame_geometry.topLeft())

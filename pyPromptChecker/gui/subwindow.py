@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import os
 from .dialog import ProgressDialog
 from .dialog import PixmapLabel
 from functools import lru_cache
 from PyQt6.QtWidgets import QMainWindow, QApplication, QGridLayout, QGroupBox, QCheckBox, QScrollArea
-from PyQt6.QtWidgets import QVBoxLayout, QLabel, QWidget
+from PyQt6.QtWidgets import QVBoxLayout, QWidget
 from PyQt6.QtGui import QPixmap, QImageReader
 from PyQt6.QtCore import Qt
 
@@ -41,7 +40,7 @@ class ImageWindow(QMainWindow):
 
         self.setCentralWidget(label)
         self.show()
-        move_center(self)
+        move_centre(self)
 
     def clicked(self):
         self.close()
@@ -49,19 +48,21 @@ class ImageWindow(QMainWindow):
 
 class ThumbnailView(QMainWindow):
     def __init__(self, parent=None):
-        super().__init__()
+        super().__init__(parent)
         self.setWindowTitle('Thumbnail View')
-        self.file_list = []
+        self.filelist_for_return = []
+        self.filelist_original = []
 
-    def init_ui(self, filelist):
+    def init_thumbnail(self, filelist):
+        self.filelist_original = filelist
         progress = ProgressDialog()
         progress.setLabelText('Loading...')
         progress.setRange(0, len(filelist))
         base_layout = QGridLayout()
         row = col = 0
 
-        for filepath in filelist:
-            filename = os.path.basename(filepath)
+        for array in filelist:
+            filepath, filename = array
 
             portrait_border = QGroupBox()
             portrait_border.setMaximumWidth(190)
@@ -71,11 +72,13 @@ class ThumbnailView(QMainWindow):
             portrait_border.setLayout(portrait_layout)
 
             pixmap = portrait_generator(filepath)
-            pixmap_label = QLabel()
+            pixmap_label = PixmapLabel()
             pixmap_label.setMinimumSize(150, 150)
             pixmap_label.setPixmap(pixmap)
             pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
             pixmap_label.setToolTip(filename)
+            pixmap_label.setObjectName(filename)
+            pixmap_label.clicked.connect(self.pixmap_clicked)
 
             check_box = QCheckBox(filename)
             check_box.setObjectName(filename)
@@ -101,22 +104,36 @@ class ThumbnailView(QMainWindow):
         self.setCentralWidget(scroll_area)
 
         scroll_area.setMinimumWidth(thumb.sizeHint().width() + 16)
+        scroll_area.setMinimumHeight(portrait_layout.sizeHint().height() * 3)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setWidgetResizable(True)
 
         progress.close()
         self.show()
+        move_centre(self, self.parent())
 
     def check_box_changed(self):
         filename = self.sender().objectName()
         if self.sender().isChecked():
-            print('"{}" checked !'.format(filename))
+            for array in self.filelist_original:
+                if filename == array[1]:
+                    self.filelist_for_return.append(array[0])
+                    break
+            print(self.filelist_for_return)
         else:
-            print('"{}" unchecked !'.format(filename))
+            for array in self.filelist_original:
+                if filename == array[1]:
+                    self.filelist_for_return.remove(array[0])
+            print(self.filelist_for_return)
+
+    def pixmap_clicked(self):
+        self.parent().activateWindow()
+        target_tab = self.sender().objectName()
+        self.parent().root_tab_change(target_tab)
 
 
-@lru_cache(maxsize=None)
+@lru_cache(maxsize=1000)
 def portrait_generator(filepath):
     image_reader = QImageReader(filepath)
     pixmap = QPixmap.fromImageReader(image_reader)
@@ -125,7 +142,7 @@ def portrait_generator(filepath):
     return pixmap
 
 
-def move_center(myself, parent=None):
+def move_centre(myself, parent=None):
     if not parent or not parent.isVisible():
         screen_center = QApplication.primaryScreen().geometry().center()
     else:
