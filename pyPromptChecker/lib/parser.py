@@ -124,6 +124,9 @@ def prompt_parse(target_data):
         if re.search(r'^parameters', prompt):
             prompt = prompt.replace('parameters', '', 1)
             send_prompt = 'parameters' + prompt
+        elif re.search(r'^UNICODE', prompt):
+            prompt = prompt.replace('UNICODE', '', 1)
+            send_prompt = 'UNICODE' + prompt
         else:
             send_prompt = prompt
         tmp = prompt.split('Negative prompt: ')

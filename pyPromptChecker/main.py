@@ -4,10 +4,9 @@ import os
 import sys
 import argparse
 import glob
-import pyPromptChecker
 
-from pyPromptChecker.lib import decoder
-from pyPromptChecker.lib import window
+from lib import decoder
+from gui import window
 
 
 def directory_to_filelist(directory_path):
@@ -26,14 +25,13 @@ def check_files(target_list):
     progress_enable = False
     file_is_not_found_list = []
     this_is_directory_list = []
-    this_file_is_not_png_file_list = []
+    this_file_is_not_image_file_list = []
     valid_file_list = []
 
     if file_counts > 20:
-        app, progress_bar = pyPromptChecker.lib.window.from_main(False, True)
+        app, progress_bar = window.from_main('progress')
         progress_bar.setLabelText("Checking files...")
         progress_bar.setRange(0, file_counts)
-        pyPromptChecker.lib.window.move_center(progress_bar)
         progress_enable = True
 
     for filepath in target_list:
@@ -41,17 +39,21 @@ def check_files(target_list):
             file_is_not_found_list.append(filepath)
         elif not os.path.isfile(filepath):
             this_is_directory_list.append(filepath)
-        elif not decoder.image_format_identifier(filepath):
-            this_file_is_not_png_file_list.append(filepath)
+
+        result = decoder.image_format_identifier(filepath)
+
+        if not result:
+            this_file_is_not_image_file_list.append(filepath)
         else:
-            valid_file_list.append(filepath)
+            valid_file_list.append(result)
+
         if progress_enable:
             progress_bar.update_value()
 
     if progress_enable:
-        pyPromptChecker.lib.window.from_main(False, True, progress_bar)
+        progress_bar.close()
 
-    return valid_file_list, file_is_not_found_list, this_is_directory_list, this_file_is_not_png_file_list
+    return valid_file_list, file_is_not_found_list, this_is_directory_list, this_file_is_not_image_file_list
 
 
 def main():
@@ -70,10 +72,10 @@ def main():
     elif args.directory:
         filepaths = directory_to_filelist(args.directory)
     elif args.ask:
-        src = pyPromptChecker.lib.window.from_main(True)
+        src = window.from_main('directory')
         filepaths = directory_to_filelist(src) if src else None
     else:
-        filepaths = pyPromptChecker.lib.window.from_main()
+        filepaths = window.from_main('files')
 
     if filepaths:
         valid_filepath, not_found_list, directory_list, not_png_list = check_files(filepaths)
@@ -96,7 +98,7 @@ def main():
             sys.exit()
         print('a hoy!!!!')
         valid_filepath.sort()
-        window.result_window(valid_filepath)
+        window.from_main('result', valid_filepath)
 
 
 if __name__ == '__main__':
