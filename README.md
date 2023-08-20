@@ -21,7 +21,7 @@ More screenshots here.
 - Tab navigation with filename or thumbnails.
 - Search with various conditions.
 
-See more details [here](docs/description.md). 
+See more details [here](doc/description.md). 
 
 
 # Requirements  
