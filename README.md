@@ -21,7 +21,7 @@ More screenshots here.
 - Tab navigation with filename or thumbnails.
 - Search with various conditions.
 
-See more details here. 
+See more details [here](https://github.com/yui-tan/pyPromptChecker/blob/dev/doc/description.md). 
 
 
 # Requirements  
