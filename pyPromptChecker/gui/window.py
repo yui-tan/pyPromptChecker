@@ -59,7 +59,6 @@ class ResultWindow(QMainWindow):
             if parameters.params['Positive'] == 'This file has no embedded data' and ignore:
                 valid_total = valid_total - 1
                 continue
-#            self.params.append([parameters.params, parameters.original_data, parameters.error_list])
             self.params.append(parameters)
             if self.progress_bar_enable:
                 self.progress_bar.update_value()
@@ -231,8 +230,6 @@ class ResultWindow(QMainWindow):
             self.export_json_single()
         elif where_from == 'Export JSON (All)':
             self.export_json_all()
-        elif where_from == 'Reselect':
-            self.reselect_files()
         elif where_from == 'Menu':
             x = self.sender().mapToGlobal(self.sender().rect().topLeft()).x()
             y = self.sender().mapToGlobal(self.sender().rect().topLeft()).y() - self.main_menu.sizeHint().height()
@@ -379,13 +376,13 @@ class ResultWindow(QMainWindow):
         self.dialog.init_dialog('choose-files', 'Select files', None, 'PNG')
         filepath = self.dialog.result
         result_list = []
-        for tmp in filepath:
-            result = image_format_identifier(tmp)
-            if result:
-                result_list.append(result)
         if filepath:
-            self.params = []
-            self.init_ui(result_list)
+            for tmp in filepath:
+                result = image_format_identifier(tmp)
+                if result:
+                    result_list.append(result)
+                self.params = []
+                self.init_ui(result_list)
 
     def reselect_directory(self):
         pass

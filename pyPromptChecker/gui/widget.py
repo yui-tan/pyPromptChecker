@@ -16,7 +16,6 @@ def make_footer_area():
     button_text = ['Copy positive', 'Copy negative', 'Copy seed']
     if json_export_enable:
         button_text.extend(['Export JSON (This)', 'Export JSON (All)'])
-    button_text.append('Reselect')
     button_text.append('Menu')
     for tmp in button_text:
         footer_button = QPushButton(tmp)

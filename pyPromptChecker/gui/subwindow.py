@@ -118,7 +118,7 @@ class ThumbnailView(QMainWindow):
 
         self.setCentralWidget(central_widget)
 
-        scroll_area.setMinimumWidth(thumb.sizeHint().width() + 16)
+        scroll_area.setMinimumWidth(thumb.sizeHint().width() + 18)
         if row > 2:
             scroll_area.setMinimumHeight(portrait_layout.sizeHint().height() * 3)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
@@ -131,7 +131,7 @@ class ThumbnailView(QMainWindow):
 
     def check_box_changed(self):
         filename = self.sender().objectName()
-        self.sender().parent().setStyleSheet("background-color: #86cecb;")
+        self.sender().parent().setStyleSheet("QGroupBox {background-color: #86cecb;}")
         if self.sender().isChecked():
             for array in self.filelist_original:
                 if filename == array[1]:

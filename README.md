@@ -21,7 +21,7 @@ More screenshots [here.](doc/description.md#screenshots)
 - Tab navigation with filename or thumbnails.
 - Search with various conditions.
 
-See more details [here.](doc/description.md). 
+See more details [here.](doc/description.md)
 
 
 # Requirements  
@@ -33,11 +33,11 @@ But old-fashioned versions still has requirements as follows.
 - PyQt6
 
 # Installation
-### pyPromptChecker binary edition (both Linux and Windows)  
+### pyPromptChecker binary edition (for Linux users)  
 1. Download the binary packages from the 'Releases'.
 2. Extract pyPromptChecker-bin directory to any location of your choice.
-3. Optionally, shortcuts or .desktop files for enable drag-and-drop functionality.
-4. Execute pyPromptChecker.exe / pyPromptChecker by double-click.
+3. Optionally, desktop files for enable drag-and-drop functionality.
+4. Execute pyPromptChecker by double-click.
 
 ### Old-fashioned pyPromptChecker
 
