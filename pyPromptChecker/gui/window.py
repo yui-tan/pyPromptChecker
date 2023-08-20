@@ -19,14 +19,13 @@ class ResultWindow(QMainWindow):
         self.toast_window = None
         self.progress_bar = None
         self.progress_bar_enable = False
-        self.setWindowTitle('PNG Prompt Data')
-        self.models = io.import_model_list(config.get('ModelList'))
         self.params = []
         self.init_ui(targets)
         self.image_window = ImageWindow(self)
         self.thumbnail = ThumbnailView(self)
         self.main_menu = MainMenu(self)
-        self.tab_max_count = 0
+
+        self.setWindowTitle('PNG Prompt Data')
 
         size_hint_width = self.sizeHint().width()
         size_hint_height = self.sizeHint().height()
@@ -41,7 +40,6 @@ class ResultWindow(QMainWindow):
     def init_ui(self, targets):
         self.progress_bar_enable = True if len(targets) > 20 else False
         ignore = config.get('IgnoreIfDataIsNotEmbedded')
-        tab_jump_enable = config.get('TabNavigation')
         error_list_parameter = config.get('ErrorList')
         total = len(targets)
         valid_total = total
@@ -52,13 +50,16 @@ class ResultWindow(QMainWindow):
             self.progress_bar.setRange(0, total * 2)
             self.progress_bar.setLabelText('Extracting PNG Chunk...')
 
+        models = io.import_model_list(config.get('ModelList'))
+
         for array in targets:
             filepath, filetype = array
             chunk_data = chunk_text_extractor(filepath, filetype, 1)
-            parameters = parse_parameter(chunk_data, filepath, self.models)
+            parameters = parse_parameter(chunk_data, filepath, models)
             if parameters.params['Positive'] == 'This file has no embedded data' and ignore:
                 valid_total = valid_total - 1
                 continue
+#            self.params.append([parameters.params, parameters.original_data, parameters.error_list])
             self.params.append(parameters)
             if self.progress_bar_enable:
                 self.progress_bar.update_value()
@@ -74,8 +75,11 @@ class ResultWindow(QMainWindow):
 
         root_layout = QVBoxLayout()
         self.root_tab = QTabWidget()
+        self.filepath_list = []
 
         for tmp in self.params:
+            array_for_list = [tmp.params.get('Filepath'), tmp.params.get('Filename'), image_count - 1]
+            self.filepath_list.append(array_for_list)
 
             if self.progress_bar_enable:
                 self.progress_bar.update_value()
@@ -154,17 +158,16 @@ class ResultWindow(QMainWindow):
             if 'File count' in tmp.params:
                 del tmp.params['File count']
 
-        self.tab_max_count = self.root_tab.count()
-
         footer_layout = make_footer_area()
         for i in range(footer_layout.count()):
             widget = footer_layout.itemAt(i).widget()
             if isinstance(widget, QPushButton):
                 widget.clicked.connect(self.button_clicked)
 
-        if tab_jump_enable and self.root_tab.count() > 5:
-            self.filename_list = [[item.params['Filepath'], item.params['Filename']] for item in self.params]
-            header_layout = tab_navigation(self.filename_list)
+        tab_jump_enable = config.get('TabNavigation')
+        tab_minimums = config.get('TabNavigationMinimumTabs')
+        if tab_jump_enable and self.root_tab.count() > tab_minimums:
+            header_layout = tab_navigation(self.filepath_list)
             for i in range(header_layout.count()):
                 widget = header_layout.itemAt(i).widget()
                 if isinstance(widget, QPushButton):
@@ -196,7 +199,7 @@ class ResultWindow(QMainWindow):
             target_tab = combo_box.currentText()
             self.root_tab_change(target_tab)
         elif where_from == 'Thumbnail':
-            self.thumbnail.init_thumbnail(self.filename_list)
+            self.open_thumbnail()
         elif where_from == 'Search':
             self.not_yet_implemented()
 
@@ -305,7 +308,7 @@ class ResultWindow(QMainWindow):
         if not self.image_window.isVisible():
             current_index = self.root_tab.currentIndex()
             self.image_window.filepath = self.params[current_index].params.get('Filepath')
-            self.image_window.init_ui()
+            self.image_window.init_image_window()
 
     def move_centre_main(self):
         screen_center = QApplication.primaryScreen().geometry().center()
@@ -319,10 +322,13 @@ class ResultWindow(QMainWindow):
                 self.root_tab.setCurrentIndex(index)
                 break
 
+    def open_thumbnail(self):
+        self.thumbnail.init_thumbnail(self.filepath_list)
+
     def export_json_single(self):
         current_index = self.root_tab.currentIndex()
         data = self.params[current_index].params
-        filename = config.get('JsonSingle')
+        filename = config.get('JsonSingle', 'filename')
         if filename == 'filename':
             filename = self.params[current_index].params.get('Filepath')
             filename = os.path.splitext(os.path.basename(filename))[0] + '.json'
@@ -336,7 +342,7 @@ class ResultWindow(QMainWindow):
                 MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
 
     def export_json_all(self):
-        filename = config.get('JsonMultiple')
+        filename = config.get('JsonMultiple', 'directory')
         if filename == 'directory':
             filename = self.params[0].params.get('Filepath')
             filename = os.path.basename(os.path.dirname(filename)) + '.json'
@@ -352,8 +358,22 @@ class ResultWindow(QMainWindow):
             else:
                 MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
 
-    def export_json_selected(self):
-        pass
+    def export_json_selected(self, selected_files):
+        filename = config.get('JsonSelected', 'selected')
+        if filename == 'selected':
+            filename = self.params[selected_files[0]].params.get('Filepath')
+            filename = os.path.splitext(os.path.basename(filename))[0] + '_and_so_on.json'
+        self.dialog.init_dialog('save-file', 'Save JSON', filename, 'JSON')
+        destination = self.dialog.result[0] if self.dialog.result else None
+        if destination:
+            dict_list = []
+            for index in selected_files:
+                dict_list.append(self.params[index].params)
+            result, e = io.export_json(dict_list, destination)
+            if not e:
+                self.toast_window.init_toast('Saved!', 1000)
+            else:
+                MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
 
     def reselect_files(self):
         self.dialog.init_dialog('choose-files', 'Select files', None, 'PNG')

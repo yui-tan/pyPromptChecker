@@ -10,8 +10,9 @@ config = {'ModelList': '',
           'PixmapSize': 350,
           'RegionalPrompterPixmapSize': 500,
           'JsonExport': True,
-          'JsonSingle': 'parameters.json',
-          'JsonMultiple': 'all_parameters.json',
+          'JsonSingle': 'filename',
+          'JsonMultiple': 'directory',
+          'JsonSelected': 'selected',
           'ModelHashExtractor': False,
           'LoraAddNet': True,
           'HiresCfg': True,
@@ -26,6 +27,8 @@ config = {'ModelList': '',
           'AskIfDelete': True,
           'AskIfClearTrashBin': True,
           'TabNavigation': False,
+          'TabNavigationWithThumbnails': False,
+          'TabNavigationMinimumTabs': 5,
           'TabSearch': False
           }
 
@@ -35,9 +38,10 @@ ini_section = [['Location', 'ModelList', 'Favourites'],
                ['Window', 'MaxWindowWidth', 'MaxWindowHeight'],
                ['Pixmap', 'PixmapSize', 'RegionalPrompterPixmapSize'],
                ['Features', 'ModelHashExtractor'],
-               ['Features', 'JsonExport', 'JsonSingle', 'JsonMultiple'],
+               ['Features', 'JsonExport', 'JsonSingle', 'JsonMultiple', 'JsonSelected'],
                ['Features', 'MoveDelete', 'UseCopyInsteadOfMove', 'AskIfDelete', 'AskIfClearTrashBin'],
-               ['Features', 'TabNavigation', 'TabSearch'],
+               ['Features', 'TabNavigation', 'TabNavigationWithThumbnails', 'TabNavigationMinimumTabs'],
+               ['Features', 'TabSearch'],
                ['Tab', 'LoraAddNet', 'HiresCfg', 'TiledDiffusion', 'ControlNet', 'RegionalPrompter'],
                ['Ignore', 'IgnoreIfDataIsNotEmbedded'],
                ['Debug', 'ErrorList'],
@@ -79,10 +83,16 @@ for ini in ini_section:
                     except ValueError:
                         continue
                     config[option] = value
-            elif option == "JsonSingle" or option == 'JsonMultiple':
+            elif option == "JsonSingle" or option == 'JsonMultiple' or option == 'JsonSelected':
                 value = ini_config[section].get(option)
                 if value:
                     config[option] = value
+            elif option == 'TabNavigationMinimumTabs':
+                try:
+                    value = ini_config[section].getint(option)
+                except ValueError:
+                    continue
+                config[option] = value
             else:
                 try:
                     value = ini_config[section].getboolean(option)

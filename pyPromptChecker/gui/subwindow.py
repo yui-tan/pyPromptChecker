@@ -4,7 +4,7 @@ from .dialog import ProgressDialog
 from .dialog import PixmapLabel
 from functools import lru_cache
 from PyQt6.QtWidgets import QMainWindow, QApplication, QGridLayout, QGroupBox, QCheckBox, QScrollArea
-from PyQt6.QtWidgets import QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QVBoxLayout, QWidget, QPushButton, QHBoxLayout
 from PyQt6.QtGui import QPixmap, QImageReader
 from PyQt6.QtCore import Qt
 
@@ -17,7 +17,7 @@ class ImageWindow(QMainWindow):
         self.max_screen = self.screen.availableGeometry()
         self.screen_center = self.screen.geometry().center()
 
-    def init_ui(self):
+    def init_image_window(self):
         label = PixmapLabel()
         pixmap = QPixmap(self.filepath)
 
@@ -62,7 +62,7 @@ class ThumbnailView(QMainWindow):
         row = col = 0
 
         for array in filelist:
-            filepath, filename = array
+            filepath, filename, tab_index = array
 
             portrait_border = QGroupBox()
             portrait_border.setMaximumWidth(190)
@@ -101,10 +101,26 @@ class ThumbnailView(QMainWindow):
         scroll_area = QScrollArea()
         scroll_area.setWidget(thumb)
 
-        self.setCentralWidget(scroll_area)
+        central_widget = QWidget()
+        central_widget_layout = QVBoxLayout()
+
+        button_layout = QHBoxLayout()
+        json_button = QPushButton('Export selected images JSON')
+        json_button.clicked.connect(self.json_button_clicked)
+        close_button = QPushButton('Close')
+        close_button.clicked.connect(self.close_button_clicked)
+        button_layout.addWidget(json_button)
+        button_layout.addWidget(close_button)
+
+        central_widget_layout.addWidget(scroll_area)
+        central_widget_layout.addLayout(button_layout)
+        central_widget.setLayout(central_widget_layout)
+
+        self.setCentralWidget(central_widget)
 
         scroll_area.setMinimumWidth(thumb.sizeHint().width() + 16)
-        scroll_area.setMinimumHeight(portrait_layout.sizeHint().height() * 3)
+        if row > 2:
+            scroll_area.setMinimumHeight(portrait_layout.sizeHint().height() * 3)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setWidgetResizable(True)
@@ -115,22 +131,34 @@ class ThumbnailView(QMainWindow):
 
     def check_box_changed(self):
         filename = self.sender().objectName()
+        self.sender().parent().setStyleSheet("background-color: #86cecb;")
         if self.sender().isChecked():
             for array in self.filelist_original:
                 if filename == array[1]:
                     self.filelist_for_return.append(array[0])
                     break
-            print(self.filelist_for_return)
         else:
             for array in self.filelist_original:
+                self.sender().parent().setStyleSheet("")
                 if filename == array[1]:
                     self.filelist_for_return.remove(array[0])
-            print(self.filelist_for_return)
 
     def pixmap_clicked(self):
         self.parent().activateWindow()
         target_tab = self.sender().objectName()
         self.parent().root_tab_change(target_tab)
+
+    def json_button_clicked(self):
+        index_list = []
+        for filepath in self.filelist_for_return:
+            for array in self.filelist_original:
+                if filepath == array[0]:
+                    index_list.append(array[2])
+                    break
+        self.parent().export_json_selected(index_list)
+
+    def close_button_clicked(self):
+        self.close()
 
 
 @lru_cache(maxsize=1000)

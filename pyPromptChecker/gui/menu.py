@@ -15,8 +15,8 @@ class MainMenu(QMenu):
         self.main = parent
 
         self.reselect_menu = QMenu('Reselect', self)
-        self.reselect_add = QAction('Add new tabs', self.reselect_menu)
-        self.reselect_renewal = QAction('Renewal', self.reselect_menu)
+        self.reselect_add = QAction('Append tabs', self.reselect_menu)
+        self.reselect_renewal = QAction('Repalece all tabs', self.reselect_menu)
 
         self.json_export_menu = QMenu('Export JSON', self)
         self.json_export_single = QAction("Present image", self.json_export_menu)
@@ -59,4 +59,4 @@ class MainMenu(QMenu):
         self.json_import_directory.triggered.connect(self.main.not_yet_implemented)
         self.json_export_single.triggered.connect(self.main.export_json_single)
         self.json_export_all.triggered.connect(self.main.export_json_all)
-        self.json_export_selected.triggered.connect(self.main.export_json_selected)
+        self.json_export_selected.triggered.connect(self.main.open_thumbnail)

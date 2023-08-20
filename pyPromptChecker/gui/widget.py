@@ -12,14 +12,12 @@ from PyQt6.QtCore import Qt
 
 def make_footer_area():
     json_export_enable = config.get('JsonExport', False)
-    model_hash_extractor_enable = config.get('ModelHashExtractor', False)
     footer_layout = QHBoxLayout()
     button_text = ['Copy positive', 'Copy negative', 'Copy seed']
     if json_export_enable:
         button_text.extend(['Export JSON (This)', 'Export JSON (All)'])
     button_text.append('Reselect')
-    if model_hash_extractor_enable:
-        button_text.append('Menu')
+    button_text.append('Menu')
     for tmp in button_text:
         footer_button = QPushButton(tmp)
         footer_button.setObjectName(tmp)
@@ -31,7 +29,7 @@ def make_footer_area():
 
 def tab_navigation(filename_list):
     filename_list = [array[1] for array in filename_list]
-    tab_search = config.get('TabSearch', False)
+    tab_search = config.get('TabSearch', True)
     thumbnails = config.get('TabNavigationWithThumbnails', True)
     header_layout = QHBoxLayout()
     dropdown_box = QComboBox()
