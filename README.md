@@ -9,7 +9,7 @@ All of these features are accessible even without AUTOMATIC/stable-diffusion-web
 # Screenshots
 ![Main](https://github.com/yui-tan/pyPromptChecker/assets/121333129/a0c86d10-563f-44a2-bf9f-cfc207fd262f)
 
-More screenshots here.
+More screenshots [here.](doc/description.md#screenshots)
 
 # Features
 
@@ -21,7 +21,7 @@ More screenshots here.
 - Tab navigation with filename or thumbnails.
 - Search with various conditions.
 
-See more details [here](doc/description.md). 
+See more details [here.](doc/description.md). 
 
 
 # Requirements  
