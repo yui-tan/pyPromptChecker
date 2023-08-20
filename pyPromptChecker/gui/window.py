@@ -381,8 +381,8 @@ class ResultWindow(QMainWindow):
                 result = image_format_identifier(tmp)
                 if result:
                     result_list.append(result)
-                self.params = []
-                self.init_ui(result_list)
+            self.params = []
+            self.init_ui(result_list)
 
     def reselect_directory(self):
         pass
