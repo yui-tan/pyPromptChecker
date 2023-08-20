@@ -5,8 +5,8 @@ import sys
 import argparse
 import glob
 
-from lib import decoder
-from gui import window
+from pyPromptChecker.lib import decoder
+from pyPromptChecker.gui import window
 
 
 def directory_to_filelist(directory_path):
@@ -37,8 +37,14 @@ def check_files(target_list):
     for filepath in target_list:
         if not os.path.exists(filepath):
             file_is_not_found_list.append(filepath)
+            if progress_enable:
+                progress_bar.update_value()
+            continue
         elif not os.path.isfile(filepath):
             this_is_directory_list.append(filepath)
+            if progress_enable:
+                progress_bar.update_value()
+            continue
 
         result = decoder.image_format_identifier(filepath)
 
@@ -56,7 +62,7 @@ def check_files(target_list):
     return valid_file_list, file_is_not_found_list, this_is_directory_list, this_file_is_not_image_file_list
 
 
-def main():
+def main(test=False):
     description_text = 'Script for extracting and formatting PNG chunks.\n'
     description_text = description_text + 'If no options are specified, the script will open a file choose dialog.\n'
     description_text = description_text + 'All options are mutually exclusive.'
@@ -71,7 +77,7 @@ def main():
         filepaths = args.filepath
     elif args.directory:
         filepaths = directory_to_filelist(args.directory)
-    elif args.ask:
+    elif args.ask or test:
         src = window.from_main('directory')
         filepaths = directory_to_filelist(src) if src else None
     else:

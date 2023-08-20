@@ -42,7 +42,7 @@ class Dialog(QFileDialog):
             self.setOption(QFileDialog.Option.ShowDirsOnly, False)
             self.selectFile(filename)
         elif category == 'choose-files':
-            self.selectFile('*.png *.jpg *.jpeg')
+            self.selectFile('*')
             self.setFileMode(QFileDialog.FileMode.ExistingFiles)
             self.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
             self.setNameFilter(self.file_filter)

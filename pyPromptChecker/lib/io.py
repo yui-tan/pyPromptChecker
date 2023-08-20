@@ -88,6 +88,3 @@ def model_hash_maker(file_list, progress):
         writer.writerows(model_hash_data)
     progress.update_value()
     progress.close()
-
-# def test():
-#     dict_array = [data.params for data in data_array]
