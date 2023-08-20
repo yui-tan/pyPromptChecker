@@ -1,15 +1,15 @@
-# Descriptions about features
-The authors themselves had no idea it would be so feature-rich.  
 <!-- TOC -->
 * [Descriptions about features](#descriptions-about-features)
   * [config.ini](#configini)
-  * [Model_list.csv](#modellistcsv)
+  * [Model_list.csv](#model_listcsv)
   * [JSON export](#json-export)
   * [Model hash extractor](#model-hash-extractor)
   * [Move/Delete feature](#movedelete-feature)
   * [Tab navigation](#tab-navigation)
 * [Screenshots](#screenshots)
 <!-- TOC -->
+# Descriptions about features
+The authors themselves had no idea it would be so feature-rich.  
 ## config.ini
 ## Model_list.csv
 - ### Overview  
@@ -63,19 +63,13 @@ The authors themselves had no idea it would be so feature-rich.
       *But this setting is not affected to 'Delete' feature.*
     - **"AskIfDelete" option** (Boolean)  
       If set to True, confirmation dialog will be shown when the delete button is pressed.
-    - **"AskIfClearTrashBin" option** (Boolean)   
+    - **"AskIfClearTrashBin" option[^2]** (Boolean)   
       If set to True, confirmation dialog will be shown the script exits,   
       asking if delete all files within the TrashBin directory.  
       
-
-  For fail-safe, it is highly recommended to set 'Ture' for 'AskIfClearTrashBin'.  
-  It might be a bit bothersome but even if the script crashes, image files will remain in '/pyPromptChecker/.trash'.  
-  Additionally, even if you accidentally delete image files, the script should protect your files if you press 'cancel'
-
 ## Tab navigation
 - ### Overview
-- ### Tab navigation with thumbnails
-- ### JSON export selected files
+- ### Tab navigation
 - ### Related values in 'config.ini'
 
 # Screenshots
@@ -90,6 +84,8 @@ The authors themselves had no idea it would be so feature-rich.
 - ### Thumbnail tab navigation
 
 
- [^1]:Pressing the delete button will not actually perform the deletion:
- instead, the file will be moved to TrashBin directory (/pyPromptChecker/.trash).
+ [^1]:Pressing the delete button will not actually perform the deletion:instead, the file will be moved to TrashBin directory (/pyPromptChecker/.trash).  
  The actual deletion of files occurs when the script exits.
+ [^2]:For fail-safe, it is highly recommended to set 'Ture' for 'AskIfClearTrashBin'.  
+  It might be a bit bothersome but even if the script crashes, image files will remain in '/pyPromptChecker/.trash'.  
+  Additionally, even if you accidentally delete image files, the script should protect your files if you press 'cancel'
