@@ -68,12 +68,7 @@ def is_directory_empty(directory_path):
     return len(file_list) == 0
 
 
-def model_hash_maker(directory, progress):
-    file_list = os.listdir(directory)
-    file_list = [os.path.join(directory, v) for v in file_list if os.path.isfile(os.path.join(directory, v))]
-    file_list = [v for v in file_list if 'safetensors' in v or 'ckpt' in v]
-    progress.setLabelText('Loading model file......')
-    progress.setRange(0, len(file_list))
+def model_hash_maker(file_list, progress):
     model_hash_data = []
     for tmp in file_list:
         model_name = os.path.basename(tmp)
@@ -84,13 +79,15 @@ def model_hash_maker(directory, progress):
             data_hash = hashlib.sha256(data).hexdigest()
             model_hash = data_hash[:10]
             model_hash_data.append([filename, model_hash, data_hash, filename, extension])
-            progress.update_value()
-            QApplication.processEvents()
+        progress.update_value()
+        QApplication.processEvents()
+    progress.setLabelText('Writing collected data......')
+    QApplication.processEvents()
     with open('model_list.csv', 'a') as w:
         writer = csv.writer(w, lineterminator='\n')
         writer.writerows(model_hash_data)
+    progress.update_value()
     progress.close()
-
 
 # def test():
 #     dict_array = [data.params for data in data_array]

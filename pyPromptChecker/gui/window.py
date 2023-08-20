@@ -400,7 +400,15 @@ class ResultWindow(QMainWindow):
             directory = self.dialog.result[0] if self.dialog.result else None
             if directory:
                 operation_progress = ProgressDialog(self)
-                io.model_hash_maker(directory, operation_progress)
+                file_list = os.listdir(directory)
+                file_list = [os.path.join(directory, v) for v in file_list if
+                             os.path.isfile(os.path.join(directory, v))]
+                file_list = [v for v in file_list if 'safetensors' in v or 'ckpt' in v]
+                operation_progress.setLabelText('Loading model file......')
+                operation_progress.setRange(0, len(file_list) + 1)
+                operation_progress.update_value()
+                QApplication.processEvents()
+                io.model_hash_maker(file_list, operation_progress)
                 MessageBox('Finished', "I'm knackered", 'ok', 'info', self)
 
     def not_yet_implemented(self):
