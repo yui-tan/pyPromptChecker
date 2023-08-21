@@ -26,7 +26,7 @@ See more details [here.](doc/description.md)
 
 # Requirements  
 ### pyPromptChecker binary edition no longer has any requirements.  
-But old-fashioned versions still has requirements as follows.
+But old-fashioned edition still has requirements as follows.
 - Python 3.x
 - pillow (PIL)
 - pypng
@@ -39,7 +39,7 @@ But old-fashioned versions still has requirements as follows.
 3. Optionally, desktop files for enable drag-and-drop functionality.
 4. Execute pyPromptChecker by double-click.
 
-### Old-fashioned pyPromptChecker
+### Old-fashioned edition pyPromptChecker
 
 For Linux
 ````bash
