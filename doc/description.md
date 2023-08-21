@@ -1,16 +1,19 @@
-<!-- TOC -->
-* [Descriptions about features](#descriptions-about-features)
-  * [config.ini](#configini)
-  * [Model_list.csv](#model_listcsv)
-  * [JSON export](#json-export)
-  * [Model hash extractor](#model-hash-extractor)
-  * [Move/Delete feature](#movedelete-feature)
-  * [Tab navigation](#tab-navigation)
-* [Screenshots](#screenshots)
-<!-- TOC -->
+# About
+  - Supported image formats
+    - png
+    - jpeg
+  - Supported web-ui extension
+    - Basic information
+    - Hires.fix
+    - Dynamic threshoulding (CFG fix)
+    - Add networks
+    - Tiled diffusion
+    - ControlNet
+    - Regional Prompter
+    
 # Descriptions about features
 The authors themselves had no idea it would be so feature-rich.  
-## config.ini
+## Config.ini
 ## Model_list.csv
 - ### Overview  
   'model_list.csv' is a file what script locate model name from hash values.  
@@ -40,9 +43,11 @@ The authors themselves had no idea it would be so feature-rich.
 - ### related values in 'config.ini'
 ## Model hash extractor
 - ### Overview
+  - Model hash extractor is making your own 
 - ### Related values in 'config.ini'
-  - ***Deprecated***
-  - [Features] section, "ModelHashExtractor" option
+  - ### [Features] section ###
+    - **"ModelHashExtractor" option** (Boolean)  
+    *Deprecated*
 ## Move/Delete feature
 - ### Overview
   - Favourite button: Move/copy image to favourite directory.
@@ -51,7 +56,7 @@ The authors themselves had no idea it would be so feature-rich.
 
 - ### Related values in 'config.ini'
   - ### [Location] section ###
-    - **"Favourites" option*** (Filepath)  
+    - **"Favourites" option** (Filepath)  
       Set an absolute directory path here to gather your favourite images.  
       However, if you leave this value blank or enter a non-existent directory path,  
       the favourite button will still appear, but this features won't be available.
@@ -74,15 +79,22 @@ The authors themselves had no idea it would be so feature-rich.
 
 # Screenshots
 - ### Main screen
+![main_screen](https://user-images.githubusercontent.com/121333129/261905025-69283ba2-ac9d-4b92-944e-bd187ce2abc2.png)
+![main_screen_2](https://user-images.githubusercontent.com/121333129/261905120-ad750fda-e8b3-458d-b03a-a3d97eff7bfb.png)
 - ### Highres fix and Dynamic thresholding
+![hires_cfg](https://user-images.githubusercontent.com/121333129/261911834-178e9918-3f3a-4434-90e9-6f8ce7c33bde.png)
 - ### Lora and Add network
+![Lora_addnet](https://user-images.githubusercontent.com/121333129/261911864-42731ce9-b9de-48b2-8f70-b538be7a56e8.png)
 - ### Tiled diffusion
+![tiled_diffusion](https://user-images.githubusercontent.com/121333129/261911802-a571772a-3e53-404b-b09b-4b9dc576add9.png)
 - ### Controlnet
+![controlnet](https://user-images.githubusercontent.com/121333129/261911911-cb4219a6-0270-4381-ba59-b333a91d7456.png)
 - ### Regional prompter
 - ### Region control in Tiled diffusion
 - ### Image view
+![image_view](https://user-images.githubusercontent.com/121333129/261905238-2aee6631-de09-4a1a-9052-a61bba7f348a.png)
 - ### Thumbnail tab navigation
-
+![Thumbnail](https://user-images.githubusercontent.com/121333129/261905360-cae29606-c641-4400-9c5d-64bb5251d8af.png)
 
  [^1]:Pressing the delete button will not actually perform the deletion:instead, the file will be moved to TrashBin directory (/pyPromptChecker/.trash).  
  The actual deletion of files occurs when the script exits.
