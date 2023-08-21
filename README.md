@@ -26,7 +26,7 @@ See more details [here.](doc/description.md)
 
 # Requirements  
 ### pyPromptChecker binary edition no longer has any requirements.  
-But old-fashioned edition still has requirements as follows.
+But source code edition still has requirements as follows.
 - Python 3.x
 - pillow (PIL)
 - pypng
@@ -39,7 +39,7 @@ But old-fashioned edition still has requirements as follows.
 3. Optionally, desktop files for enable drag-and-drop functionality.
 4. Execute pyPromptChecker by double-click.
 
-### Old-fashioned edition pyPromptChecker
+### pyPromptChecker source code edition
 
 For Linux
 ````bash
@@ -64,7 +64,7 @@ pyPromptChecker -f [FILEPATH ...], --filepath [FILEPATH ...]
 pyPromptChecker -d DIRECTORY, --directory DIRECTORY  
 # Send directory paths to the script.
 ```
-### Old-fashioned edition
+### Source code edition
 ```bash
 mikkumiku -a, --ask  
 # Open directory choose dialog.
