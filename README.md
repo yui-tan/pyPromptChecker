@@ -33,9 +33,9 @@ But old-fashioned versions still has requirements as follows.
 - PyQt6
 
 # Installation
-### pyPromptChecker binary edition (for Linux users)  
+### pyPromptChecker binary edition (for Linux and Windows users)  
 1. Download the binary packages from the 'Releases'.
-2. Extract pyPromptChecker-bin directory to any location of your choice.
+2. Extract pyPromptChecker directory to any location of your choice.
 3. Optionally, desktop files for enable drag-and-drop functionality.
 4. Execute pyPromptChecker by double-click.
 
