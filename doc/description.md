@@ -90,6 +90,8 @@ The authors themselves had no idea it would be so feature-rich.
 - ### Controlnet
 ![controlnet](https://user-images.githubusercontent.com/121333129/261911911-cb4219a6-0270-4381-ba59-b333a91d7456.png)
 - ### Regional prompter
+![regional_prompter](https://user-images.githubusercontent.com/121333129/261966851-dff68376-70e2-4fe9-a24b-399c120e0f60.png)
+![regional_prompter_2](https://user-images.githubusercontent.com/121333129/261966907-8cb29c70-1c9a-4601-98cc-8c771e5cf608.png)
 - ### Region control in Tiled diffusion
 - ### Image view
 ![image_view](https://user-images.githubusercontent.com/121333129/261905238-2aee6631-de09-4a1a-9052-a61bba7f348a.png)
