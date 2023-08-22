@@ -34,13 +34,28 @@ The authors themselves had no idea it would be so feature-rich.
   - Therefore, you can delete columns from the third onward or add something in columns from the sixth onward without any issues.  
 
 - ### Related values in 'config.ini'
-  - [Location] section, "ModelList" option
-  - If this parameter is unset, the program will search in the same directory as 'config.ini' file by default.
-  - If you relocate 'model_list.csv', **you must** declare the new path by setting this parameter.
+  - ### [Location] section ###
+    - **"ModelList" option** (Filepath)  
+      If this parameter is unset, the script will search in the same directory as 'config.ini' file by default.  
+      If relocate 'model_list.csv', **you must** declare the new path by setting this parameter.
 
 ## JSON export
 - ### Overview
+  - Export creation data as JSON formatted data.
+  - It can now be found in the menu > Export JSON.
 - ### related values in 'config.ini'
+  - ### [Features] section ###
+    - **"JsonExport" option** (Boolean)
+      - This option now only mean toggle shown/not shown "Export Json" buttons.
+    - **"JsonSingle" option** (Strings)
+      - This option is setting for exported JSONs (single file) default Name. Setting whatever you want.
+      - If 'JsonSingle=filename' is set, the image file name will be set as default.
+    - **"JsonMultiple" option** (Strings)
+      - This option is setting for exported JSONs (all file) default Name. Setting whatever you want.
+      - If 'JsonMultiple=directory' is set, the first image's directory name will be set as default.
+    - **"JsonSelected" option** (String)
+      - This option is setting for exported JSONs (selected) default Name. Setting whatever you want.
+      - If 'JsonSelected=selected' is set, the first image's name + "-and-so-on" will be set as default. maybe...
 ## Model hash extractor
 - ### Overview
   - Model hash extractor is making your own 
