@@ -18,7 +18,6 @@ class ResultWindow(QMainWindow):
         self.dialog = None
         self.toast_window = None
         self.progress_bar = None
-        self.progress_bar_enable = False
         self.params = []
         self.init_ui(targets)
         self.image_window = ImageWindow(self)
@@ -29,28 +28,30 @@ class ResultWindow(QMainWindow):
 
         size_hint_width = self.sizeHint().width()
         size_hint_height = self.sizeHint().height()
-        max_width = config.get('MaxWindowWidth')
-        max_height = config.get('MaxWindowHeight')
+
+        max_width = config.get('MaxWindowWidth', 650)
+        max_height = config.get('MaxWindowHeight', 800)
 
         window_width = size_hint_width if max_width > size_hint_width else max_width
         window_height = size_hint_height if max_height > size_hint_height else max_height
+
+        self.show()
         self.resize(window_width, window_height)
         self.move_centre_main()
 
     def init_ui(self, targets):
-        self.progress_bar_enable = True if len(targets) > 20 else False
-        ignore = config.get('IgnoreIfDataIsNotEmbedded')
-        error_list_parameter = config.get('ErrorList')
+        ignore = config.get('IgnoreIfDataIsNotEmbedded', False)
+        error_list_parameter = config.get('ErrorList', 1)
         total = len(targets)
         valid_total = total
         image_count = 1
 
-        if self.progress_bar_enable:
+        if len(targets) > 10:
             self.progress_bar = ProgressDialog(self)
             self.progress_bar.setRange(0, total * 2)
             self.progress_bar.setLabelText('Extracting PNG Chunk...')
 
-        models = io.import_model_list(config.get('ModelList'))
+        models = io.import_model_list(config.get('ModelList', 'model_list.csv'))
 
         for array in targets:
             filepath, filetype = array
@@ -60,7 +61,7 @@ class ResultWindow(QMainWindow):
                 valid_total = valid_total - 1
                 continue
             self.params.append(parameters)
-            if self.progress_bar_enable:
+            if self.progress_bar:
                 self.progress_bar.update_value()
 
         if valid_total == 0:
@@ -69,7 +70,7 @@ class ResultWindow(QMainWindow):
                 return
             sys.exit()
 
-        if self.progress_bar_enable:
+        if self.progress_bar:
             self.progress_bar.setLabelText('Formatting prompt data...')
 
         root_layout = QVBoxLayout()
@@ -80,7 +81,7 @@ class ResultWindow(QMainWindow):
             array_for_list = [tmp.params.get('Filepath'), tmp.params.get('Filename'), image_count - 1]
             self.filepath_list.append(array_for_list)
 
-            if self.progress_bar_enable:
+            if self.progress_bar:
                 self.progress_bar.update_value()
             if valid_total > 1:
                 tmp.params['File count'] = str(image_count) + ' / ' + str(valid_total)
@@ -90,6 +91,7 @@ class ResultWindow(QMainWindow):
             inner_tab = QTabWidget()
 
             main_section = QGroupBox()
+            main_section.setObjectName('main_section')
             main_section_layout = QHBoxLayout()
 
             main_label_layout = make_main_section(tmp)
@@ -110,19 +112,19 @@ class ResultWindow(QMainWindow):
             tabs = [['Prompts', True, True],
                     ['Hires.fix / CFG scale fix',
                      any(key in v for v in tmp.params for key in hires_tab),
-                     config.get('HiresCfg')],
+                     config.get('HiresCfg', True)],
                     ['Lora / Add networks',
                      any(key in v for v in tmp.params for key in lora_tab),
-                     config.get('LoraAddNet')],
+                     config.get('LoraAddNet', True)],
                     ['Tiled diffusion',
                      'Tiled diffusion' in tmp.params,
-                     config.get('TiledDiffusion')],
+                     config.get('TiledDiffusion', True)],
                     ['Control net',
                      'ControlNet' in tmp.params,
-                     config.get('ControlNet')],
+                     config.get('ControlNet', True)],
                     ['Regional prompter',
                      'RP Active' in tmp.params,
-                     config.get('RegionalPrompter')]
+                     config.get('RegionalPrompter', True)]
                     ]
 
             for index, tab in enumerate(tabs):
@@ -147,6 +149,7 @@ class ResultWindow(QMainWindow):
                 inner_tab.addTab(error_page, 'Errors')
 
             inner_tab.setTabPosition(QTabWidget.TabPosition.South)
+            inner_tab.setObjectName('extension_tab')
             tab_page_layout.addWidget(inner_tab)
             tab_page.setLayout(tab_page_layout)
 
@@ -185,11 +188,19 @@ class ResultWindow(QMainWindow):
             self.centralWidget().deleteLater()
         self.setCentralWidget(central_widget)
 
-        if self.progress_bar_enable:
+        if self.progress_bar:
             self.progress_bar.close()
+
+        self.root_tab.currentChanged.connect(self.tab_changed)
 
         self.toast_window = Toast(self)
         self.dialog = Dialog(self)
+
+    def tab_changed(self):
+        if self.image_window.isVisible():
+            current_index = self.root_tab.currentIndex()
+            self.image_window.filepath = self.params[current_index].params.get('Filepath')
+            self.image_window.init_image_window()
 
     def header_button_clicked(self):
         where_from = self.sender().objectName()

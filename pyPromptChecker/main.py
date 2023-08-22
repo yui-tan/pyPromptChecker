@@ -12,7 +12,6 @@ from pyPromptChecker.gui import window
 def directory_to_filelist(directory_path):
     if not os.path.isdir(directory_path[0]):
         print('This is not a directory')
-        print("It's all thanks to you there's no work to do :))")
         sys.exit()
     directory = os.path.join(directory_path[0], '*')
     file_list = glob.glob(directory)
@@ -71,13 +70,16 @@ def main(test=False):
     group.add_argument('-a', '--ask', action='store_true', help='Open directory choose dialog.')
     group.add_argument('-f', '--filepath', nargs='*', type=str, help='Send path to the file.')
     group.add_argument('-d', '--directory', type=str, help='Send path to the directory.')
+    parser.add_argument('filepaths', metavar='Filepath', type=str, nargs='*', help='Send path to the file.')
     args = parser.parse_args()
 
     if args.filepath:
         filepaths = args.filepath
+    elif args.filepaths:
+        filepaths = args.filepaths
     elif args.directory:
-        filepaths = directory_to_filelist(args.directory)
-    elif args.ask or test:
+        filepaths = directory_to_filelist([args.directory])
+    elif args.ask:
         src = window.from_main('directory')
         filepaths = directory_to_filelist(src) if src else None
     else:
@@ -89,18 +91,14 @@ def main(test=False):
         if not_found_list:
             print('\n'.join(not_found_list))
             print('These files are not found')
-            print('Go ahead make my day.\n')
         if directory_list:
             print('\n'.join(directory_list))
             print('This is directory')
-            print('Do I have to start explaining the difference between files and directories?\n')
         if not_png_list:
             print('\n'.join(not_png_list))
-            print('These files are not PNG images.')
-            print("You'd better to learn or relearn what a PNG file is.\n")
+            print('These files are not supported image files.')
         if not valid_filepath:
             print('There is no valid file to parse')
-            print("It's all thanks to you there's no work to do :))")
             sys.exit()
         print('a hoy!!!!')
         valid_filepath.sort()
