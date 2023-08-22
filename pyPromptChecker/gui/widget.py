@@ -22,7 +22,7 @@ def make_footer_area():
         footer_button.setObjectName(tmp)
         footer_layout.addWidget(footer_button)
         if tmp == 'Menu':
-            footer_button.setText('▲ Menu')
+            footer_button.setText('▲Menu')
     return footer_layout
 
 
@@ -93,7 +93,7 @@ def make_main_section(target):
 
 def make_pixmap_label(filepath):
     scale = config.get('PixmapSize', 350)
-    enable = config.get('MoveDelete', False)
+    move_delete_enable = config.get('MoveDelete', True)
     pixmap_layout = QVBoxLayout()
     button_layout = QHBoxLayout()
     if os.path.exists(filepath):
@@ -107,7 +107,7 @@ def make_pixmap_label(filepath):
     pixmap_label.setObjectName('Pixmap')
     pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
     pixmap_layout.addWidget(pixmap_label)
-    if enable:
+    if move_delete_enable:
         for tmp in ['Favourite', 'Move to', 'Delete']:
             button = QPushButton(tmp)
             button.setObjectName(tmp)
@@ -356,7 +356,7 @@ def make_control_net_tab(target, starts):
               ]
     control_tab.setWidgetResizable(True)
     control_tab.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-    control_tab.setStyleSheet('QScrollArea {background-color:transparent;}')
+    control_tab.setStyleSheet('QScrollArea {background-color: transparent; border: 0px}')
 
     unit_num = int(target.params.get('ControlNet'))
     loop_num = 2 if 2 > unit_num else unit_num
