@@ -34,13 +34,19 @@ class ImageWindow(QMainWindow):
         self.setWindowTitle(title)
 
         label.setPixmap(pixmap)
-        label.setScaledContents(True)
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+#        label.setScaledContents(True)
 
         label.clicked.connect(self.clicked)
 
         self.setCentralWidget(label)
+
+        visible = self.isVisible()
+
         self.show()
-        move_centre(self)
+
+        if not visible:
+            move_centre(self)
 
     def clicked(self):
         self.close()

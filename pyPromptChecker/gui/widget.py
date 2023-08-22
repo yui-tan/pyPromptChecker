@@ -425,6 +425,8 @@ def make_regional_prompter_status_section(target):
               ['RP Change AND', '"AND" to "BREAK"'],
               ['RP LoRA Neg U Ratios', 'Lora negative UNet ratio'],
               ['RP LoRA Neg Te Ratios', 'Lora negative TEnc ratio'],
+              ['RP LoRA Stop Step', 'Lora Stop Step'],
+              ['RP LoRA Hires Stop Step', 'Hires Stop Step'],
               ['RP threshold', 'Threshold']]
     status_section = QGroupBox()
     status_section.setLayout(label_maker(status, target, 2, 1))

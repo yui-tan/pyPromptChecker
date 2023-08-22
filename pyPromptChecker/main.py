@@ -76,7 +76,7 @@ def main(test=False):
     if args.filepath:
         filepaths = args.filepath
     elif args.directory:
-        filepaths = directory_to_filelist(args.directory)
+        filepaths = directory_to_filelist([args.directory])
     elif args.ask or test:
         src = window.from_main('directory')
         filepaths = directory_to_filelist(src) if src else None
