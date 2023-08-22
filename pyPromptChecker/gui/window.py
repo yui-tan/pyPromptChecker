@@ -154,7 +154,6 @@ class ResultWindow(QMainWindow):
             tab_page.setLayout(tab_page_layout)
 
             self.root_tab.addTab(tab_page, tmp.params.get('Filename'))
-            self.root_tab.currentChanged.connect(self.tab_changed)
 
             image_count = image_count + 1
 
@@ -191,6 +190,8 @@ class ResultWindow(QMainWindow):
 
         if self.progress_bar:
             self.progress_bar.close()
+
+        self.root_tab.currentChanged.connect(self.tab_changed)
 
         self.toast_window = Toast(self)
         self.dialog = Dialog(self)
