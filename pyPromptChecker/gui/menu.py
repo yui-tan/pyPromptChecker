@@ -55,7 +55,7 @@ class MainMenu(QMenu):
         self.model_hash_extractor.triggered.connect(self.main.model_hash_extractor)
         self.reselect_add.triggered.connect(self.main.not_yet_implemented)
         self.reselect_renewal.triggered.connect(self.main.reselect_files)
-        self.json_import_files.triggered.connect(self.main.not_yet_implemented)
+        self.json_import_files.triggered.connect(self.main.import_json_single)
         self.json_import_directory.triggered.connect(self.main.not_yet_implemented)
         self.json_export_single.triggered.connect(self.main.export_json_single)
         self.json_export_all.triggered.connect(self.main.export_json_all)

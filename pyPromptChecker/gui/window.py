@@ -19,7 +19,7 @@ class ResultWindow(QMainWindow):
         self.toast_window = None
         self.progress_bar = None
         self.params = []
-        self.init_ui(targets)
+        self.extract_data(targets)
         self.image_window = ImageWindow(self)
         self.thumbnail = ThumbnailView(self)
         self.main_menu = MainMenu(self)
@@ -39,12 +39,10 @@ class ResultWindow(QMainWindow):
         self.resize(window_width, window_height)
         self.move_centre_main()
 
-    def init_ui(self, targets):
+    def extract_data(self, targets):
         ignore = config.get('IgnoreIfDataIsNotEmbedded', False)
-        error_list_parameter = config.get('ErrorList', 1)
         total = len(targets)
         valid_total = total
-        image_count = 1
 
         if len(targets) > 10:
             self.progress_bar = ProgressDialog(self)
@@ -70,6 +68,11 @@ class ResultWindow(QMainWindow):
                 return
             sys.exit()
 
+        self.init_ui(valid_total)
+
+    def init_ui(self, total):
+        image_count = 1
+
         if self.progress_bar:
             self.progress_bar.setLabelText('Formatting prompt data...')
 
@@ -83,8 +86,8 @@ class ResultWindow(QMainWindow):
 
             if self.progress_bar:
                 self.progress_bar.update_value()
-            if valid_total > 1:
-                tmp.params['File count'] = str(image_count) + ' / ' + str(valid_total)
+            if total > 1:
+                tmp.params['File count'] = str(image_count) + ' / ' + str(total)
 
             tab_page = QWidget()
             tab_page_layout = QVBoxLayout()
@@ -100,7 +103,8 @@ class ResultWindow(QMainWindow):
             tab_page_layout.addWidget(main_section)
 
             pixmap_label = main_section.findChild(PixmapLabel, 'Pixmap')
-            pixmap_label.clicked.connect(self.pixmap_clicked)
+            if pixmap_label:
+                pixmap_label.clicked.connect(self.pixmap_clicked)
             for button in ['Favourite', 'Move to', 'Delete']:
                 managing_button = main_section.findChild(QPushButton, button)
                 if managing_button:
@@ -144,6 +148,7 @@ class ResultWindow(QMainWindow):
                         inner_page.setLayout(make_regional_prompter_tab(tmp))
                     inner_tab.addTab(inner_page, tab[0])
 
+            error_list_parameter = config.get('ErrorList', 1)
             if not error_list_parameter == 0:
                 error_page = make_error_tab(tmp, error_list_parameter)
                 inner_tab.addTab(error_page, 'Errors')
@@ -192,6 +197,7 @@ class ResultWindow(QMainWindow):
             self.progress_bar.close()
 
         self.root_tab.currentChanged.connect(self.tab_changed)
+        self.root_tab.setTabBarAutoHide(True)
 
         self.toast_window = Toast(self)
         self.dialog = Dialog(self)
@@ -332,6 +338,30 @@ class ResultWindow(QMainWindow):
 
     def open_thumbnail(self):
         self.thumbnail.init_thumbnail(self.filepath_list)
+
+    def import_json_single(self):
+        self.dialog.init_dialog('choose-files', 'Select JSONs', None, 'JSON')
+        filepaths = self.dialog.result
+        if filepaths:
+            json_list = []
+            for filepath in filepaths:
+                json_data, e = io.import_json(filepath)
+                if isinstance(json_data, list):
+                    for data in json_data:
+                        if data.get('Filepath', None):
+                            json_list.append(data)
+                else:
+                    if json_data.get('Filepath', None):
+                        json_list.append(json_data)
+                if len(json_list) < 1:
+                    MessageBox('There is no valid JSON data.', 'pyPromptChecker', 'ok', 'warning', self)
+                    return
+                self.params = []
+                for prepared_json in json_list:
+                    json_class = parser.ChunkData('This data import from JSON')
+                    json_class.import_json(prepared_json)
+                    self.params.append(json_class)
+                self.init_ui(len(self.params))
 
     def export_json_single(self):
         current_index = self.root_tab.currentIndex()

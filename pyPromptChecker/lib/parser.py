@@ -76,9 +76,8 @@ class ChunkData:
             self.params['Model'] = model_name
             self.used_params['Model hash'] = True
 
-    def search_value(self, target_key, target_value):
-        target_str = self.params[target_key]
-        return target_value in target_str
+    def import_json(self, json_data):
+        self.params = json_data
 
 
 def parse_parameter(chunks, filepath, model_list=None):

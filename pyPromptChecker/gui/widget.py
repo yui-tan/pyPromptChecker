@@ -80,8 +80,9 @@ def make_main_section(target):
     filepath = target.params.get('Filepath')
     if target.params.get('Hires upscaler'):
         del status[15]
-    timestamp = datetime.datetime.fromtimestamp(os.path.getctime(filepath))
-    target.params['Timestamp'] = timestamp.strftime('%Y/%m/%d %H:%M')
+    if os.path.exists(filepath):
+        timestamp = datetime.datetime.fromtimestamp(os.path.getctime(filepath))
+        target.params['Timestamp'] = timestamp.strftime('%Y/%m/%d %H:%M')
     main_section_layout = QHBoxLayout()
     pixmap_label = make_pixmap_label(filepath)
     main_section_layout.addLayout(pixmap_label, 1)
@@ -380,9 +381,10 @@ def make_control_net_tab(target, starts):
 def make_regional_prompter_tab(target):
     filepath = target.params.get('Filepath')
     scale = config.get('RegionalPrompterPixmapSize', 350)
-    pixmap = QPixmap(filepath)
-    pixmap = pixmap.scaled(scale, int(scale * 0.7), Qt.AspectRatioMode.KeepAspectRatio,
-                           Qt.TransformationMode.FastTransformation)
+    if os.path.exists(filepath):
+        pixmap = QPixmap(filepath)
+        pixmap = pixmap.scaled(scale, int(scale * 0.7), Qt.AspectRatioMode.KeepAspectRatio,
+                               Qt.TransformationMode.FastTransformation)
 
     regional_prompter_group = QHBoxLayout()
     regional_prompter_group.addWidget(make_regional_prompter_status_section(target), 1)
@@ -393,7 +395,7 @@ def make_regional_prompter_tab(target):
     if not ratio_mode:
         ratio_mode = '---'
     main, sub = regional_prompter_ratio_check(str_ratios, ratio_mode)
-    if main and sub:
+    if main and sub and os.path.exists(filepath):
         pixmap = make_regional_prompter_pixmap(pixmap, ratio_mode, main, sub)
         ratio_pixmap_label.setPixmap(pixmap)
     else:
