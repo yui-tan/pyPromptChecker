@@ -60,3 +60,16 @@ class MainMenu(QMenu):
         self.json_export_single.triggered.connect(self.main.export_json_single)
         self.json_export_all.triggered.connect(self.main.export_json_all)
         self.json_export_selected.triggered.connect(self.main.open_thumbnail)
+
+
+class TabMenu(QMenu):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.main = parent
+
+        self.tab_link = QAction('Tab link', self)
+        self.addAction(self.tab_link)
+        self.tab_link.setCheckable(True)
+
+        self.tab_link.triggered.connect(self.main.tab_link)

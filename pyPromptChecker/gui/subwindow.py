@@ -35,7 +35,6 @@ class ImageWindow(QMainWindow):
 
         label.setPixmap(pixmap)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-#        label.setScaledContents(True)
 
         label.clicked.connect(self.clicked)
 

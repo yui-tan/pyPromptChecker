@@ -23,6 +23,8 @@ class ResultWindow(QMainWindow):
         self.image_window = ImageWindow(self)
         self.thumbnail = ThumbnailView(self)
         self.main_menu = MainMenu(self)
+        self.tab_linker = TabMenu(self)
+        self.tab_linker_enable = [False, 'Prompt']
 
         self.setWindowTitle('PNG Prompt Data')
 
@@ -55,7 +57,7 @@ class ResultWindow(QMainWindow):
             filepath, filetype = array
             chunk_data = chunk_text_extractor(filepath, filetype, 1)
             parameters = parse_parameter(chunk_data, filepath, models)
-            if parameters.params['Positive'] == 'This file has no embedded data' and ignore:
+            if parameters.params.get('Positive') == 'This file has no embedded data' and ignore:
                 valid_total = valid_total - 1
                 continue
             self.params.append(parameters)
@@ -155,6 +157,9 @@ class ResultWindow(QMainWindow):
 
             inner_tab.setTabPosition(QTabWidget.TabPosition.South)
             inner_tab.setObjectName('extension_tab')
+            inner_tab.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            inner_tab.customContextMenuRequested.connect(self.show_tab_menu)
+
             tab_page_layout.addWidget(inner_tab)
             tab_page.setLayout(tab_page_layout)
 
@@ -203,10 +208,18 @@ class ResultWindow(QMainWindow):
         self.dialog = Dialog(self)
 
     def tab_changed(self):
+        current_index = self.root_tab.currentIndex()
+        current_page = self.root_tab.widget(current_index)
+        extension_tab = current_page.findChild(QTabWidget, 'extension_tab')
         if self.image_window.isVisible():
-            current_index = self.root_tab.currentIndex()
             self.image_window.filepath = self.params[current_index].params.get('Filepath')
             self.image_window.init_image_window()
+        if self.tab_linker_enable[0]:
+            tab_name = self.tab_linker_enable[1]
+            for index in range(extension_tab.count()):
+                if extension_tab.tabText(index) == tab_name:
+                    extension_tab.setCurrentIndex(index)
+                    break
 
     def header_button_clicked(self):
         where_from = self.sender().objectName()
@@ -323,6 +336,15 @@ class ResultWindow(QMainWindow):
             current_index = self.root_tab.currentIndex()
             self.image_window.filepath = self.params[current_index].params.get('Filepath')
             self.image_window.init_image_window()
+
+    def show_tab_menu(self, pos):
+        tab_bar = self.sender().tabBar()
+        position = tab_bar.geometry()
+        if position.contains(pos):
+            x = tab_bar.mapToGlobal(tab_bar.rect().topLeft()).x()
+            y = tab_bar.mapToGlobal(tab_bar.rect().topLeft()).y()
+            adjusted_pos = QPoint(x, y)
+            self.tab_linker.exec(adjusted_pos)
 
     def move_centre_main(self):
         screen_center = QApplication.primaryScreen().geometry().center()
@@ -448,6 +470,17 @@ class ResultWindow(QMainWindow):
                 QApplication.processEvents()
                 io.model_hash_maker(file_list, operation_progress)
                 MessageBox('Finished', "I'm knackered", 'ok', 'info', self)
+
+    def tab_link(self):
+        if self.tab_linker_enable[0]:
+            self.tab_linker_enable = [False, None]
+        else:
+            current_tab_index = self.root_tab.currentIndex()
+            current_tab_page = self.root_tab.widget(current_tab_index)
+            extension_tab = current_tab_page.findChild(QTabWidget, 'extension_tab')
+            extension_tab_index = extension_tab.currentIndex()
+            extension_tab_text = extension_tab.tabText(extension_tab_index) if extension_tab else None
+            self.tab_linker_enable = [True, extension_tab_text]
 
     def not_yet_implemented(self):
         MessageBox('Sorry, not yet implemented...', 'pyPromptChecker', 'ok', 'info', self)
