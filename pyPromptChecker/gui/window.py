@@ -19,6 +19,7 @@ class ResultWindow(QMainWindow):
         self.toast_window = None
         self.progress_bar = None
         self.params = []
+        self.filepath_list = []
         self.extract_data(targets)
         self.image_window = ImageWindow(self)
         self.thumbnail = ThumbnailView(self)
@@ -72,7 +73,7 @@ class ResultWindow(QMainWindow):
 
         self.init_ui(valid_total)
 
-    def init_ui(self, total):
+    def init_ui(self, total, from_json=False):
         image_count = 1
 
         if self.progress_bar:
@@ -80,7 +81,6 @@ class ResultWindow(QMainWindow):
 
         root_layout = QVBoxLayout()
         self.root_tab = QTabWidget()
-        self.filepath_list = []
 
         for tmp in self.params:
             array_for_list = [tmp.params.get('Filepath'), tmp.params.get('Filename'), image_count - 1]
@@ -90,6 +90,9 @@ class ResultWindow(QMainWindow):
                 self.progress_bar.update_value()
             if total > 1:
                 tmp.params['File count'] = str(image_count) + ' / ' + str(total)
+
+            if from_json and 'Model' in tmp.params:
+                tmp.used_params['Model hash'] = True
 
             tab_page = QWidget()
             tab_page_layout = QVBoxLayout()
@@ -159,11 +162,12 @@ class ResultWindow(QMainWindow):
             inner_tab.setObjectName('extension_tab')
             inner_tab.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
             inner_tab.customContextMenuRequested.connect(self.show_tab_menu)
+            inner_tab.currentChanged.connect(self.inner_tab_changed)
 
             tab_page_layout.addWidget(inner_tab)
             tab_page.setLayout(tab_page_layout)
 
-            self.root_tab.addTab(tab_page, tmp.params.get('Filename'))
+            self.root_tab.addTab(tab_page, tmp.params.get('Filename', 'None'))
 
             image_count = image_count + 1
 
@@ -176,8 +180,8 @@ class ResultWindow(QMainWindow):
             if isinstance(widget, QPushButton):
                 widget.clicked.connect(self.button_clicked)
 
-        tab_jump_enable = config.get('TabNavigation')
-        tab_minimums = config.get('TabNavigationMinimumTabs')
+        tab_jump_enable = config.get('TabNavigation', True)
+        tab_minimums = config.get('TabNavigationMinimumTabs', True)
         if tab_jump_enable and self.root_tab.count() > tab_minimums:
             header_layout = tab_navigation(self.filepath_list)
             for i in range(header_layout.count()):
@@ -220,6 +224,11 @@ class ResultWindow(QMainWindow):
                 if extension_tab.tabText(index) == tab_name:
                     extension_tab.setCurrentIndex(index)
                     break
+
+    def inner_tab_changed(self):
+        current_index = self.sender().currentIndex()
+        tab_name = self.sender().tabText(current_index)
+        self.tab_linker_enable[1] = tab_name
 
     def header_button_clicked(self):
         where_from = self.sender().objectName()
@@ -338,11 +347,13 @@ class ResultWindow(QMainWindow):
             self.image_window.init_image_window()
 
     def show_tab_menu(self, pos):
+        current_index = self.sender().currentIndex()
         tab_bar = self.sender().tabBar()
-        position = tab_bar.geometry()
-        if position.contains(pos):
-            x = tab_bar.mapToGlobal(tab_bar.rect().topLeft()).x()
-            y = tab_bar.mapToGlobal(tab_bar.rect().topLeft()).y()
+        tab_rect = tab_bar.tabRect(current_index)
+        changed_pos = tab_bar.mapFrom(self.sender(), pos)
+        if tab_rect.contains(changed_pos):
+            x = tab_bar.mapToGlobal(tab_rect.topLeft()).x()
+            y = tab_bar.mapToGlobal(tab_rect.topLeft()).y() - self.tab_linker.sizeHint().height()
             adjusted_pos = QPoint(x, y)
             self.tab_linker.exec(adjusted_pos)
 
@@ -383,7 +394,7 @@ class ResultWindow(QMainWindow):
                     json_class = parser.ChunkData('This data import from JSON')
                     json_class.import_json(prepared_json)
                     self.params.append(json_class)
-                self.init_ui(len(self.params))
+                self.init_ui(len(self.params), True)
 
     def export_json_single(self):
         current_index = self.root_tab.currentIndex()

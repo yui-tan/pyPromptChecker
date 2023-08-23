@@ -68,7 +68,7 @@ class TabMenu(QMenu):
 
         self.main = parent
 
-        self.tab_link = QAction('Tab link', self)
+        self.tab_link = QAction('Compare this extension', self)
         self.addAction(self.tab_link)
         self.tab_link.setCheckable(True)
 

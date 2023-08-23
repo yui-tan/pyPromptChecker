@@ -43,6 +43,7 @@ class ImageWindow(QMainWindow):
         visible = self.isVisible()
 
         self.show()
+        self.adjustSize()
 
         if not visible:
             move_centre(self)

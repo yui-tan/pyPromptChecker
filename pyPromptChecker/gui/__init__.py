@@ -3,34 +3,7 @@
 import os
 import configparser
 
-config = {'ModelList': '',
-          'Favourites': '',
-          'MaxWindowWidth': 1024,
-          'MaxWindowHeight': 920,
-          'PixmapSize': 350,
-          'RegionalPrompterPixmapSize': 500,
-          'JsonExport': True,
-          'JsonSingle': 'filename',
-          'JsonMultiple': 'directory',
-          'JsonSelected': 'selected',
-          'ModelHashExtractor': False,
-          'LoraAddNet': True,
-          'HiresCfg': True,
-          'TiledDiffusion': True,
-          'ControlNet': True,
-          'RegionalPrompter': True,
-          'ErrorList': 1,
-          'IgnoreIfDataIsNotEmbedded': False,
-          'TargetChunkIndex': 1,
-          'MoveDelete': False,
-          'UseCopyInsteadOfMove': True,
-          'AskIfDelete': True,
-          'AskIfClearTrashBin': True,
-          'TabNavigation': False,
-          'TabNavigationWithThumbnails': False,
-          'TabNavigationMinimumTabs': 5,
-          'TabSearch': False
-          }
+config = {}
 
 ini_config = configparser.ConfigParser()
 ini_config.read('config.ini', encoding='utf-8')
