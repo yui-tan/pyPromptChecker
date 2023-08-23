@@ -57,7 +57,7 @@ class ResultWindow(QMainWindow):
             filepath, filetype = array
             chunk_data = chunk_text_extractor(filepath, filetype, 1)
             parameters = parse_parameter(chunk_data, filepath, models)
-            if parameters.params['Positive'] == 'This file has no embedded data' and ignore:
+            if parameters.params.get('Positive') == 'This file has no embedded data' and ignore:
                 valid_total = valid_total - 1
                 continue
             self.params.append(parameters)
