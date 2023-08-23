@@ -71,6 +71,7 @@ def make_main_section(target):
               ['Lora', 'Lora in prompt'],
               ['AddNet Number', 'Add network'],
               ['Hires upscaler', 'Hires.fix'],
+              'Extras',
               'Tiled diffusion',
               'Region control',
               'ControlNet',
@@ -99,7 +100,8 @@ def make_pixmap_label(filepath):
     button_layout = QHBoxLayout()
     if os.path.exists(filepath):
         pixmap = QPixmap(filepath)
-        pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
+        pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio,
+                               Qt.TransformationMode.FastTransformation)
         pixmap_label = PixmapLabel()
         pixmap_label.setPixmap(pixmap)
     else:
@@ -145,8 +147,10 @@ def make_hires_other_tab(target):
     tab_layout = QHBoxLayout()
     hires_section = make_hires_section(target)
     tab_layout.addLayout(hires_section)
-    cfg_fix_section = dynamic_thresholding_section(target)
-    tab_layout.addWidget(cfg_fix_section)
+    #    cfg_fix_section = dynamic_thresholding_section(target)
+    #    tab_layout.addWidget(cfg_fix_section)
+    extras_section = make_extras_section(target)
+    tab_layout.addWidget(extras_section)
     return tab_layout
 
 
@@ -179,6 +183,24 @@ def make_hires_section(target):
     hires_section_layout.addWidget(hires_group, 2)
     hires_section_layout.addWidget(face_section, 1)
     return hires_section_layout
+
+
+def make_extras_section(target):
+    status = [['Postprocess upscale by', 'Upscale by'],
+              ['Postprocess upscale to', 'Upscale to'],
+              ['Postprocess crop to', 'Crop to'],
+              ['Postprocess upscaler', 'Upscaler 1'],
+              ['Postprocess upscaler 2', 'Upscaler 2'],
+              'GFPGAN visibility',
+              'CodeFormer visibility',
+              'CodeFormer weight',
+              'Rembg']
+    section = QGroupBox()
+    section.setLayout(label_maker(status, target, 2, 3))
+    section.setTitle('Extras / Postprocess')
+    if not target.params.get('Extras'):
+        section.setDisabled(True)
+    return section
 
 
 def dynamic_thresholding_section(target):

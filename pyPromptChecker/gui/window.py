@@ -115,11 +115,11 @@ class ResultWindow(QMainWindow):
                 if managing_button:
                     managing_button.clicked.connect(self.managing_button_clicked)
 
-            hires_tab = ['Hires upscaler', 'Face restoration', 'Dynamic thresholding enabled']
+            hires_tab = ['Hires upscaler', 'Face restoration', 'Extras']
             lora_tab = ['Lora', 'AddNet Enabled']
 
             tabs = [['Prompts', True, True],
-                    ['Hires.fix / CFG scale fix',
+                    ['Hires.fix / Extras',
                      any(key in v for v in tmp.params for key in hires_tab),
                      config.get('HiresCfg', True)],
                     ['Lora / Add networks',

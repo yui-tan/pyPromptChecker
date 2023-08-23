@@ -34,6 +34,7 @@ class ChunkData:
         loras = 0
         add_net = 0
         region_control = 0
+        extras = 0
         if not self.data_list:
             return None
         self.data_list = [[value.strip() for value in d1] for d1 in self.data_list]
@@ -55,6 +56,8 @@ class ChunkData:
                 add_net += 1
             if 'Region' in key and 'enable' in key:
                 region_control += 1
+            if 'Postprocess' in key:
+                extras += 1
             self.params[key] = value
         if control_net > 0:
             self.params['ControlNet'] = str(control_net)
@@ -64,6 +67,8 @@ class ChunkData:
             self.params['AddNet Number'] = str(add_net)
         if region_control > 0:
             self.params['Region control'] = str(region_control)
+        if extras > 0:
+            self.params['Extras'] = 'True'
 
     def model_name(self, model_list):
         model_hash = self.params.get('Model hash')
@@ -119,13 +124,13 @@ def prompt_parse(target_data):
         return target_data
     match = re.search(prompt_regex, prompt)
     if match:
-        prompt = match.group()
-        if re.search(r'^parameters', prompt):
-            prompt = prompt.replace('parameters', '', 1)
-            send_prompt = 'parameters' + prompt
-        elif re.search(r'^UNICODE', prompt):
-            prompt = prompt.replace('UNICODE', '', 1)
-            send_prompt = 'UNICODE' + prompt
+        matched_prompt = match.group()
+        if re.search(r'^parameters', matched_prompt):
+            matched_prompt = matched_prompt.replace('parameters', '', 1)
+            send_prompt = 'parameters' + matched_prompt
+        elif re.search(r'^UNICODE', matched_prompt):
+            matched_prompt = matched_prompt.replace('UNICODE', '', 1)
+            send_prompt = 'UNICODE' + matched_prompt
         else:
             send_prompt = prompt
         tmp = prompt.split('Negative prompt: ')
@@ -133,6 +138,12 @@ def prompt_parse(target_data):
         if len(tmp) == 2:
             result[1][1] = tmp[1]
         target_data.data_refresh(send_prompt, result)
+    else:
+        match = re.search(r'^parameters', prompt)
+        if match:
+            matched_prompt = match.group()
+            matched_prompt = matched_prompt.replace('parameters', '', 1)
+            target_data.data_refresh('parameters', matched_prompt)
     return target_data
 
 
