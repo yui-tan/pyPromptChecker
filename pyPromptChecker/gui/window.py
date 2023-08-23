@@ -116,12 +116,16 @@ class ResultWindow(QMainWindow):
                     managing_button.clicked.connect(self.managing_button_clicked)
 
             hires_tab = ['Hires upscaler', 'Face restoration', 'Extras']
+            cfg_fix_auto_tab = ['Dynamic thresholding enabled', 'CFG auto', 'CFG scheduler']
             lora_tab = ['Lora', 'AddNet Enabled']
 
             tabs = [['Prompts', True, True],
                     ['Hires.fix / Extras',
                      any(key in v for v in tmp.params for key in hires_tab),
                      config.get('HiresCfg', True)],
+                    ['CFG',
+                     any(key in v for v in tmp.params for key in cfg_fix_auto_tab),
+                     config.get('cfg', True)],
                     ['Lora / Add networks',
                      any(key in v for v in tmp.params for key in lora_tab),
                      config.get('LoraAddNet', True)],
@@ -144,12 +148,14 @@ class ResultWindow(QMainWindow):
                     if index == 1:
                         inner_page.setLayout(make_hires_other_tab(tmp))
                     if index == 2:
-                        inner_page.setLayout(make_lora_addnet_tab(tmp))
+                        inner_page.setLayout(make_cfg_tab(tmp))
                     if index == 3:
-                        inner_page.setLayout(make_tiled_diffusion_tab(tmp))
+                        inner_page.setLayout(make_lora_addnet_tab(tmp))
                     if index == 4:
-                        inner_page = make_control_net_tab(tmp, 0)
+                        inner_page.setLayout(make_tiled_diffusion_tab(tmp))
                     if index == 5:
+                        inner_page = make_control_net_tab(tmp, 0)
+                    if index == 6:
                         inner_page.setLayout(make_regional_prompter_tab(tmp))
                     inner_tab.addTab(inner_page, tab[0])
 
@@ -455,8 +461,12 @@ class ResultWindow(QMainWindow):
                 result = image_format_identifier(tmp)
                 if result:
                     result_list.append(result)
+            if self.image_window.isVisible():
+                self.image_window.close()
+            if self.thumbnail.isVisible():
+                self.thumbnail.close()
             self.params = []
-            self.init_ui(result_list)
+            self.extract_data(result_list)
 
     def reselect_directory(self):
         pass

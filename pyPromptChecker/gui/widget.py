@@ -147,8 +147,6 @@ def make_hires_other_tab(target):
     tab_layout = QHBoxLayout()
     hires_section = make_hires_section(target)
     tab_layout.addLayout(hires_section)
-    #    cfg_fix_section = dynamic_thresholding_section(target)
-    #    tab_layout.addWidget(cfg_fix_section)
     extras_section = make_extras_section(target)
     tab_layout.addWidget(extras_section)
     return tab_layout
@@ -200,6 +198,50 @@ def make_extras_section(target):
     section.setTitle('Extras / Postprocess')
     if not target.params.get('Extras'):
         section.setDisabled(True)
+    return section
+
+
+def make_cfg_tab(target):
+    tab_layout = QHBoxLayout()
+    cfg_fix_section = dynamic_thresholding_section(target)
+    tab_layout.addWidget(cfg_fix_section)
+    cfg_auto_scheduler_layout = QVBoxLayout()
+    cfg_auto_scheduler_layout.addWidget(cfg_auto(target))
+    cfg_auto_scheduler_layout.addWidget(cfg_scheduler_section(target))
+    tab_layout.addLayout(cfg_auto_scheduler_layout)
+    return tab_layout
+
+
+def cfg_auto(target):
+    status = ['Scheduler',
+              ['Main Strength', 'Main strength'],
+              ['Sub- Strength', 'Sub strength'],
+              ['Main Range', 'Main range'],
+              ['Sub- Range', 'Sub range']
+              ]
+    section = QGroupBox()
+    section.setLayout(label_maker(status, target, 2, 3))
+    section.setTitle('CFG auto')
+    if not target.params.get('CFG auto'):
+        section.setDisabled(True)
+    else:
+        target.used_params['CFG auto'] = True
+    return section
+
+
+def cfg_scheduler_section(target):
+    status = [['loops', 'Loops'],
+              ['target denoising', 'Target'],
+              'CFG',
+              'ETA',
+              ]
+    section = QGroupBox()
+    section.setLayout(label_maker(status, target, 1, 3, True))
+    section.setTitle('CFG scheduler')
+    if not target.params.get('CFG scheduler'):
+        section.setDisabled(True)
+    else:
+        target.used_params['CFG scheduler'] = True
     return section
 
 
@@ -610,6 +652,8 @@ def label_maker(status, target, stretch_title, stretch_value, selectable=False, 
         section_layout.addWidget(value, label_count, 1)
         label_count = label_count + 1
         if not item == 'None':
+            target.used_params[key] = True
+        elif key == 'CFG' or key == 'ETA':
             target.used_params[key] = True
     if 20 > minimums > label_count:
         for i in range(minimums - label_count):
