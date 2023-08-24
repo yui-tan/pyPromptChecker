@@ -20,6 +20,7 @@ class ResultWindow(QMainWindow):
         self.progress_bar = None
         self.params = []
         self.filepath_list = []
+        self.file_count_list = []
         self.extract_data(targets)
         self.image_window = ImageWindow(self)
         self.thumbnail = ThumbnailView(self)
@@ -42,47 +43,63 @@ class ResultWindow(QMainWindow):
         self.resize(window_width, window_height)
         self.move_centre_main()
 
-    def extract_data(self, targets):
-        ignore = config.get('IgnoreIfDataIsNotEmbedded', False)
-        total = len(targets)
-        valid_total = total
+    def init_ui(self, from_json=False):
 
-        if len(targets) > 10:
-            self.progress_bar = ProgressDialog(self)
-            self.progress_bar.setRange(0, total * 2)
-            self.progress_bar.setLabelText('Extracting PNG Chunk...')
+        self.root_tab = QTabWidget()
+        root_layout = QVBoxLayout()
 
-        models = io.import_model_list(config.get('ModelList', 'model_list.csv'))
+        footer_layout = make_footer_area()
+        for i in range(footer_layout.count()):
+            widget = footer_layout.itemAt(i).widget()
+            if isinstance(widget, QPushButton):
+                widget.clicked.connect(self.button_clicked)
 
-        for array in targets:
-            filepath, filetype = array
-            chunk_data = chunk_text_extractor(filepath, filetype, 1)
-            parameters = parse_parameter(chunk_data, filepath, models)
-            if parameters.params.get('Positive') == 'This file has no embedded data' and ignore:
-                valid_total = valid_total - 1
-                continue
-            self.params.append(parameters)
-            if self.progress_bar:
-                self.progress_bar.update_value()
+        self.file_tab(0, from_json)
 
-        if valid_total == 0:
-            MessageBox('There is no data to parse.', 'Oops!')
-            if self.centralWidget():
-                return
-            sys.exit()
+        tab_jump_enable = config.get('TabNavigation', True)
+        tab_minimums = config.get('TabNavigationMinimumTabs', True)
+        if tab_jump_enable and self.root_tab.count() > tab_minimums:
+            root_layout.addLayout(self.tab_navigation())
 
-        self.init_ui(valid_total)
+        root_layout.addWidget(self.root_tab)
+        root_layout.addLayout(footer_layout)
 
-    def init_ui(self, total, from_json=False):
+        central_widget = QWidget()
+        central_widget.setLayout(root_layout)
+
+        if self.centralWidget():
+            self.centralWidget().deleteLater()
+        self.setCentralWidget(central_widget)
+
+        if self.progress_bar:
+            self.progress_bar.close()
+
+        self.root_tab.currentChanged.connect(self.tab_changed)
+        self.root_tab.setTabBarAutoHide(True)
+
+        self.toast_window = Toast(self)
+        self.dialog = Dialog(self)
+
+    def tab_navigation(self):
+        header_layout = tab_navigation(self.filepath_list)
+        for i in range(header_layout.count()):
+            widget = header_layout.itemAt(i).widget()
+            if isinstance(widget, QPushButton):
+                widget.clicked.connect(self.header_button_clicked)
+            elif isinstance(widget, QComboBox):
+                widget.currentIndexChanged.connect(self.header_button_clicked)
+        return header_layout
+
+    def file_tab(self, add=0, from_json=False):
+        total = len(self.params)
         image_count = 1
 
         if self.progress_bar:
             self.progress_bar.setLabelText('Formatting prompt data...')
 
-        root_layout = QVBoxLayout()
-        self.root_tab = QTabWidget()
-
-        for tmp in self.params:
+        for params_index, tmp in enumerate(self.params):
+            if add > 0 and params_index < add:
+                continue
             array_for_list = [tmp.params.get('Filepath'), tmp.params.get('Filename'), image_count - 1]
             self.filepath_list.append(array_for_list)
 
@@ -106,6 +123,10 @@ class ResultWindow(QMainWindow):
             main_section_layout.addLayout(main_label_layout)
             main_section.setLayout(main_section_layout)
             tab_page_layout.addWidget(main_section)
+
+            target = main_section.findChild(QLabel, 'Number_value')
+            if target:
+                self.file_count_list.append(target)
 
             pixmap_label = main_section.findChild(PixmapLabel, 'Pixmap')
             if pixmap_label:
@@ -173,49 +194,60 @@ class ResultWindow(QMainWindow):
             tab_page_layout.addWidget(inner_tab)
             tab_page.setLayout(tab_page_layout)
 
-            self.root_tab.addTab(tab_page, tmp.params.get('Filename', 'None'))
-
-            image_count = image_count + 1
-
             if 'File count' in tmp.params:
                 del tmp.params['File count']
 
-        footer_layout = make_footer_area()
-        for i in range(footer_layout.count()):
-            widget = footer_layout.itemAt(i).widget()
-            if isinstance(widget, QPushButton):
-                widget.clicked.connect(self.button_clicked)
+            self.root_tab.addTab(tab_page, tmp.params.get('Filename', 'None'))
+            image_count = image_count + 1
 
-        tab_jump_enable = config.get('TabNavigation', True)
-        tab_minimums = config.get('TabNavigationMinimumTabs', True)
-        if tab_jump_enable and self.root_tab.count() > tab_minimums:
-            header_layout = tab_navigation(self.filepath_list)
-            for i in range(header_layout.count()):
-                widget = header_layout.itemAt(i).widget()
-                if isinstance(widget, QPushButton):
-                    widget.clicked.connect(self.header_button_clicked)
-                elif isinstance(widget, QComboBox):
-                    widget.currentIndexChanged.connect(self.header_button_clicked)
-            root_layout.addLayout(header_layout)
+        if add > 0:
+            self.rewrite_file_count()
+            tab_jump_enable = config.get('TabNavigation', True)
+            tab_minimums = config.get('TabNavigationMinimumTabs', True)
+            if tab_jump_enable and self.root_tab.count() > tab_minimums:
+                root_layout = self.centralWidget().layout()
+                root_layout.insertLayout(0, self.tab_navigation())
 
-        root_layout.addWidget(self.root_tab)
-        root_layout.addLayout(footer_layout)
+    def extract_data(self, targets, add=False):
+        ignore = config.get('IgnoreIfDataIsNotEmbedded', False)
+        index_for_now = len(self.params)
+        total = len(targets)
+        valid_total = total
 
-        central_widget = QWidget()
-        central_widget.setLayout(root_layout)
+        if len(targets) > 10:
+            self.progress_bar = ProgressDialog(self)
+            self.progress_bar.setRange(0, total * 2)
+            self.progress_bar.setLabelText('Extracting PNG Chunk...')
 
-        if self.centralWidget():
-            self.centralWidget().deleteLater()
-        self.setCentralWidget(central_widget)
+        models = io.import_model_list(config.get('ModelList', 'model_list.csv'))
 
-        if self.progress_bar:
-            self.progress_bar.close()
+        for array in targets:
+            filepath, filetype = array
+            chunk_data = chunk_text_extractor(filepath, filetype, 1)
+            parameters = parse_parameter(chunk_data, filepath, models)
+            if parameters.params.get('Positive') == 'This file has no embedded data' and ignore:
+                valid_total = valid_total - 1
+                continue
+            self.params.append(parameters)
+            if self.progress_bar:
+                self.progress_bar.update_value()
 
-        self.root_tab.currentChanged.connect(self.tab_changed)
-        self.root_tab.setTabBarAutoHide(True)
+        if valid_total == 0:
+            MessageBox('There is no data to parse.', 'Oops!')
+            if self.centralWidget():
+                return
+            sys.exit()
 
-        self.toast_window = Toast(self)
-        self.dialog = Dialog(self)
+        if add:
+            self.file_tab(index_for_now)
+        else:
+            self.init_ui()
+
+    def rewrite_file_count(self):
+        total = len(self.file_count_list)
+        for count, label in enumerate(self.file_count_list, 1):
+            text = str(count) + ' / ' + str(total)
+            label.setText(text)
 
     def tab_changed(self):
         current_index = self.root_tab.currentIndex()
@@ -378,9 +410,19 @@ class ResultWindow(QMainWindow):
     def open_thumbnail(self):
         self.thumbnail.init_thumbnail(self.filepath_list)
 
-    def import_json_single(self):
+    def import_json_from_files(self):
         self.dialog.init_dialog('choose-files', 'Select JSONs', None, 'JSON')
         filepaths = self.dialog.result
+        self.import_json(filepaths)
+
+    def import_json_from_directory(self):
+        self.dialog.init_dialog('choose-directory', 'Select directory')
+        directory = self.dialog.result
+        if directory:
+            filepaths = [os.path.join(directory[0], value) for value in os.listdir(directory[0]) if '.json' in value]
+            self.import_json(filepaths)
+
+    def import_json(self, filepaths):
         if filepaths:
             json_list = []
             for filepath in filepaths:
@@ -400,7 +442,10 @@ class ResultWindow(QMainWindow):
                     json_class = parser.ChunkData('This data import from JSON')
                     json_class.import_json(prepared_json)
                     self.params.append(json_class)
-                self.init_ui(len(self.params), True)
+            if len(self.params) > 10:
+                self.progress_bar = ProgressDialog()
+                self.progress_bar.setRange(0, len(self.params))
+            self.init_ui(True)
 
     def export_json_single(self):
         current_index = self.root_tab.currentIndex()
@@ -452,7 +497,7 @@ class ResultWindow(QMainWindow):
             else:
                 MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
 
-    def reselect_files(self):
+    def reselect_files(self, add=False):
         self.dialog.init_dialog('choose-files', 'Select files', None, 'PNG')
         filepath = self.dialog.result
         result_list = []
@@ -465,8 +510,19 @@ class ResultWindow(QMainWindow):
                 self.image_window.close()
             if self.thumbnail.isVisible():
                 self.thumbnail.close()
-            self.params = []
-            self.extract_data(result_list)
+            if not add or len(self.params) == 1:
+                if not add:
+                    self.params = []
+                if len(result_list) > 10:
+                    self.progress_bar = ProgressDialog()
+                self.extract_data(result_list)
+            else:
+                if len(result_list) > 10:
+                    self.progress_bar = ProgressDialog()
+                self.extract_data(result_list, True)
+
+    def reselect_files_with_args(self):
+        self.reselect_files(True)
 
     def reselect_directory(self):
         pass
