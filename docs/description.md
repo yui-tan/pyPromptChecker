@@ -6,7 +6,7 @@
     - Basic information
     - Hires.fix
     - Extras
-    - Dynamic threshoulding (CFG fix)
+    - Dynamic thresholding (CFG fix)
     - Auto CFG
     - CFG scheduling
     - Add networks
@@ -97,10 +97,14 @@ The authors themselves had no idea it would be so feature-rich.
       Asking if delete all files within the TrashBin directory.
 
     Those values are set to True by default.
-## Tab navigation
-- ### Overview
-- ### Tab navigation
-- ### Related values in 'config.ini'
+## Tab navigation ##
+- ### Overview ###
+- ### Tab navigation ###
+- ### Related values in 'config.ini' ###
+ - ### [Features] section ###
+   - **"TabNavigation" option** (Boolean)
+   - **"TabNavigationWithThumbnails" option** (Boolean)
+   - **"TabNavigationMinimumTabs" option** (Integer)
 
 # Screenshots
 - ### Main screen

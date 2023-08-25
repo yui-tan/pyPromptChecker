@@ -71,9 +71,6 @@ class ResultWindow(QMainWindow):
             self.centralWidget().deleteLater()
         self.setCentralWidget(central_widget)
 
-        if self.progress_bar:
-            self.progress_bar.close()
-
         self.root_tab.currentChanged.connect(self.tab_changed)
         self.root_tab.setTabBarAutoHide(True)
 
@@ -205,8 +202,13 @@ class ResultWindow(QMainWindow):
             tab_jump_enable = config.get('TabNavigation', True)
             tab_minimums = config.get('TabNavigationMinimumTabs', True)
             if tab_jump_enable and self.root_tab.count() > tab_minimums:
-                root_layout = self.centralWidget().layout()
-                root_layout.insertLayout(0, self.tab_navigation())
+                tab_navigation_visible = self.centralWidget().findChild(QComboBox, 'Combo')
+                if not tab_navigation_visible:
+                    root_layout = self.centralWidget().layout()
+                    root_layout.insertLayout(0, self.tab_navigation())
+
+        if self.progress_bar:
+            self.progress_bar.close()
 
     def extract_data(self, targets, add=False):
         ignore = config.get('IgnoreIfDataIsNotEmbedded', False)
@@ -214,7 +216,7 @@ class ResultWindow(QMainWindow):
         total = len(targets)
         valid_total = total
 
-        if len(targets) > 10:
+        if len(targets) > 5:
             self.progress_bar = ProgressDialog(self)
             self.progress_bar.setRange(0, total * 2)
             self.progress_bar.setLabelText('Extracting PNG Chunk...')
@@ -442,7 +444,7 @@ class ResultWindow(QMainWindow):
                     json_class = parser.ChunkData('This data import from JSON')
                     json_class.import_json(prepared_json)
                     self.params.append(json_class)
-            if len(self.params) > 10:
+            if len(self.params) > 5:
                 self.progress_bar = ProgressDialog()
                 self.progress_bar.setRange(0, len(self.params))
             self.init_ui(True)
@@ -497,35 +499,54 @@ class ResultWindow(QMainWindow):
             else:
                 MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
 
+    def reselect_files_duplicate_check(self, selected_filepaths):
+        shown_files = [value[0] for value in self.filepath_list]
+        unique_filepaths = set(selected_filepaths)
+        for filepath in shown_files:
+            if filepath in unique_filepaths:
+                unique_filepaths.remove(filepath)
+        result = list(unique_filepaths)
+        deleted = len(selected_filepaths) - len(result)
+        result.sort()
+        return result, deleted
+
+    def reselect_files_from_directory(self):
+        pass
+
+    def reselect_files_append(self):
+        self.reselect_files(True)
+
     def reselect_files(self, add=False):
         self.dialog.init_dialog('choose-files', 'Select files', None, 'PNG')
         filepath = self.dialog.result
         result_list = []
         if filepath:
-            for tmp in filepath:
-                result = image_format_identifier(tmp)
-                if result:
-                    result_list.append(result)
-            if self.image_window.isVisible():
-                self.image_window.close()
-            if self.thumbnail.isVisible():
-                self.thumbnail.close()
-            if not add or len(self.params) == 1:
-                if not add:
-                    self.params = []
-                if len(result_list) > 10:
-                    self.progress_bar = ProgressDialog()
-                self.extract_data(result_list)
-            else:
-                if len(result_list) > 10:
-                    self.progress_bar = ProgressDialog()
-                self.extract_data(result_list, True)
-
-    def reselect_files_with_args(self):
-        self.reselect_files(True)
-
-    def reselect_directory(self):
-        pass
+            filepath, duplicate = self.reselect_files_duplicate_check(filepath)
+            if filepath:
+                for tmp in filepath:
+                    result = image_format_identifier(tmp)
+                    if result:
+                        result_list.append(result)
+                if self.image_window.isVisible():
+                    self.image_window.close()
+                if self.thumbnail.isVisible():
+                    self.thumbnail.close()
+                if not add or len(self.params) == 1:
+                    if not add:
+                        self.params = []
+                    elif len(self.params) == 1:
+                        self.filepath_list = []
+                    if len(result_list) > 5:
+                        self.progress_bar = ProgressDialog()
+                    self.extract_data(result_list)
+                else:
+                    if len(result_list) > 5:
+                        self.progress_bar = ProgressDialog()
+                        self.progress_bar.setRange(0, len(result_list) * 2)
+                    self.extract_data(result_list, True)
+            if duplicate > 0:
+                text = "{} file(s) didn't processed due to already shown. ".format(duplicate)
+                MessageBox(text, 'pyPromptChecker', 'ok', 'info', self)
 
     def model_hash_extractor(self):
         text = 'This operation requires a significant amount of time.' \

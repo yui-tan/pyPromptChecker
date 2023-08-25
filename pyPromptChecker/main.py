@@ -9,6 +9,17 @@ from pyPromptChecker.lib import decoder
 from pyPromptChecker.gui import window
 
 
+def is_directory_check(filepaths):
+    filepath_list = []
+    if filepaths:
+        for filepath in filepaths:
+            if os.path.isdir(filepath):
+                file_in_directory = directory_to_filelist([filepath])
+                filepath_list = filepath_list + file_in_directory
+        filepaths = filepaths + filepath_list
+    return filepaths
+
+
 def directory_to_filelist(directory_path):
     if not os.path.isdir(directory_path[0]):
         print('This is not a directory')
@@ -21,27 +32,26 @@ def directory_to_filelist(directory_path):
 def check_files(target_list):
     file_counts = len(target_list) if target_list else 0
     progress_bar = None
-    progress_enable = False
     file_is_not_found_list = []
     this_is_directory_list = []
     this_file_is_not_image_file_list = []
     valid_file_list = []
 
-    if file_counts > 20:
+    if file_counts > 5:
         app, progress_bar = window.from_main('progress')
         progress_bar.setLabelText("Checking files...")
         progress_bar.setRange(0, file_counts)
-        progress_enable = True
 
     for filepath in target_list:
         if not os.path.exists(filepath):
             file_is_not_found_list.append(filepath)
-            if progress_enable:
+            if progress_bar:
                 progress_bar.update_value()
             continue
+
         elif not os.path.isfile(filepath):
             this_is_directory_list.append(filepath)
-            if progress_enable:
+            if progress_bar:
                 progress_bar.update_value()
             continue
 
@@ -52,10 +62,10 @@ def check_files(target_list):
         else:
             valid_file_list.append(result)
 
-        if progress_enable:
+        if progress_bar:
             progress_bar.update_value()
 
-    if progress_enable:
+    if progress_bar:
         progress_bar.close()
 
     return valid_file_list, file_is_not_found_list, this_is_directory_list, this_file_is_not_image_file_list
@@ -70,13 +80,14 @@ def main(test=False):
     group.add_argument('-a', '--ask', action='store_true', help='Open directory choose dialog.')
     group.add_argument('-f', '--filepath', nargs='*', type=str, help='Send path to the file.')
     group.add_argument('-d', '--directory', type=str, help='Send path to the directory.')
-    parser.add_argument('filepaths', metavar='Filepath', type=str, nargs='*', help='Send path to the file.')
+    parser.add_argument('filepaths', metavar='Filepath', type=str, nargs='*', help='Send path to files and directories.')
     args = parser.parse_args()
 
     if args.filepath:
         filepaths = args.filepath
-    elif args.filepaths:
+    elif args.filepaths or test:
         filepaths = args.filepaths
+        filepaths = is_directory_check(filepaths)
     elif args.directory:
         filepaths = directory_to_filelist([args.directory])
     elif args.ask:
