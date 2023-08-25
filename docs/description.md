@@ -64,19 +64,39 @@ The authors themselves had no idea it would be so feature-rich.
 
 ## JSON import and export
 - ### Overview
-- ### related values in 'config.ini'
+  - Export creation data as JSON formatted data.
+  - It can now be found in the menu > Export JSON
+    
+- ### Related values in 'config.ini'
+  - ### [Features] section ###
+    - **"JsonExport" option** (Boolean)  
+      This option now only mean toggle shown/not shown "Export Json" buttons.
+    - **"JsonSingle" option** (Strings)  
+      This option is setting for exported JSONs (single file) default Name. Setting whatever you want.  
+      If 'JsonSingle=filename' is set, the image file name will be set as default.
+    - **"JsonMultiple" option** (Strings)  
+      This option is setting for exported JSONs (all file) default Name. Setting whatever you want.  
+      If 'JsonMultiple=directory' is set, the first image's directory name will be set as default.
+    - **"JsonSelected" option** (Strings)  
+      This option is setting for exported JSONs (selected) default Name. Setting whatever you want.  
+      If 'JsonSelected=selected' is set, the first image's name + "-and-so-on" will be set as default. maybe...
+      
 ## Model hash extractor
 - ### Overview
-  - Model hash extractor is making your own 
+  - The feature that extract model hash from your own model files and create 'model_list.csv' file or append data to it.
+  - Now it can be find in menu > model hash extractor.
+  - Depends on number of files, it requires huge mount of time and memories[^1].
+  
 - ### Related values in 'config.ini'
   - ### [Features] section ###
     - **"ModelHashExtractor" option** (Boolean)  
     *Deprecated*
+
 ## Move/Delete feature
 - ### Overview
   - Favourite button: Move/copy image to favourite directory.
   - Move to button: Move/copy image to any directory.
-  - Delete button: Delete[^1] image file.
+  - Delete button: Delete[^2] image file.
 
 - ### Related values in 'config.ini'
   - ### [Location] section ###
@@ -92,7 +112,7 @@ The authors themselves had no idea it would be so feature-rich.
       *But this setting is not affect to 'Delete' feature.*  
     - **"AskIfDelete" option** (Boolean)  
       If set to True, confirmation dialog will be shown when the delete button is pressed.
-    - **"AskIfClearTrashBin" option[^2]** (Boolean)   
+    - **"AskIfClearTrashBin" option[^3]** (Boolean)   
       If set to True, confirmation dialog will be shown the script exits,   
       Asking if delete all files within the TrashBin directory.
 
@@ -119,14 +139,18 @@ The authors themselves had no idea it would be so feature-rich.
 - ### Controlnet
 ![controlnet](https://user-images.githubusercontent.com/121333129/261911911-cb4219a6-0270-4381-ba59-b333a91d7456.png)
 - ### Regional prompter
+![regional_prompter](https://user-images.githubusercontent.com/121333129/261966851-dff68376-70e2-4fe9-a24b-399c120e0f60.png)
+![regional_prompter_2](https://user-images.githubusercontent.com/121333129/261966907-8cb29c70-1c9a-4601-98cc-8c771e5cf608.png)
 - ### Region control in Tiled diffusion
 - ### Image view
 ![image_view](https://user-images.githubusercontent.com/121333129/261905238-2aee6631-de09-4a1a-9052-a61bba7f348a.png)
 - ### Thumbnail tab navigation
 ![Thumbnail](https://user-images.githubusercontent.com/121333129/261905360-cae29606-c641-4400-9c5d-64bb5251d8af.png)
 
- [^1]:Pressing the delete button will not actually perform the deletion:instead, the file will be moved to TrashBin directory (/pyPromptChecker/.trash).  
+ [^1]:It may require more than 32 GiB of memory (not VRAM).  
+For example, in my case, it took 20 minutes to process 62 files, and the memory usage went up to 29 GiB.
+ [^2]:Pressing the delete button will not actually perform the deletion:instead, the file will be moved to TrashBin directory (/pyPromptChecker/.trash).  
  The actual deletion of files occurs when the script exits.
- [^2]:For fail-safe, it is highly recommended to set 'Ture' for 'AskIfClearTrashBin'.  
+ [^3]:For fail-safe, it is highly recommended to set 'Ture' for 'AskIfClearTrashBin'.  
   It might be a bit bothersome but even if the script crashes, image files will remain in '/pyPromptChecker/.trash'.  
   Additionally, even if you accidentally delete image files, the script should protect your files if you press 'cancel'
