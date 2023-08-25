@@ -34,6 +34,8 @@ class ChunkData:
         loras = 0
         add_net = 0
         region_control = 0
+        extras = 0
+        cfg_auto = 0
         if not self.data_list:
             return None
         self.data_list = [[value.strip() for value in d1] for d1 in self.data_list]
@@ -55,6 +57,10 @@ class ChunkData:
                 add_net += 1
             if 'Region' in key and 'enable' in key:
                 region_control += 1
+            if 'Postprocess' in key:
+                extras += 1
+            if 'Scheduler' in key:
+                cfg_auto += 1
             self.params[key] = value
         if control_net > 0:
             self.params['ControlNet'] = str(control_net)
@@ -64,6 +70,10 @@ class ChunkData:
             self.params['AddNet Number'] = str(add_net)
         if region_control > 0:
             self.params['Region control'] = str(region_control)
+        if extras > 0:
+            self.params['Extras'] = 'True'
+        if cfg_auto > 0:
+            self.params['CFG auto'] = 'True'
 
     def model_name(self, model_list):
         model_hash = self.params.get('Model hash')
@@ -76,9 +86,8 @@ class ChunkData:
             self.params['Model'] = model_name
             self.used_params['Model hash'] = True
 
-    def search_value(self, target_key, target_value):
-        target_str = self.params[target_key]
-        return target_value in target_str
+    def import_json(self, json_data):
+        self.params = json_data
 
 
 def parse_parameter(chunks, filepath, model_list=None):
@@ -88,6 +97,7 @@ def parse_parameter(chunks, filepath, model_list=None):
     target_data = lora_parse(target_data)
     target_data = tiled_diffusion_parse(target_data)
     target_data = control_net_parse(target_data)
+    target_data = cfg_scheduler_parse(target_data)
     target_data = main_status_parse(target_data)
     target_data.make_dictionary()
     target_data.model_name(model_list)
@@ -120,20 +130,26 @@ def prompt_parse(target_data):
         return target_data
     match = re.search(prompt_regex, prompt)
     if match:
-        prompt = match.group()
-        if re.search(r'^parameters', prompt):
-            prompt = prompt.replace('parameters', '', 1)
-            send_prompt = 'parameters' + prompt
-        elif re.search(r'^UNICODE', prompt):
-            prompt = prompt.replace('UNICODE', '', 1)
-            send_prompt = 'UNICODE' + prompt
+        matched_prompt = match.group()
+        if re.search(r'^parameters', matched_prompt):
+            matched_prompt = matched_prompt.replace('parameters', '', 1)
+            send_prompt = 'parameters' + matched_prompt
+        elif re.search(r'^UNICODE', matched_prompt):
+            matched_prompt = matched_prompt.replace('UNICODE', '', 1)
+            send_prompt = 'UNICODE' + matched_prompt
         else:
             send_prompt = prompt
-        tmp = prompt.split('Negative prompt: ')
+        tmp = matched_prompt.split('Negative prompt: ')
         result[0][1] = tmp[0]
         if len(tmp) == 2:
             result[1][1] = tmp[1]
         target_data.data_refresh(send_prompt, result)
+    else:
+        match = re.search(r'^parameters', prompt)
+        if match:
+            matched_prompt = match.group()
+            matched_prompt = matched_prompt.replace('parameters', '', 1)
+            target_data.data_refresh('parameters', matched_prompt)
     return target_data
 
 
@@ -199,3 +215,20 @@ def control_net_parse(target_data):
             result = [[value.replace('<comma>', ',') for value in d1] for d1 in result]
         target_data.data_refresh(target, result)
     return target_data
+
+
+def cfg_scheduler_parse(target_data):
+    cfg_regex = r' CFG Scheduler Info: ".*",'
+    match = re.search(cfg_regex, target_data.data)
+    if match:
+        target = match.group()
+        cfg_match = re.search(r'"[^"]*"', target)
+        if cfg_match:
+            cfg_result = cfg_match.group()
+            cfg_result = cfg_result.replace('terget denoising', '\\n target denoising')
+            cfg_result = cfg_result.replace('\\n"', '').replace('"', '')
+            result = [[value.split(':')[0], str(value.split(':', 1)[1])] for value in cfg_result.split('\\n')]
+            target_data.data_refresh(target, result)
+            target_data.params['CFG scheduler'] = 'True'
+    return target_data
+

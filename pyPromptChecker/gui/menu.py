@@ -53,10 +53,23 @@ class MainMenu(QMenu):
 
         self.quit.triggered.connect(quit_triggered)
         self.model_hash_extractor.triggered.connect(self.main.model_hash_extractor)
-        self.reselect_add.triggered.connect(self.main.not_yet_implemented)
+        self.reselect_add.triggered.connect(self.main.reselect_files_append)
         self.reselect_renewal.triggered.connect(self.main.reselect_files)
-        self.json_import_files.triggered.connect(self.main.not_yet_implemented)
-        self.json_import_directory.triggered.connect(self.main.not_yet_implemented)
+        self.json_import_files.triggered.connect(self.main.import_json_from_files)
+        self.json_import_directory.triggered.connect(self.main.import_json_from_directory)
         self.json_export_single.triggered.connect(self.main.export_json_single)
         self.json_export_all.triggered.connect(self.main.export_json_all)
         self.json_export_selected.triggered.connect(self.main.open_thumbnail)
+
+
+class TabMenu(QMenu):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.main = parent
+
+        self.tab_link = QAction('Compare extension', self)
+        self.addAction(self.tab_link)
+        self.tab_link.setCheckable(True)
+
+        self.tab_link.triggered.connect(self.main.tab_link)

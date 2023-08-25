@@ -71,6 +71,7 @@ def make_main_section(target):
               ['Lora', 'Lora in prompt'],
               ['AddNet Number', 'Add network'],
               ['Hires upscaler', 'Hires.fix'],
+              'Extras',
               'Tiled diffusion',
               'Region control',
               'ControlNet',
@@ -80,8 +81,9 @@ def make_main_section(target):
     filepath = target.params.get('Filepath')
     if target.params.get('Hires upscaler'):
         del status[15]
-    timestamp = datetime.datetime.fromtimestamp(os.path.getctime(filepath))
-    target.params['Timestamp'] = timestamp.strftime('%Y/%m/%d %H:%M')
+    if os.path.exists(filepath):
+        timestamp = datetime.datetime.fromtimestamp(os.path.getctime(filepath))
+        target.params['Timestamp'] = timestamp.strftime('%Y/%m/%d %H:%M')
     main_section_layout = QHBoxLayout()
     pixmap_label = make_pixmap_label(filepath)
     main_section_layout.addLayout(pixmap_label, 1)
@@ -98,7 +100,8 @@ def make_pixmap_label(filepath):
     button_layout = QHBoxLayout()
     if os.path.exists(filepath):
         pixmap = QPixmap(filepath)
-        pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
+        pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio,
+                               Qt.TransformationMode.FastTransformation)
         pixmap_label = PixmapLabel()
         pixmap_label.setPixmap(pixmap)
     else:
@@ -119,12 +122,12 @@ def make_pixmap_label(filepath):
 def make_prompt_tab(target):
     textbox_tab_layout = QVBoxLayout()
     splitter = QSplitter(Qt.Orientation.Vertical)
-    positive_text = target.params.get('Positive')
+    positive_text = target.params.get('Positive', 'None')
     positive_prompt = QTextEdit()
     positive_prompt.setPlainText(positive_text)
     positive_prompt.setReadOnly(True)
     positive_prompt.setObjectName('Positive')
-    negative_text = target.params.get('Negative')
+    negative_text = target.params.get('Negative', 'None')
     negative_prompt = QTextEdit(negative_text)
     negative_prompt.setPlainText(negative_text)
     negative_prompt.setReadOnly(True)
@@ -144,8 +147,8 @@ def make_hires_other_tab(target):
     tab_layout = QHBoxLayout()
     hires_section = make_hires_section(target)
     tab_layout.addLayout(hires_section)
-    cfg_fix_section = dynamic_thresholding_section(target)
-    tab_layout.addWidget(cfg_fix_section)
+    extras_section = make_extras_section(target)
+    tab_layout.addWidget(extras_section)
     return tab_layout
 
 
@@ -178,6 +181,68 @@ def make_hires_section(target):
     hires_section_layout.addWidget(hires_group, 2)
     hires_section_layout.addWidget(face_section, 1)
     return hires_section_layout
+
+
+def make_extras_section(target):
+    status = [['Postprocess upscale by', 'Upscale by'],
+              ['Postprocess upscale to', 'Upscale to'],
+              ['Postprocess crop to', 'Crop to'],
+              ['Postprocess upscaler', 'Upscaler 1'],
+              ['Postprocess upscaler 2', 'Upscaler 2'],
+              'GFPGAN visibility',
+              'CodeFormer visibility',
+              'CodeFormer weight',
+              'Rembg']
+    section = QGroupBox()
+    section.setLayout(label_maker(status, target, 2, 3))
+    section.setTitle('Extras / Postprocess')
+    if not target.params.get('Extras'):
+        section.setDisabled(True)
+    return section
+
+
+def make_cfg_tab(target):
+    tab_layout = QHBoxLayout()
+    cfg_fix_section = dynamic_thresholding_section(target)
+    tab_layout.addWidget(cfg_fix_section)
+    cfg_auto_scheduler_layout = QVBoxLayout()
+    cfg_auto_scheduler_layout.addWidget(cfg_auto(target))
+    cfg_auto_scheduler_layout.addWidget(cfg_scheduler_section(target))
+    tab_layout.addLayout(cfg_auto_scheduler_layout)
+    return tab_layout
+
+
+def cfg_auto(target):
+    status = ['Scheduler',
+              ['Main Strength', 'Main strength'],
+              ['Sub- Strength', 'Sub strength'],
+              ['Main Range', 'Main range'],
+              ['Sub- Range', 'Sub range']
+              ]
+    section = QGroupBox()
+    section.setLayout(label_maker(status, target, 2, 3))
+    section.setTitle('CFG auto')
+    if not target.params.get('CFG auto'):
+        section.setDisabled(True)
+    else:
+        target.used_params['CFG auto'] = True
+    return section
+
+
+def cfg_scheduler_section(target):
+    status = [['loops', 'Loops'],
+              ['target denoising', 'Target'],
+              'CFG',
+              'ETA',
+              ]
+    section = QGroupBox()
+    section.setLayout(label_maker(status, target, 1, 3, True))
+    section.setTitle('CFG scheduler')
+    if not target.params.get('CFG scheduler'):
+        section.setDisabled(True)
+    else:
+        target.used_params['CFG scheduler'] = True
+    return section
 
 
 def dynamic_thresholding_section(target):
@@ -380,9 +445,10 @@ def make_control_net_tab(target, starts):
 def make_regional_prompter_tab(target):
     filepath = target.params.get('Filepath')
     scale = config.get('RegionalPrompterPixmapSize', 350)
-    pixmap = QPixmap(filepath)
-    pixmap = pixmap.scaled(scale, int(scale * 0.7), Qt.AspectRatioMode.KeepAspectRatio,
-                           Qt.TransformationMode.FastTransformation)
+    if os.path.exists(filepath):
+        pixmap = QPixmap(filepath)
+        pixmap = pixmap.scaled(scale, int(scale * 0.7), Qt.AspectRatioMode.KeepAspectRatio,
+                               Qt.TransformationMode.FastTransformation)
 
     regional_prompter_group = QHBoxLayout()
     regional_prompter_group.addWidget(make_regional_prompter_status_section(target), 1)
@@ -393,7 +459,7 @@ def make_regional_prompter_tab(target):
     if not ratio_mode:
         ratio_mode = '---'
     main, sub = regional_prompter_ratio_check(str_ratios, ratio_mode)
-    if main and sub:
+    if main and sub and os.path.exists(filepath):
         pixmap = make_regional_prompter_pixmap(pixmap, ratio_mode, main, sub)
         ratio_pixmap_label.setPixmap(pixmap)
     else:
@@ -586,6 +652,8 @@ def label_maker(status, target, stretch_title, stretch_value, selectable=False, 
         section_layout.addWidget(value, label_count, 1)
         label_count = label_count + 1
         if not item == 'None':
+            target.used_params[key] = True
+        elif key == 'CFG' or key == 'ETA':
             target.used_params[key] = True
     if 20 > minimums > label_count:
         for i in range(minimums - label_count):

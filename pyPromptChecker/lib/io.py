@@ -23,6 +23,9 @@ def import_json(filepath):
         with open(filepath) as j:
             json_data = json.load(j)
             return json_data, None
+    except json.JSONDecodeError as e:
+        print('This is invalid JSON\n' + str(e) + '\n {}'.format(filepath))
+        return None, e
     except Exception as e:
         return 'Error occurred during loading JSON.', e
 

@@ -19,10 +19,14 @@ class ResultWindow(QMainWindow):
         self.toast_window = None
         self.progress_bar = None
         self.params = []
-        self.init_ui(targets)
+        self.filepath_list = []
+        self.file_count_list = []
+        self.extract_data(targets)
         self.image_window = ImageWindow(self)
         self.thumbnail = ThumbnailView(self)
         self.main_menu = MainMenu(self)
+        self.tab_linker = TabMenu(self)
+        self.tab_linker_enable = [False, 'Prompt']
 
         self.setWindowTitle('PNG Prompt Data')
 
@@ -39,14 +43,180 @@ class ResultWindow(QMainWindow):
         self.resize(window_width, window_height)
         self.move_centre_main()
 
-    def init_ui(self, targets):
-        ignore = config.get('IgnoreIfDataIsNotEmbedded', False)
-        error_list_parameter = config.get('ErrorList', 1)
-        total = len(targets)
-        valid_total = total
+    def init_ui(self, from_json=False):
+
+        self.root_tab = QTabWidget()
+        root_layout = QVBoxLayout()
+
+        footer_layout = make_footer_area()
+        for i in range(footer_layout.count()):
+            widget = footer_layout.itemAt(i).widget()
+            if isinstance(widget, QPushButton):
+                widget.clicked.connect(self.button_clicked)
+
+        self.file_tab(0, from_json)
+
+        tab_jump_enable = config.get('TabNavigation', True)
+        tab_minimums = config.get('TabNavigationMinimumTabs', True)
+        if tab_jump_enable and self.root_tab.count() > tab_minimums:
+            root_layout.addLayout(self.tab_navigation())
+
+        root_layout.addWidget(self.root_tab)
+        root_layout.addLayout(footer_layout)
+
+        central_widget = QWidget()
+        central_widget.setLayout(root_layout)
+
+        if self.centralWidget():
+            self.centralWidget().deleteLater()
+        self.setCentralWidget(central_widget)
+
+        self.root_tab.currentChanged.connect(self.tab_changed)
+        self.root_tab.setTabBarAutoHide(True)
+
+        self.toast_window = Toast(self)
+        self.dialog = Dialog(self)
+
+    def tab_navigation(self):
+        header_layout = tab_navigation(self.filepath_list)
+        for i in range(header_layout.count()):
+            widget = header_layout.itemAt(i).widget()
+            if isinstance(widget, QPushButton):
+                widget.clicked.connect(self.header_button_clicked)
+            elif isinstance(widget, QComboBox):
+                widget.currentIndexChanged.connect(self.header_button_clicked)
+        return header_layout
+
+    def file_tab(self, add=0, from_json=False):
+        total = len(self.params)
         image_count = 1
 
-        if len(targets) > 10:
+        if self.progress_bar:
+            self.progress_bar.setLabelText('Formatting prompt data...')
+
+        for params_index, tmp in enumerate(self.params):
+            if add > 0 and params_index < add:
+                continue
+            array_for_list = [tmp.params.get('Filepath'), tmp.params.get('Filename'), image_count - 1]
+            self.filepath_list.append(array_for_list)
+
+            if self.progress_bar:
+                self.progress_bar.update_value()
+            if total > 1:
+                tmp.params['File count'] = str(image_count) + ' / ' + str(total)
+
+            if from_json and 'Model' in tmp.params:
+                tmp.used_params['Model hash'] = True
+
+            tab_page = QWidget()
+            tab_page_layout = QVBoxLayout()
+            inner_tab = QTabWidget()
+
+            main_section = QGroupBox()
+            main_section.setObjectName('main_section')
+            main_section_layout = QHBoxLayout()
+
+            main_label_layout = make_main_section(tmp)
+            main_section_layout.addLayout(main_label_layout)
+            main_section.setLayout(main_section_layout)
+            tab_page_layout.addWidget(main_section)
+
+            target = main_section.findChild(QLabel, 'Number_value')
+            if target:
+                self.file_count_list.append(target)
+
+            pixmap_label = main_section.findChild(PixmapLabel, 'Pixmap')
+            if pixmap_label:
+                pixmap_label.clicked.connect(self.pixmap_clicked)
+            for button in ['Favourite', 'Move to', 'Delete']:
+                managing_button = main_section.findChild(QPushButton, button)
+                if managing_button:
+                    managing_button.clicked.connect(self.managing_button_clicked)
+
+            hires_tab = ['Hires upscaler', 'Face restoration', 'Extras']
+            cfg_fix_auto_tab = ['Dynamic thresholding enabled', 'CFG auto', 'CFG scheduler']
+            lora_tab = ['Lora', 'AddNet Enabled']
+
+            tabs = [['Prompts', True, True],
+                    ['Hires.fix / Extras',
+                     any(key in v for v in tmp.params for key in hires_tab),
+                     config.get('HiresCfg', True)],
+                    ['CFG',
+                     any(key in v for v in tmp.params for key in cfg_fix_auto_tab),
+                     config.get('cfg', True)],
+                    ['Lora / Add networks',
+                     any(key in v for v in tmp.params for key in lora_tab),
+                     config.get('LoraAddNet', True)],
+                    ['Tiled diffusion',
+                     'Tiled diffusion' in tmp.params,
+                     config.get('TiledDiffusion', True)],
+                    ['Control net',
+                     'ControlNet' in tmp.params,
+                     config.get('ControlNet', True)],
+                    ['Regional prompter',
+                     'RP Active' in tmp.params,
+                     config.get('RegionalPrompter', True)]
+                    ]
+
+            for index, tab in enumerate(tabs):
+                if tab[1] and tab[2]:
+                    inner_page = QWidget()
+                    if index == 0:
+                        inner_page.setLayout(make_prompt_tab(tmp))
+                    if index == 1:
+                        inner_page.setLayout(make_hires_other_tab(tmp))
+                    if index == 2:
+                        inner_page.setLayout(make_cfg_tab(tmp))
+                    if index == 3:
+                        inner_page.setLayout(make_lora_addnet_tab(tmp))
+                    if index == 4:
+                        inner_page.setLayout(make_tiled_diffusion_tab(tmp))
+                    if index == 5:
+                        inner_page = make_control_net_tab(tmp, 0)
+                    if index == 6:
+                        inner_page.setLayout(make_regional_prompter_tab(tmp))
+                    inner_tab.addTab(inner_page, tab[0])
+
+            error_list_parameter = config.get('ErrorList', 1)
+            if not error_list_parameter == 0:
+                error_page = make_error_tab(tmp, error_list_parameter)
+                inner_tab.addTab(error_page, 'Errors')
+
+            inner_tab.setTabPosition(QTabWidget.TabPosition.South)
+            inner_tab.setObjectName('extension_tab')
+            inner_tab.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+            inner_tab.customContextMenuRequested.connect(self.show_tab_menu)
+            inner_tab.currentChanged.connect(self.inner_tab_changed)
+
+            tab_page_layout.addWidget(inner_tab)
+            tab_page.setLayout(tab_page_layout)
+
+            if 'File count' in tmp.params:
+                del tmp.params['File count']
+
+            self.root_tab.addTab(tab_page, tmp.params.get('Filename', 'None'))
+            image_count = image_count + 1
+
+        if add > 0:
+            self.rewrite_file_count()
+            tab_jump_enable = config.get('TabNavigation', True)
+            tab_minimums = config.get('TabNavigationMinimumTabs', True)
+            if tab_jump_enable and self.root_tab.count() > tab_minimums:
+                tab_navigation_visible = self.centralWidget().findChild(QComboBox, 'Combo')
+                if not tab_navigation_visible:
+                    root_layout = self.centralWidget().layout()
+                    root_layout.insertLayout(0, self.tab_navigation())
+
+        if self.progress_bar:
+            self.progress_bar.close()
+
+    def extract_data(self, targets, add=False):
+        ignore = config.get('IgnoreIfDataIsNotEmbedded', False)
+        index_for_now = len(self.params)
+        total = len(targets)
+        valid_total = total
+
+        if len(targets) > 5:
             self.progress_bar = ProgressDialog(self)
             self.progress_bar.setRange(0, total * 2)
             self.progress_bar.setLabelText('Extracting PNG Chunk...')
@@ -70,137 +240,35 @@ class ResultWindow(QMainWindow):
                 return
             sys.exit()
 
-        if self.progress_bar:
-            self.progress_bar.setLabelText('Formatting prompt data...')
+        if add:
+            self.file_tab(index_for_now)
+        else:
+            self.init_ui()
 
-        root_layout = QVBoxLayout()
-        self.root_tab = QTabWidget()
-        self.filepath_list = []
-
-        for tmp in self.params:
-            array_for_list = [tmp.params.get('Filepath'), tmp.params.get('Filename'), image_count - 1]
-            self.filepath_list.append(array_for_list)
-
-            if self.progress_bar:
-                self.progress_bar.update_value()
-            if valid_total > 1:
-                tmp.params['File count'] = str(image_count) + ' / ' + str(valid_total)
-
-            tab_page = QWidget()
-            tab_page_layout = QVBoxLayout()
-            inner_tab = QTabWidget()
-
-            main_section = QGroupBox()
-            main_section.setObjectName('main_section')
-            main_section_layout = QHBoxLayout()
-
-            main_label_layout = make_main_section(tmp)
-            main_section_layout.addLayout(main_label_layout)
-            main_section.setLayout(main_section_layout)
-            tab_page_layout.addWidget(main_section)
-
-            pixmap_label = main_section.findChild(PixmapLabel, 'Pixmap')
-            pixmap_label.clicked.connect(self.pixmap_clicked)
-            for button in ['Favourite', 'Move to', 'Delete']:
-                managing_button = main_section.findChild(QPushButton, button)
-                if managing_button:
-                    managing_button.clicked.connect(self.managing_button_clicked)
-
-            hires_tab = ['Hires upscaler', 'Face restoration', 'Dynamic thresholding enabled']
-            lora_tab = ['Lora', 'AddNet Enabled']
-
-            tabs = [['Prompts', True, True],
-                    ['Hires.fix / CFG scale fix',
-                     any(key in v for v in tmp.params for key in hires_tab),
-                     config.get('HiresCfg', True)],
-                    ['Lora / Add networks',
-                     any(key in v for v in tmp.params for key in lora_tab),
-                     config.get('LoraAddNet', True)],
-                    ['Tiled diffusion',
-                     'Tiled diffusion' in tmp.params,
-                     config.get('TiledDiffusion', True)],
-                    ['Control net',
-                     'ControlNet' in tmp.params,
-                     config.get('ControlNet', True)],
-                    ['Regional prompter',
-                     'RP Active' in tmp.params,
-                     config.get('RegionalPrompter', True)]
-                    ]
-
-            for index, tab in enumerate(tabs):
-                if tab[1] and tab[2]:
-                    inner_page = QWidget()
-                    if index == 0:
-                        inner_page.setLayout(make_prompt_tab(tmp))
-                    if index == 1:
-                        inner_page.setLayout(make_hires_other_tab(tmp))
-                    if index == 2:
-                        inner_page.setLayout(make_lora_addnet_tab(tmp))
-                    if index == 3:
-                        inner_page.setLayout(make_tiled_diffusion_tab(tmp))
-                    if index == 4:
-                        inner_page = make_control_net_tab(tmp, 0)
-                    if index == 5:
-                        inner_page.setLayout(make_regional_prompter_tab(tmp))
-                    inner_tab.addTab(inner_page, tab[0])
-
-            if not error_list_parameter == 0:
-                error_page = make_error_tab(tmp, error_list_parameter)
-                inner_tab.addTab(error_page, 'Errors')
-
-            inner_tab.setTabPosition(QTabWidget.TabPosition.South)
-            inner_tab.setObjectName('extension_tab')
-            tab_page_layout.addWidget(inner_tab)
-            tab_page.setLayout(tab_page_layout)
-
-            self.root_tab.addTab(tab_page, tmp.params.get('Filename'))
-
-            image_count = image_count + 1
-
-            if 'File count' in tmp.params:
-                del tmp.params['File count']
-
-        footer_layout = make_footer_area()
-        for i in range(footer_layout.count()):
-            widget = footer_layout.itemAt(i).widget()
-            if isinstance(widget, QPushButton):
-                widget.clicked.connect(self.button_clicked)
-
-        tab_jump_enable = config.get('TabNavigation')
-        tab_minimums = config.get('TabNavigationMinimumTabs')
-        if tab_jump_enable and self.root_tab.count() > tab_minimums:
-            header_layout = tab_navigation(self.filepath_list)
-            for i in range(header_layout.count()):
-                widget = header_layout.itemAt(i).widget()
-                if isinstance(widget, QPushButton):
-                    widget.clicked.connect(self.header_button_clicked)
-                elif isinstance(widget, QComboBox):
-                    widget.currentIndexChanged.connect(self.header_button_clicked)
-            root_layout.addLayout(header_layout)
-
-        root_layout.addWidget(self.root_tab)
-        root_layout.addLayout(footer_layout)
-
-        central_widget = QWidget()
-        central_widget.setLayout(root_layout)
-
-        if self.centralWidget():
-            self.centralWidget().deleteLater()
-        self.setCentralWidget(central_widget)
-
-        if self.progress_bar:
-            self.progress_bar.close()
-
-        self.root_tab.currentChanged.connect(self.tab_changed)
-
-        self.toast_window = Toast(self)
-        self.dialog = Dialog(self)
+    def rewrite_file_count(self):
+        total = len(self.file_count_list)
+        for count, label in enumerate(self.file_count_list, 1):
+            text = str(count) + ' / ' + str(total)
+            label.setText(text)
 
     def tab_changed(self):
+        current_index = self.root_tab.currentIndex()
+        current_page = self.root_tab.widget(current_index)
+        extension_tab = current_page.findChild(QTabWidget, 'extension_tab')
         if self.image_window.isVisible():
-            current_index = self.root_tab.currentIndex()
             self.image_window.filepath = self.params[current_index].params.get('Filepath')
             self.image_window.init_image_window()
+        if self.tab_linker_enable[0]:
+            tab_name = self.tab_linker_enable[1]
+            for index in range(extension_tab.count()):
+                if extension_tab.tabText(index) == tab_name:
+                    extension_tab.setCurrentIndex(index)
+                    break
+
+    def inner_tab_changed(self):
+        current_index = self.sender().currentIndex()
+        tab_name = self.sender().tabText(current_index)
+        self.tab_linker_enable[1] = tab_name
 
     def header_button_clicked(self):
         where_from = self.sender().objectName()
@@ -318,6 +386,17 @@ class ResultWindow(QMainWindow):
             self.image_window.filepath = self.params[current_index].params.get('Filepath')
             self.image_window.init_image_window()
 
+    def show_tab_menu(self, pos):
+        current_index = self.sender().currentIndex()
+        tab_bar = self.sender().tabBar()
+        tab_rect = tab_bar.tabRect(current_index)
+        changed_pos = tab_bar.mapFrom(self.sender(), pos)
+        if tab_rect.contains(changed_pos):
+            x = tab_bar.mapToGlobal(tab_rect.topLeft()).x()
+            y = tab_bar.mapToGlobal(tab_rect.topLeft()).y() - self.tab_linker.sizeHint().height()
+            adjusted_pos = QPoint(x, y)
+            self.tab_linker.exec(adjusted_pos)
+
     def move_centre_main(self):
         screen_center = QApplication.primaryScreen().geometry().center()
         frame_geometry = self.frameGeometry()
@@ -332,6 +411,43 @@ class ResultWindow(QMainWindow):
 
     def open_thumbnail(self):
         self.thumbnail.init_thumbnail(self.filepath_list)
+
+    def import_json_from_files(self):
+        self.dialog.init_dialog('choose-files', 'Select JSONs', None, 'JSON')
+        filepaths = self.dialog.result
+        self.import_json(filepaths)
+
+    def import_json_from_directory(self):
+        self.dialog.init_dialog('choose-directory', 'Select directory')
+        directory = self.dialog.result
+        if directory:
+            filepaths = [os.path.join(directory[0], value) for value in os.listdir(directory[0]) if '.json' in value]
+            self.import_json(filepaths)
+
+    def import_json(self, filepaths):
+        if filepaths:
+            json_list = []
+            for filepath in filepaths:
+                json_data, e = io.import_json(filepath)
+                if isinstance(json_data, list):
+                    for data in json_data:
+                        if data.get('Filepath', None):
+                            json_list.append(data)
+                else:
+                    if json_data.get('Filepath', None):
+                        json_list.append(json_data)
+                if len(json_list) < 1:
+                    MessageBox('There is no valid JSON data.', 'pyPromptChecker', 'ok', 'warning', self)
+                    return
+                self.params = []
+                for prepared_json in json_list:
+                    json_class = parser.ChunkData('This data import from JSON')
+                    json_class.import_json(prepared_json)
+                    self.params.append(json_class)
+            if len(self.params) > 5:
+                self.progress_bar = ProgressDialog()
+                self.progress_bar.setRange(0, len(self.params))
+            self.init_ui(True)
 
     def export_json_single(self):
         current_index = self.root_tab.currentIndex()
@@ -383,20 +499,54 @@ class ResultWindow(QMainWindow):
             else:
                 MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
 
-    def reselect_files(self):
+    def reselect_files_duplicate_check(self, selected_filepaths):
+        shown_files = [value[0] for value in self.filepath_list]
+        unique_filepaths = set(selected_filepaths)
+        for filepath in shown_files:
+            if filepath in unique_filepaths:
+                unique_filepaths.remove(filepath)
+        result = list(unique_filepaths)
+        deleted = len(selected_filepaths) - len(result)
+        result.sort()
+        return result, deleted
+
+    def reselect_files_from_directory(self):
+        pass
+
+    def reselect_files_append(self):
+        self.reselect_files(True)
+
+    def reselect_files(self, add=False):
         self.dialog.init_dialog('choose-files', 'Select files', None, 'PNG')
         filepath = self.dialog.result
         result_list = []
         if filepath:
-            for tmp in filepath:
-                result = image_format_identifier(tmp)
-                if result:
-                    result_list.append(result)
-            self.params = []
-            self.init_ui(result_list)
-
-    def reselect_directory(self):
-        pass
+            filepath, duplicate = self.reselect_files_duplicate_check(filepath)
+            if filepath:
+                for tmp in filepath:
+                    result = image_format_identifier(tmp)
+                    if result:
+                        result_list.append(result)
+                if self.image_window.isVisible():
+                    self.image_window.close()
+                if self.thumbnail.isVisible():
+                    self.thumbnail.close()
+                if not add or len(self.params) == 1:
+                    if not add:
+                        self.params = []
+                    elif len(self.params) == 1:
+                        self.filepath_list = []
+                    if len(result_list) > 5:
+                        self.progress_bar = ProgressDialog()
+                    self.extract_data(result_list)
+                else:
+                    if len(result_list) > 5:
+                        self.progress_bar = ProgressDialog()
+                        self.progress_bar.setRange(0, len(result_list) * 2)
+                    self.extract_data(result_list, True)
+            if duplicate > 0:
+                text = "{} file(s) didn't processed due to already shown. ".format(duplicate)
+                MessageBox(text, 'pyPromptChecker', 'ok', 'info', self)
 
     def model_hash_extractor(self):
         text = 'This operation requires a significant amount of time.' \
@@ -418,6 +568,17 @@ class ResultWindow(QMainWindow):
                 QApplication.processEvents()
                 io.model_hash_maker(file_list, operation_progress)
                 MessageBox('Finished', "I'm knackered", 'ok', 'info', self)
+
+    def tab_link(self):
+        if self.tab_linker_enable[0]:
+            self.tab_linker_enable = [False, None]
+        else:
+            current_tab_index = self.root_tab.currentIndex()
+            current_tab_page = self.root_tab.widget(current_tab_index)
+            extension_tab = current_tab_page.findChild(QTabWidget, 'extension_tab')
+            extension_tab_index = extension_tab.currentIndex()
+            extension_tab_text = extension_tab.tabText(extension_tab_index) if extension_tab else None
+            self.tab_linker_enable = [True, extension_tab_text]
 
     def not_yet_implemented(self):
         MessageBox('Sorry, not yet implemented...', 'pyPromptChecker', 'ok', 'info', self)

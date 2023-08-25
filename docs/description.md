@@ -1,11 +1,14 @@
-# About
+# Supported formats and Webui extentions
   - Supported image formats
     - png
     - jpeg
   - Supported web-ui extension
     - Basic information
     - Hires.fix
-    - Dynamic threshoulding (CFG fix)
+    - Extras
+    - Dynamic thresholding (CFG fix)
+    - Auto CFG
+    - CFG scheduling
     - Add networks
     - Tiled diffusion
     - ControlNet
@@ -14,6 +17,26 @@
 # Descriptions about features
 The authors themselves had no idea it would be so feature-rich.  
 ## Config.ini
+- ### Overview
+  The behaviour of the script is configured in 'config.ini'.  
+  It will work with the default values even without it, but you may want to create your own favourite settings.  
+  The description of each configuration value is given here, but see below for a description of the individual features.
+- ### [Window] section
+  - **"MaxWindowWidth" option** (Integer)
+  - **"MaxWindowHeight" option** (Integer)
+- ### [Pixmap] section
+  - **"PixmapSize" option** (Integer)
+  - **"RegionalPrompterPixmapSize" option** (Integer)
+- ### [Tab] section
+  - **"HiresExtras" option** (Boolean)
+  - **"CFG" option** (Boolean)
+  - **"LoraAddnet" option** (Boolean)
+  - **"TiledDiffusion" option** (Boolean)
+  - **"ControlNet" option** (Boolean)
+  - **"RegionalPrompter" option** (Boolean)
+- ### [Ignore] section
+  - **"IgnoreIfDataIsNotEmbedded" option** (Boolean)
+  - **"IgnoreDuplicateWhenTabAdding" option** (Boolean)
 ## Model_list.csv
 - ### Overview  
   'model_list.csv' is a file what script locate model name from hash values.  
@@ -36,10 +59,10 @@ The authors themselves had no idea it would be so feature-rich.
 - ### Related values in 'config.ini'
   - ### [Location] section ###
     - **"ModelList" option** (Directory path)  
-      If this parameter is unset, the script will search in the same directory as 'config.ini' file by default.  
-      If relocate 'model_list.csv', **you must** declare the new path by setting this parameter.
+       If this parameter is unset, the program will search in the same directory as 'config.ini' file by default.  
+       If you relocate 'model_list.csv', **you must** declare the new path by setting this parameter.
 
-## JSON export
+## JSON import and export
 - ### Overview
   - Export creation data as JSON formatted data.
   - It can now be found in the menu > Export JSON
@@ -77,26 +100,31 @@ The authors themselves had no idea it would be so feature-rich.
 
 - ### Related values in 'config.ini'
   - ### [Location] section ###
-    - **"Favourites" option** (Filepath)  
+    - **"Favourites" option** (Directory path)  
       Set an absolute directory path here to gather your favourite images.  
       However, if you leave this value blank or enter a non-existent directory path,  
       the favourite button will still appear, but this features won't be available.
   - ### [Features] section ###
     - **"MoveDelete" option** (Boolean)  
-      If set to True, 3 buttons will be shown beneath the image.
+      If set to True, 3 buttons will be shown beneath the image.  
     - **"UseCopyInsteadOfMove" option** (Boolean)   
       If set to True, this scripts will copy file instead of moving it.  
-      *But this setting is not affected to 'Delete' feature.*
+      *But this setting is not affect to 'Delete' feature.*  
     - **"AskIfDelete" option** (Boolean)  
       If set to True, confirmation dialog will be shown when the delete button is pressed.
     - **"AskIfClearTrashBin" option[^3]** (Boolean)   
       If set to True, confirmation dialog will be shown the script exits,   
-      asking if delete all files within the TrashBin directory.  
-      
-## Tab navigation
-- ### Overview
-- ### Tab navigation
-- ### Related values in 'config.ini'
+      Asking if delete all files within the TrashBin directory.
+
+    Those values are set to True by default.
+## Tab navigation ##
+- ### Overview ###
+- ### Tab navigation ###
+- ### Related values in 'config.ini' ###
+ - ### [Features] section ###
+   - **"TabNavigation" option** (Boolean)
+   - **"TabNavigationWithThumbnails" option** (Boolean)
+   - **"TabNavigationMinimumTabs" option** (Integer)
 
 # Screenshots
 - ### Main screen

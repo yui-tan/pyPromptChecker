@@ -33,8 +33,17 @@ def chunk_text_extractor(target, method, index=1):
                 print('The index value {} is greater than the number of chunks in the file!'.format(index))
                 return None
 
-            chunk_data = chunk_list[index][1]
-            text = chunk_data.decode('utf-8', errors='ignore').replace("\x00", "")
+            text = ''
+            for i in range(1, 4):
+                chunk_data = chunk_list[i][1]
+                str_data = chunk_data.decode('utf-8', errors='ignore').replace("\x00", "")
+                if str_data.startswith('parameters'):
+                    text = text + str_data
+                elif str_data.startswith('extras'):
+                    if text:
+                        text = text + str_data.replace('extras', ',')
+                    else:
+                        text = text + str_data.replace('extras', 'parameters')
 
             if text.startswith('parameters'):
                 return text
@@ -54,6 +63,7 @@ def chunk_text_extractor(target, method, index=1):
             text = binary.decode('utf-8', errors='ignore').replace("\x00", "")
 
             if text.startswith('UNICODE'):
+                text = text.replace('UNICODE', 'parameters', 1)
                 return text
             else:
                 print('{} has not valid parameters'.format(target))
