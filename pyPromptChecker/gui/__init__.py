@@ -15,7 +15,7 @@ ini_section = [['Location', 'ModelList', 'Favourites'],
                ['Features', 'MoveDelete', 'UseCopyInsteadOfMove', 'AskIfDelete', 'AskIfClearTrashBin'],
                ['Features', 'TabNavigation', 'TabNavigationWithThumbnails', 'TabNavigationMinimumTabs'],
                ['Features', 'TabSearch'],
-               ['Tab', 'LoraAddNet', 'HiresCfg', 'TiledDiffusion', 'ControlNet', 'RegionalPrompter'],
+               ['Tab', 'HiresExtras', 'CFG', 'LoraAddNet', 'TiledDiffusion', 'ControlNet', 'RegionalPrompter'],
                ['Ignore', 'IgnoreIfDataIsNotEmbedded'],
                ['Debug', 'ErrorList'],
                ['PNG', 'TargetChunkIndex']
