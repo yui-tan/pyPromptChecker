@@ -27,11 +27,11 @@ The authors themselves had no idea it would be so feature-rich.
 Sets the maximum size of the window.  
 Not very useful in practice.  
 I'll address this soon, but for now, please treat it as a placeholder.
-  - ### [Pixmap] section
+- ### [Pixmap] section
   - **"PixmapSize" option** (Integer)  
 Sets the size of the pixmap.  
 Unlike window size, this one is always adhered to.  
-The long sides of the image maintain the aspect ratio and are scaled up/down to this size.  
+The long sides of the image are scaled up/down to this size.  
 This value has a significant effect on the size of the window itself.  
 The default value is **350**.
   - **"RegionalPrompterPixmapSize" option** (Integer)  
