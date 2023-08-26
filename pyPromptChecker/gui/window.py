@@ -18,6 +18,7 @@ class ResultWindow(QMainWindow):
         self.dialog = None
         self.toast_window = None
         self.progress_bar = None
+        self.combo = None
         self.params = []
         self.filepath_list = []
         self.file_count_list = []
@@ -85,6 +86,10 @@ class ResultWindow(QMainWindow):
                 widget.clicked.connect(self.header_button_clicked)
             elif isinstance(widget, QComboBox):
                 widget.currentIndexChanged.connect(self.header_button_clicked)
+                self.combo = widget
+        filename_list = [value[1] for value in self.filepath_list]
+        self.combo.clear()
+        self.combo.addItems(filename_list)
         return header_layout
 
     def file_tab(self, add=0, from_json=False):
@@ -206,6 +211,10 @@ class ResultWindow(QMainWindow):
                 if not tab_navigation_visible:
                     root_layout = self.centralWidget().layout()
                     root_layout.insertLayout(0, self.tab_navigation())
+                else:
+                    filename_list = [value[1] for value in self.filepath_list]
+                    self.combo.clear()
+                    self.combo.addItems(filename_list)
 
         if self.progress_bar:
             self.progress_bar.close()
@@ -246,10 +255,13 @@ class ResultWindow(QMainWindow):
             self.init_ui()
 
     def rewrite_file_count(self):
-        total = len(self.file_count_list)
-        for count, label in enumerate(self.file_count_list, 1):
-            text = str(count) + ' / ' + str(total)
-            label.setText(text)
+        total = self.root_tab.count()
+        for index in range(total):
+            text = str(index + 1) + ' / ' + str(total)
+            widget = self.root_tab.widget(index)
+            label = widget.findChild(QLabel, 'Number_value')
+            if label:
+                label.setText(text)
 
     def tab_changed(self):
         current_index = self.root_tab.currentIndex()
@@ -273,9 +285,11 @@ class ResultWindow(QMainWindow):
     def header_button_clicked(self):
         where_from = self.sender().objectName()
         if where_from == 'Jump to' or where_from == 'Combo':
-            combo_box = self.centralWidget().findChild(QComboBox, 'Combo')
-            target_tab = combo_box.currentText()
-            self.root_tab_change(target_tab)
+            if self.centralWidget():
+                combo_box = self.centralWidget().findChild(QComboBox, 'Combo')
+                if combo_box:
+                    target_tab = combo_box.currentText()
+                    self.root_tab_change(target_tab)
         elif where_from == 'Thumbnail':
             self.open_thumbnail()
         elif where_from == 'Search':
@@ -440,6 +454,7 @@ class ResultWindow(QMainWindow):
                     MessageBox('There is no valid JSON data.', 'pyPromptChecker', 'ok', 'warning', self)
                     return
                 self.params = []
+                self.filepath_list = []
                 for prepared_json in json_list:
                     json_class = parser.ChunkData('This data import from JSON')
                     json_class.import_json(prepared_json)
@@ -520,8 +535,11 @@ class ResultWindow(QMainWindow):
         self.dialog.init_dialog('choose-files', 'Select files', None, 'PNG')
         filepath = self.dialog.result
         result_list = []
+        duplicate = 0
+        flag = False
         if filepath:
-            filepath, duplicate = self.reselect_files_duplicate_check(filepath)
+            if add:
+                filepath, duplicate = self.reselect_files_duplicate_check(filepath)
             if filepath:
                 for tmp in filepath:
                     result = image_format_identifier(tmp)
@@ -532,21 +550,26 @@ class ResultWindow(QMainWindow):
                 if self.thumbnail.isVisible():
                     self.thumbnail.close()
                 if not add or len(self.params) == 1:
+                    self.filepath_list = []
                     if not add:
                         self.params = []
-                    elif len(self.params) == 1:
-                        self.filepath_list = []
                     if len(result_list) > 5:
                         self.progress_bar = ProgressDialog()
                     self.extract_data(result_list)
+                    flag = True
                 else:
                     if len(result_list) > 5:
                         self.progress_bar = ProgressDialog()
                         self.progress_bar.setRange(0, len(result_list) * 2)
                     self.extract_data(result_list, True)
+                    flag = True
             if duplicate > 0:
                 text = "{} file(s) didn't processed due to already shown. ".format(duplicate)
                 MessageBox(text, 'pyPromptChecker', 'ok', 'info', self)
+            if add and flag:
+                self.toast_window.init_toast('Added!', 1000)
+            elif flag:
+                self.toast_window.init_toast('Replaced!', 1000)
 
     def model_hash_extractor(self):
         text = 'This operation requires a significant amount of time.' \
