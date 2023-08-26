@@ -1,4 +1,4 @@
-# Supported formats and Webui extentions
+# Supported formats and Webui extensions
   - Supported image formats
     - png
     - jpeg
@@ -23,20 +23,36 @@ The authors themselves had no idea it would be so feature-rich.
   The description of each configuration value is given here, but see below for a description of the individual features.
 - ### [Window] section
   - **"MaxWindowWidth" option** (Integer)
-  - **"MaxWindowHeight" option** (Integer)
-- ### [Pixmap] section
-  - **"PixmapSize" option** (Integer)
-  - **"RegionalPrompterPixmapSize" option** (Integer)
+  - **"MaxWindowHeight" option** (Integer)   
+Sets the maximum size of the window.  
+Not very useful in practice.  
+I'll address this soon, but for now, please treat it as a placeholder.
+  - ### [Pixmap] section
+  - **"PixmapSize" option** (Integer)  
+Sets the size of the pixmap.  
+Unlike window size, this one is always adhered to.  
+The long sides of the image maintain the aspect ratio and are scaled up/down to this size.  
+This value has a significant effect on the size of the window itself.  
+The default value is **350**.
+  - **"RegionalPrompterPixmapSize" option** (Integer)  
+Set the size of pixmap of regional prompter tab.  
+This value also has the same overview as the previous 'PixmapSize' option.  
+The default value is **500**.
 - ### [Tab] section
   - **"HiresExtras" option** (Boolean)
   - **"CFG" option** (Boolean)
   - **"LoraAddnet" option** (Boolean)
   - **"TiledDiffusion" option** (Boolean)
   - **"ControlNet" option** (Boolean)
-  - **"RegionalPrompter" option** (Boolean)
+  - **"RegionalPrompter" option** (Boolean)  
+Setting show/hide tab at the bottom of the window.  
+If set to false, the script don't create tab even if the image uses applicable extension.
 - ### [Ignore] section
-  - **"IgnoreIfDataIsNotEmbedded" option** (Boolean)
-  - **"IgnoreDuplicateWhenTabAdding" option** (Boolean)
+  - **"IgnoreIfDataIsNotEmbedded" option** (Boolean)  
+Setting behaviour if image has no embedded data.  
+If set to True, the script does not create image's tab.  
+If set to False, it creates image's tab with minimum information.  
+(e.g. filepath, filename, etc)
 ## Model_list.csv
 - ### Overview  
   'model_list.csv' is a file what script locate model name from hash values.  
@@ -52,7 +68,7 @@ The authors themselves had no idea it would be so feature-rich.
 
   - The display name in the first column is the same as the filename if freshly output from the script.
   - But there is no issue to  edit it according to your preference.
-  - The each of value must be comma-separated and the values must not be enclosed in quotation marks.  
+  - Each of value must be comma-separated and the values must not be enclosed in quotation marks.  
   - The script uses the first and second columns for searching.  
   - Therefore, you can delete columns from the third onward or add something in columns from the sixth onward without any issues.  
 
