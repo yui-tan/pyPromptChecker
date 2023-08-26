@@ -216,6 +216,9 @@ class ResultWindow(QMainWindow):
                     self.combo.clear()
                     self.combo.addItems(filename_list)
 
+        for index in range(len(self.filepath_list)):
+            self.filepath_list[index][2] = index
+
         if self.progress_bar:
             self.progress_bar.close()
 
