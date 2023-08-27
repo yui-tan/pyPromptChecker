@@ -98,7 +98,6 @@ def main(test=False):
 
     if filepaths:
         valid_filepath, not_found_list, directory_list, not_png_list = check_files(filepaths)
-
         if not_found_list:
             print('\n'.join(not_found_list))
             print('These files are not found')
@@ -114,6 +113,8 @@ def main(test=False):
         print('a hoy!!!!')
         valid_filepath.sort()
         window.from_main('result', valid_filepath)
+    else:
+        print('Cancelled!')
 
 
 if __name__ == '__main__':

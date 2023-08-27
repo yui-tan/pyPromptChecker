@@ -30,11 +30,11 @@ def chunk_text_extractor(target, method, index=1):
             chunk_list = list(chunks)
 
             if index >= len(chunk_list):
-                print('The index value {} is greater than the number of chunks in the file!'.format(index))
+                print('{} has no embedded data!'.format(target))
                 return None
 
             text = ''
-            for i in range(1, 4):
+            for i in range(index, index + 4):
                 chunk_data = chunk_list[i][1]
                 str_data = chunk_data.decode('utf-8', errors='ignore').replace("\x00", "")
                 if str_data.startswith('parameters'):

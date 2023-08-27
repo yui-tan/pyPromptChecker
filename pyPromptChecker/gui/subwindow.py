@@ -61,9 +61,11 @@ class ThumbnailView(QMainWindow):
 
     def init_thumbnail(self, filelist):
         self.filelist_original = filelist
+
         progress = ProgressDialog()
         progress.setLabelText('Loading...')
         progress.setRange(0, len(filelist))
+
         base_layout = QGridLayout()
         row = col = 0
 
@@ -83,7 +85,7 @@ class ThumbnailView(QMainWindow):
             pixmap_label.setPixmap(pixmap)
             pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
             pixmap_label.setToolTip(filename)
-            pixmap_label.setObjectName(filename)
+            pixmap_label.setObjectName(str(tab_index))
             pixmap_label.clicked.connect(self.pixmap_clicked)
 
             check_box = QCheckBox(filename)
@@ -150,9 +152,9 @@ class ThumbnailView(QMainWindow):
                     self.filelist_for_return.remove(array[0])
 
     def pixmap_clicked(self):
-        self.parent().activateWindow()
         target_tab = self.sender().objectName()
-        self.parent().root_tab_change(target_tab)
+        self.parent().root_tab.setCurrentIndex(int(target_tab))
+        self.parent().activateWindow()
 
     def json_button_clicked(self):
         index_list = []

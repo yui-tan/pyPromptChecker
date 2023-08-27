@@ -10,43 +10,53 @@ from PyQt6.QtGui import QPixmap, QPainter, QColor
 from PyQt6.QtCore import Qt
 
 
-def make_footer_area():
+def make_footer_area(parent):
     json_export_enable = config.get('JsonExport', False)
     footer_layout = QHBoxLayout()
     button_text = ['Copy positive', 'Copy negative', 'Copy seed']
     if json_export_enable:
         button_text.extend(['Export JSON (This)', 'Export JSON (All)'])
-    button_text.append('Menu')
+    button_text.append('▲Menu')
     for tmp in button_text:
         footer_button = QPushButton(tmp)
         footer_button.setObjectName(tmp)
+        footer_button.clicked.connect(parent.button_clicked)
         footer_layout.addWidget(footer_button)
-        if tmp == 'Menu':
-            footer_button.setText('▲Menu')
     return footer_layout
 
 
-def tab_navigation(filename_list):
-    filename_list = [array[1] for array in filename_list]
+def tab_navigation(parent):
     tab_search = config.get('TabSearch', True)
     thumbnails = config.get('TabNavigationWithThumbnails', True)
+    filename_list = [value.params.get('Filename') for value in parent.params]
+
     header_layout = QHBoxLayout()
+
     dropdown_box = QComboBox()
     dropdown_box.addItems(filename_list)
     dropdown_box.setEditable(True)
     dropdown_box.setObjectName('Combo')
-    jump_to_button = QPushButton('Jump to')
-    jump_to_button.setObjectName('Jump to')
+    dropdown_box.currentIndexChanged.connect(parent.header_button_clicked)
+
+    listview_button = QPushButton('Listview')
+    listview_button.setObjectName('Listview')
+    listview_button.clicked.connect(parent.header_button_clicked)
+
     if tab_search:
         search_button = QPushButton('Search')
         search_button.setObjectName('Search')
+        search_button.clicked.connect(parent.header_button_clicked)
         header_layout.addWidget(search_button, 1)
+
     header_layout.addWidget(dropdown_box, 5)
-    header_layout.addWidget(jump_to_button, 1)
+    header_layout.addWidget(listview_button, 1)
+
     if thumbnails:
         thumbnail_button = QPushButton('Thumbnail')
         thumbnail_button.setObjectName('Thumbnail')
+        thumbnail_button.clicked.connect(parent.header_button_clicked)
         header_layout.addWidget(thumbnail_button, 1)
+
     return header_layout
 
 

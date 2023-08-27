@@ -59,7 +59,7 @@ class ChunkData:
                 region_control += 1
             if 'Postprocess' in key:
                 extras += 1
-            if 'Scheduler' in key:
+            if key == 'Scheduler':
                 cfg_auto += 1
             self.params[key] = value
         if control_net > 0:
