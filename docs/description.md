@@ -2,6 +2,7 @@
   - Supported image formats
     - png
     - jpeg
+    - webp
   - Supported web-ui extension
     - Basic information
     - Hires.fix

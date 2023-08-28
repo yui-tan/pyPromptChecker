@@ -29,6 +29,8 @@ class MainMenu(QMenu):
 
         self.model_hash_extractor = QAction('Model hash extractor', self)
         self.quit = QAction('Quit', self)
+        self.dark_mode = QAction('Dark mode', self)
+        self.dark_mode.setCheckable(True)
 
         self.addAction(self.model_hash_extractor)
 
@@ -49,9 +51,14 @@ class MainMenu(QMenu):
 
         self.addSeparator()
 
+        self.addAction(self.dark_mode)
+
+        self.addSeparator()
+
         self.addAction(self.quit)
 
         self.quit.triggered.connect(quit_triggered)
+        self.dark_mode.triggered.connect(self.main.not_yet_implemented)
         self.model_hash_extractor.triggered.connect(self.main.model_hash_extractor)
         self.reselect_add.triggered.connect(self.main.reselect_files_append)
         self.reselect_renewal.triggered.connect(self.main.reselect_files)

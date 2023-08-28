@@ -55,7 +55,7 @@ def chunk_text_extractor(target, method, index=1):
             print('An error occurred while decoding: {}\n{}'.format(target, str(e)))
             return None
 
-    elif method == 1:
+    elif method == 1 or method == 2:
         try:
             img = Image.open(target)
             exif = img._getexif()

@@ -56,7 +56,7 @@ class Dialog(QFileDialog):
         if str_filter == 'JSON':
             self.file_filter = 'JSON Files(*.json)'
         elif str_filter == 'PNG':
-            self.file_filter = 'Image files(*.png *.jpg *.jpeg)'
+            self.file_filter = 'Image files(*.png *.jpg *.jpeg *.webp)'
 
 
 class ProgressDialog(QProgressDialog):

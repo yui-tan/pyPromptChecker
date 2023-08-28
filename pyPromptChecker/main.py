@@ -5,8 +5,8 @@ import sys
 import argparse
 import glob
 
-from pyPromptChecker.lib import decoder
-from pyPromptChecker.gui import window
+from lib import decoder
+from gui import window
 
 
 def is_directory_check(filepaths):

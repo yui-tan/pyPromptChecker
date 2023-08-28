@@ -1,8 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import sys
-from . import config
+import qdarktheme
+
 from pyPromptChecker.lib import *
+
+# sys.path.append('../')
+# from lib import *
+
+from . import config
 from .dialog import *
 from .subwindow import *
 from .widget import *
@@ -43,7 +49,7 @@ class ResultWindow(QMainWindow):
         self.move_centre_main()
 
     def init_ui(self):
-        tab_jump_enable = config.get('TabNavigation', True)
+        tab_navigation_enable = config.get('TabNavigation', True)
         tab_minimums = config.get('TabNavigationMinimumTabs', True)
 
         self.root_tab = QTabWidget()
@@ -53,7 +59,7 @@ class ResultWindow(QMainWindow):
         footer_layout = make_footer_area(self)
         self.make_root_tab()
 
-        if tab_jump_enable and self.root_tab.count() > tab_minimums:
+        if tab_navigation_enable and self.root_tab.count() > tab_minimums:
             root_layout.addLayout(tab_navigation(self))
         root_layout.addWidget(self.root_tab)
         root_layout.addLayout(footer_layout)
@@ -213,7 +219,8 @@ class ResultWindow(QMainWindow):
             if 'File count' in tmp.params:
                 del tmp.params['File count']
 
-            self.root_tab.addTab(tab_page, tmp.params.get('Filename', 'None'))
+            self.root_tab.addTab(tab_page, tmp.params.get('Filename', '---'))
+            self.root_tab.setTabToolTip(shown_tab + image_count, tmp.params.get('Filename', '---'))
             image_count += 1
 
         if total != image_count and self.centralWidget():
@@ -606,12 +613,14 @@ class ResultWindow(QMainWindow):
 def from_main(purpose, target_data=None):
     if purpose == 'directory':
         app = QApplication(sys.argv)
+        qdarktheme.setup_theme('dark')
         open_directory = Dialog()
         open_directory.init_dialog('choose-directory', 'Select directory')
         result = open_directory.result
         return result
     elif purpose == 'files':
         app = QApplication(sys.argv)
+        qdarktheme.setup_theme('dark')
         open_files = Dialog()
         open_files.init_dialog('choose-files', 'Select files', None, 'PNG')
         result = open_files.result
@@ -620,6 +629,7 @@ def from_main(purpose, target_data=None):
         app = QApplication.instance()
         if app is None:
             app = QApplication(sys.argv)
+        qdarktheme.setup_theme('dark')
         progress = ProgressDialog()
         return app, progress
     elif purpose == 'result':
@@ -627,5 +637,6 @@ def from_main(purpose, target_data=None):
         if app is None:
             app = QApplication(sys.argv)
         result_window = ResultWindow(target_data)
+        qdarktheme.setup_theme('dark')
         result_window.show()
         sys.exit(app.exec())
