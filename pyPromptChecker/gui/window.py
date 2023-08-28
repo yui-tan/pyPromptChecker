@@ -2,7 +2,6 @@
 
 import sys
 import qdarktheme
-
 from pyPromptChecker.lib import *
 
 # sys.path.append('../')
@@ -613,14 +612,14 @@ class ResultWindow(QMainWindow):
 def from_main(purpose, target_data=None):
     if purpose == 'directory':
         app = QApplication(sys.argv)
-        qdarktheme.setup_theme('dark')
+        qdarktheme.setup_theme('auto')
         open_directory = Dialog()
         open_directory.init_dialog('choose-directory', 'Select directory')
         result = open_directory.result
         return result
     elif purpose == 'files':
         app = QApplication(sys.argv)
-        qdarktheme.setup_theme('dark')
+        qdarktheme.setup_theme('auto')
         open_files = Dialog()
         open_files.init_dialog('choose-files', 'Select files', None, 'PNG')
         result = open_files.result
@@ -629,7 +628,7 @@ def from_main(purpose, target_data=None):
         app = QApplication.instance()
         if app is None:
             app = QApplication(sys.argv)
-        qdarktheme.setup_theme('dark')
+        qdarktheme.setup_theme('auto')
         progress = ProgressDialog()
         return app, progress
     elif purpose == 'result':
@@ -637,6 +636,6 @@ def from_main(purpose, target_data=None):
         if app is None:
             app = QApplication(sys.argv)
         result_window = ResultWindow(target_data)
-        qdarktheme.setup_theme('dark')
+        qdarktheme.setup_theme('auto')
         result_window.show()
         sys.exit(app.exec())

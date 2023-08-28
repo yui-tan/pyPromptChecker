@@ -1,12 +1,19 @@
 # -*- coding: utf-8 -*-
 
 import os
+import sys
 import configparser
 
 config = {}
 
+config_file = os.path.join(os.path.abspath(''), 'config.ini')
+model_list = os.path.join(os.path.abspath(''), 'model_list')
+if not os.path.exists(config_file):
+    config_file = os.path.join(os.path.dirname(sys.executable), 'config.ini')
+    model_list = os.path.join(os.path.dirname(sys.executable), 'model_list.csv')
+
 ini_config = configparser.ConfigParser()
-ini_config.read('config.ini', encoding='utf-8')
+ini_config.read(config_file, encoding='utf-8')
 ini_section = [['Location', 'ModelList', 'Favourites'],
                ['Window', 'MaxWindowWidth', 'MaxWindowHeight'],
                ['Pixmap', 'PixmapSize', 'RegionalPrompterPixmapSize'],
