@@ -6,16 +6,14 @@ import configparser
 
 config = {}
 
-config_file = os.path.join(os.path.abspath(''), 'config.ini')
-model_list = os.path.join(os.path.abspath(''), 'model_list')
+config_file = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), 'config.ini')
 if not os.path.exists(config_file):
-    config_file = os.path.join(os.path.dirname(sys.executable), 'config.ini')
-    model_list = os.path.join(os.path.dirname(sys.executable), 'model_list.csv')
+    config_file = os.path.join('', 'config.ini')
 
 ini_config = configparser.ConfigParser()
 ini_config.read(config_file, encoding='utf-8')
 ini_section = [['Location', 'ModelList', 'Favourites'],
-               ['Window', 'MaxWindowWidth', 'MaxWindowHeight'],
+               ['Window', 'MaxWindowWidth', 'MaxWindowHeight', 'AlwaysStartWithDarkMode'],
                ['Pixmap', 'PixmapSize', 'RegionalPrompterPixmapSize'],
                ['Features', 'ModelHashExtractor'],
                ['Features', 'JsonExport', 'JsonSingle', 'JsonMultiple', 'JsonSelected'],
@@ -38,7 +36,7 @@ for ini in ini_section:
                     value = value.replace('\\\\', '\\')
                 if os.path.exists(value):
                     config[option] = value
-            elif section == 'Window' or section == 'Pixmap':
+            elif (section == 'Window' and not option == 'AlwaysStartWithDarkMode') or section == 'Pixmap':
                 try:
                     value = ini_config[section].getint(option)
                 except ValueError:
@@ -81,4 +79,8 @@ for ini in ini_section:
                 config[option] = value
 
 if not config.get('ModelList'):
-    config['ModelList'] = os.path.join(os.path.abspath(''), 'model_list.csv')
+    model_list = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), 'model_list.csv')
+    if os.path.exists(model_list):
+        config['ModelList'] = model_list
+    else:
+        config['ModelList'] = os.path.join(os.path.abspath(''), 'model_list.csv')

@@ -19,6 +19,7 @@ from PyQt6.QtCore import Qt, QPoint
 class ResultWindow(QMainWindow):
     def __init__(self, targets=None):
         super().__init__()
+        self.dark = config.get('AlwaysStartWithDarkMode')
         self.root_tab = None
         self.dialog = None
         self.toast_window = None
@@ -37,11 +38,14 @@ class ResultWindow(QMainWindow):
         size_hint_width = self.sizeHint().width()
         size_hint_height = self.sizeHint().height()
 
-        max_width = config.get('MaxWindowWidth', 650)
-        max_height = config.get('MaxWindowHeight', 800)
+        max_width = config.get('MaxWindowWidth', 700)
+        max_height = config.get('MaxWindowHeight', 950)
 
         window_width = size_hint_width if max_width > size_hint_width else max_width
         window_height = size_hint_height if max_height > size_hint_height else max_height
+
+        self.setMaximumWidth(max_width)
+        self.setMaximumHeight(max_height)
 
         self.show()
         self.resize(window_width, window_height)
@@ -524,39 +528,44 @@ class ResultWindow(QMainWindow):
         duplicate = 0
         flag = False
 
-        if filepath and add:
-            filepath, duplicate = self.reselect_files_duplicate_check(filepath)
-            if not filepath:
-                MessageBox('Those files are already shown!', 'pyPromptChecker', 'ok', 'info', self)
-                return
         if filepath:
+            if add:
+                filepath, duplicate = self.reselect_files_duplicate_check(filepath)
+                if not filepath:
+                    MessageBox('Those files are already shown!', 'pyPromptChecker', 'ok', 'info', self)
+                    return
+            if add and len(self.params) == 1:
+                shown_filepath = self.params[0].params.get('Filepath')
+                filepath.insert(0, shown_filepath)
+                flag = True
+                add = False
             for tmp in filepath:
                 result = image_format_identifier(tmp)
                 if result:
                     result_list.append(result)
-        if not result_list:
-            MessageBox('There is no image files to parse!', 'pyPromptChecker', 'ok', 'info', self)
-            return
-        if self.image_window.isVisible():
-            self.image_window.close()
-        if self.thumbnail.isVisible():
-            self.thumbnail.close()
-        if len(result_list) > 10:
-            self.progress_bar = ProgressDialog()
-            self.progress_bar.setRange(0, len(result_list) * 2)
-        if not add:
-            self.params = []
-            self.extract_data(result_list)
-        else:
-            self.extract_data(result_list)
-            flag = True
-        if duplicate > 0:
-            text = "{} file(s) didn't processed due to already shown. ".format(duplicate)
-            MessageBox(text, 'pyPromptChecker', 'ok', 'info', self)
-        if flag:
-            self.toast_window.init_toast('Added!', 1000)
-        else:
-            self.toast_window.init_toast('Replaced!', 1000)
+            if not result_list:
+                MessageBox('There is no image files to parse!', 'pyPromptChecker', 'ok', 'info', self)
+                return
+            if self.image_window.isVisible():
+                self.image_window.close()
+            if self.thumbnail.isVisible():
+                self.thumbnail.close()
+            if len(result_list) > 10:
+                self.progress_bar = ProgressDialog()
+                self.progress_bar.setRange(0, len(result_list) * 2)
+            if not add:
+                self.params = []
+                self.extract_data(result_list)
+            else:
+                self.extract_data(result_list)
+                flag = True
+            if duplicate > 0:
+                text = "{} file(s) didn't processed due to already shown. ".format(duplicate)
+                MessageBox(text, 'pyPromptChecker', 'ok', 'info', self)
+            if flag:
+                self.toast_window.init_toast('Added!', 1000)
+            else:
+                self.toast_window.init_toast('Replaced!', 1000)
 
     def model_hash_extractor(self):
         text = 'This operation requires a significant amount of time.' \
@@ -591,8 +600,18 @@ class ResultWindow(QMainWindow):
             extension_tab_text = extension_tab.tabText(extension_tab_index) if extension_tab else None
             self.tab_linker_enable = [True, extension_tab_text]
 
+    def change_themes(self):
+        if self.dark:
+            qdarktheme.setup_theme('light')
+#            qdarktheme.setup_theme(additional_qss=add_stylesheet())
+            self.dark = False
+        else:
+            qdarktheme.setup_theme('dark')
+            qdarktheme.setup_theme(additional_qss=add_stylesheet())
+            self.dark = True
+
     def not_yet_implemented(self):
-        MessageBox('Sorry, not yet implemented...', 'pyPromptChecker', 'ok', 'info', self)
+        MessageBox('Sorry this feature is not yet implemented.', 'pyPromptChecker', 'ok', 'info', self)
 
     def closeEvent(self, event):
         trash_bin = os.path.join(os.path.abspath(''), '.trash')
@@ -609,17 +628,37 @@ class ResultWindow(QMainWindow):
         QApplication.quit()
 
 
+def add_stylesheet():
+    stylesheet = "QPushButton { color: #86cecb; }" \
+                 "QPushButton:hover { background:rgba(134, 206, 203, 0.110) }" \
+                 "QPushButton:default { background: #86cecb; }" \
+                 "QPushButton:default:hover {background: #86cecb; }" \
+                 "QPushButton:default:pressed,QPushButton:default:checked {background: #86cecb; }" \
+                 "QLabel { selection-background-color: #137a7f; }"\
+                 "QTextEdit:focus, QTextEdit:selected { selection-background-color: #137a7f; }"\
+                 "QTextEdit:focus { border-color: #86cecb; }"\
+                 "QSplitter:handle:hover { background-color: #86cecb; }" \
+                 "QTabBar:tab:selected:enabled { color: #86cecb; border-color: #86cecb; }"
+    return stylesheet
+
+
 def from_main(purpose, target_data=None):
+    theme = config.get('AlwaysStartWithDarkMode')
+    qdarktheme.enable_hi_dpi()
     if purpose == 'directory':
         app = QApplication(sys.argv)
-        qdarktheme.setup_theme('auto')
+        if theme:
+            qdarktheme.setup_theme('dark')
+            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         open_directory = Dialog()
         open_directory.init_dialog('choose-directory', 'Select directory')
         result = open_directory.result
         return result
     elif purpose == 'files':
         app = QApplication(sys.argv)
-        qdarktheme.setup_theme('auto')
+        if theme:
+            qdarktheme.setup_theme('dark')
+            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         open_files = Dialog()
         open_files.init_dialog('choose-files', 'Select files', None, 'PNG')
         result = open_files.result
@@ -628,7 +667,9 @@ def from_main(purpose, target_data=None):
         app = QApplication.instance()
         if app is None:
             app = QApplication(sys.argv)
-        qdarktheme.setup_theme('auto')
+        if theme:
+            qdarktheme.setup_theme('dark')
+            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         progress = ProgressDialog()
         return app, progress
     elif purpose == 'result':
@@ -636,6 +677,8 @@ def from_main(purpose, target_data=None):
         if app is None:
             app = QApplication(sys.argv)
         result_window = ResultWindow(target_data)
-        qdarktheme.setup_theme('auto')
+        if theme:
+            qdarktheme.setup_theme('dark')
+            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         result_window.show()
         sys.exit(app.exec())

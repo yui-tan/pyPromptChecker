@@ -33,6 +33,9 @@ class MainMenu(QMenu):
         self.dark_mode = QAction('Dark mode', self)
         self.dark_mode.setCheckable(True)
 
+        if self.main.dark:
+            self.dark_mode.setChecked(True)
+
         self.addAction(self.model_hash_extractor)
 
         self.reselect_menu.addAction(self.reselect_add)
@@ -59,7 +62,7 @@ class MainMenu(QMenu):
         self.addAction(self.quit)
 
         self.quit.triggered.connect(quit_triggered)
-        self.dark_mode.triggered.connect(self.theme_change)
+        self.dark_mode.triggered.connect(self.main.change_themes)
         self.model_hash_extractor.triggered.connect(self.main.model_hash_extractor)
         self.reselect_add.triggered.connect(self.main.reselect_files_append)
         self.reselect_renewal.triggered.connect(self.main.reselect_files)
@@ -68,12 +71,6 @@ class MainMenu(QMenu):
         self.json_export_single.triggered.connect(self.main.export_json_single)
         self.json_export_all.triggered.connect(self.main.export_json_all)
         self.json_export_selected.triggered.connect(self.main.open_thumbnail)
-
-    def theme_change(self):
-        if self.sender().isChecked():
-            qdarktheme.setup_theme('dark')
-        else:
-            qdarktheme.setup_theme('light')
 
 
 class TabMenu(QMenu):

@@ -1,7 +1,17 @@
 # -*- coding: utf-8 -*-
 
+import json
 import png
 from PIL import Image
+
+
+def is_json_check(filepath):
+    try:
+        with open(filepath, 'r') as f:
+            json.load(f)
+        return True
+    except (json.JSONDecodeError, FileNotFoundError):
+        return False
 
 
 def image_format_identifier(filepath):
@@ -17,6 +27,8 @@ def image_format_identifier(filepath):
             return [filepath, 1]
         elif file_header.startswith(webp_head_signature) and file_header.endswith(webp_foot_signature):
             return [filepath, 2]
+        elif is_json_check(filepath):
+            return [filepath, 9]
         else:
             return None
 
