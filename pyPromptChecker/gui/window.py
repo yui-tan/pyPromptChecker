@@ -44,8 +44,8 @@ class ResultWindow(QMainWindow):
         window_width = size_hint_width if max_width > size_hint_width else max_width
         window_height = size_hint_height if max_height > size_hint_height else max_height
 
-        self.setMaximumWidth(max_width)
-        self.setMaximumHeight(max_height)
+#        self.setMaximumWidth(max_width)
+#        self.setMaximumHeight(max_height)
 
         self.show()
         self.resize(window_width, window_height)
@@ -202,7 +202,7 @@ class ResultWindow(QMainWindow):
                     if index == 5:
                         inner_page = make_control_net_tab(tmp, 0)
                     if index == 6:
-                        inner_page.setLayout(make_regional_prompter_tab(tmp))
+                        inner_page = make_regional_prompter_tab(tmp)
                     inner_tab.addTab(inner_page, tab[0])
 
             error_list_parameter = config.get('ErrorList', 1)

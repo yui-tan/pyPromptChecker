@@ -517,7 +517,17 @@ def make_regional_prompter_tab(target):
     ratio_strings_section.setLayout(ratio_strings_section_layout)
     regional_prompter_group.addWidget(ratio_strings_section, 2)
 
-    return regional_prompter_group
+    scroll_area = QScrollArea()
+    content_widget = QWidget()
+    content_widget.setLayout(regional_prompter_group)
+    scroll_area.setWidget(content_widget)
+
+    scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    scroll_area.setStyleSheet("QScrollArea { border: 0px; }")
+    scroll_area.setContentsMargins(0, 0, 0, 0)
+    content_widget.setContentsMargins(0, 0, 0, 0)
+
+    return scroll_area
 
 
 def make_regional_prompter_status_section(target):
