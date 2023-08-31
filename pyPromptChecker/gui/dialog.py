@@ -56,7 +56,7 @@ class Dialog(QFileDialog):
         if str_filter == 'JSON':
             self.file_filter = 'JSON Files(*.json)'
         elif str_filter == 'PNG':
-            self.file_filter = 'Image files(*.png *.jpg *.jpeg)'
+            self.file_filter = 'Image files(*.png *.jpg *.jpeg *.webp)'
 
 
 class ProgressDialog(QProgressDialog):
@@ -143,12 +143,10 @@ class Toast(QWidget):
         self.adjustSize()
         adjust_x = int(self.sizeHint().width() / 2)
         adjust_y = int(self.sizeHint().height() / 2)
-        x = self.parent().mapToGlobal(self.parent().rect().topLeft()).x()
-        y = self.parent().mapToGlobal(self.parent().rect().topLeft()).y()
         width = self.parent().rect().width()
         height = self.parent().rect().height()
-        x = + int(width / 2)
-        y = + int(height / 2)
+        x = int(width / 2)
+        y = int(height / 2)
         self.move(x - adjust_x, y - adjust_y)
 
         self.timer = QTimer()

@@ -76,9 +76,9 @@ mikkumiku -d DIRECTORY, --directory DIRECTORY
 # Roadmap
  - [x] Tab navigation with thumbnails
  - [ ] Filtering and searching tabs various conditions
- - [ ] Add support for other image file formats
+ - [x] Add support for other image file formats
     - [x] jpeg
-    - [ ] else
+    - [x] webp
  - [x] Add support for import JSON
  - [ ] Export Data to Stable-Diffusion-Webui via API
  - [ ] Get marry to Miku

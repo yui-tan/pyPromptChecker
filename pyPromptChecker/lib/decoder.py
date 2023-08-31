@@ -1,7 +1,17 @@
 # -*- coding: utf-8 -*-
 
+import json
 import png
 from PIL import Image
+
+
+def is_json_check(filepath):
+    try:
+        with open(filepath, 'r') as f:
+            json.load(f)
+        return True
+    except (json.JSONDecodeError, FileNotFoundError):
+        return False
 
 
 def image_format_identifier(filepath):
@@ -17,6 +27,8 @@ def image_format_identifier(filepath):
             return [filepath, 1]
         elif file_header.startswith(webp_head_signature) and file_header.endswith(webp_foot_signature):
             return [filepath, 2]
+        elif is_json_check(filepath):
+            return [filepath, 9]
         else:
             return None
 
@@ -30,11 +42,11 @@ def chunk_text_extractor(target, method, index=1):
             chunk_list = list(chunks)
 
             if index >= len(chunk_list):
-                print('The index value {} is greater than the number of chunks in the file!'.format(index))
+                print('{} has no embedded data!'.format(target))
                 return None
 
             text = ''
-            for i in range(1, 4):
+            for i in range(index, index + 4):
                 chunk_data = chunk_list[i][1]
                 str_data = chunk_data.decode('utf-8', errors='ignore').replace("\x00", "")
                 if str_data.startswith('parameters'):
@@ -55,7 +67,7 @@ def chunk_text_extractor(target, method, index=1):
             print('An error occurred while decoding: {}\n{}'.format(target, str(e)))
             return None
 
-    elif method == 1:
+    elif method == 1 or method == 2:
         try:
             img = Image.open(target)
             exif = img._getexif()

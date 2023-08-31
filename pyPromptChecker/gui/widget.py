@@ -4,49 +4,59 @@ import datetime
 import os
 from . import config
 from .dialog import PixmapLabel
-from PyQt6.QtWidgets import QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QComboBox, QTextEdit
+from PyQt6.QtWidgets import QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QComboBox, QTextEdit, QSizePolicy
 from PyQt6.QtWidgets import QGroupBox, QTabWidget, QScrollArea, QSplitter, QGridLayout, QWidget
 from PyQt6.QtGui import QPixmap, QPainter, QColor
 from PyQt6.QtCore import Qt
 
 
-def make_footer_area():
+def make_footer_area(parent):
     json_export_enable = config.get('JsonExport', False)
     footer_layout = QHBoxLayout()
     button_text = ['Copy positive', 'Copy negative', 'Copy seed']
     if json_export_enable:
         button_text.extend(['Export JSON (This)', 'Export JSON (All)'])
-    button_text.append('Menu')
+    button_text.append('▲Menu')
     for tmp in button_text:
         footer_button = QPushButton(tmp)
         footer_button.setObjectName(tmp)
+        footer_button.clicked.connect(parent.button_clicked)
         footer_layout.addWidget(footer_button)
-        if tmp == 'Menu':
-            footer_button.setText('▲Menu')
     return footer_layout
 
 
-def tab_navigation(filename_list):
-    filename_list = [array[1] for array in filename_list]
+def tab_navigation(parent):
     tab_search = config.get('TabSearch', True)
     thumbnails = config.get('TabNavigationWithThumbnails', True)
+    filename_list = [value.params.get('Filename') for value in parent.params]
+
     header_layout = QHBoxLayout()
+
     dropdown_box = QComboBox()
     dropdown_box.addItems(filename_list)
     dropdown_box.setEditable(True)
     dropdown_box.setObjectName('Combo')
-    jump_to_button = QPushButton('Jump to')
-    jump_to_button.setObjectName('Jump to')
+    dropdown_box.currentIndexChanged.connect(parent.header_button_clicked)
+
+    listview_button = QPushButton('Listview')
+    listview_button.setObjectName('Listview')
+    listview_button.clicked.connect(parent.header_button_clicked)
+
     if tab_search:
         search_button = QPushButton('Search')
         search_button.setObjectName('Search')
+        search_button.clicked.connect(parent.header_button_clicked)
         header_layout.addWidget(search_button, 1)
+
     header_layout.addWidget(dropdown_box, 5)
-    header_layout.addWidget(jump_to_button, 1)
+    header_layout.addWidget(listview_button, 1)
+
     if thumbnails:
         thumbnail_button = QPushButton('Thumbnail')
         thumbnail_button.setObjectName('Thumbnail')
+        thumbnail_button.clicked.connect(parent.header_button_clicked)
         header_layout.addWidget(thumbnail_button, 1)
+
     return header_layout
 
 
@@ -63,12 +73,14 @@ def make_main_section(target):
               'CFG scale',
               ['Dynamic thresholding enabled', 'CFG scale fix'],
               'Model',
+              'VAE',
               ['Variation seed', 'Var. seed'],
               ['Variation seed strength', 'Var. strength'],
-              'Seed resize from',
+              ['Seed resize from', 'Resize from'],
               ['Denoising strength', 'Denoising'],
               'Clip skip',
               ['Lora', 'Lora in prompt'],
+              'TI in prompt',
               ['AddNet Number', 'Add network'],
               ['Hires upscaler', 'Hires.fix'],
               'Extras',
@@ -78,24 +90,37 @@ def make_main_section(target):
               'ENSD',
               'Version'
               ]
+    max_height = config.get('PixmapSize', 350)
     filepath = target.params.get('Filepath')
     if target.params.get('Hires upscaler'):
-        del status[15]
+        del status[14]
     if os.path.exists(filepath):
         timestamp = datetime.datetime.fromtimestamp(os.path.getctime(filepath))
         target.params['Timestamp'] = timestamp.strftime('%Y/%m/%d %H:%M')
     main_section_layout = QHBoxLayout()
     pixmap_label = make_pixmap_label(filepath)
-    main_section_layout.addLayout(pixmap_label, 1)
-    main_section_layout.insertSpacing(1, 10)
-    main_section_layout.addLayout(label_maker(status, target, 1, 1, True, True, 15), 1)
-
+    label_layout = label_maker(status, target, 1, 1, True, True, 20, 90)
+    label_layout.setSpacing(5)
+    for i in range(label_layout.count()):
+        label_layout.itemAt(i).widget().setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+    scroll_area = QScrollArea()
+    scroll_area.setMinimumWidth(350)
+    scroll_area.setMaximumHeight(max_height + 55)
+    scroll_area.setContentsMargins(0, 0, 0, 0)
+    scroll_area.setStyleSheet('border: 0px;')
+    scroll_contents = QWidget()
+    scroll_contents.setContentsMargins(0, 0, 0, 0)
+    scroll_contents.setLayout(label_layout)
+    scroll_area.setWidget(scroll_contents)
+    main_section_layout.addWidget(pixmap_label, 1)
+    main_section_layout.addWidget(scroll_area, 1)
     return main_section_layout
 
 
 def make_pixmap_label(filepath):
     scale = config.get('PixmapSize', 350)
     move_delete_enable = config.get('MoveDelete', True)
+    pixmap_section = QWidget()
     pixmap_layout = QVBoxLayout()
     button_layout = QHBoxLayout()
     if os.path.exists(filepath):
@@ -106,17 +131,23 @@ def make_pixmap_label(filepath):
         pixmap_label.setPixmap(pixmap)
     else:
         pixmap_label = QLabel("Couldn't load image")
-        pixmap_label.setMinimumSize(233, 350)
     pixmap_label.setObjectName('Pixmap')
     pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    pixmap_label.setMinimumSize(scale, scale)
+    pixmap_label.setMaximumSize(scale, scale)
+    pixmap_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
     pixmap_layout.addWidget(pixmap_label)
     if move_delete_enable:
         for tmp in ['Favourite', 'Move to', 'Delete']:
             button = QPushButton(tmp)
             button.setObjectName(tmp)
+            button.setMinimumSize(int(scale / 3), 25)
+            button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             button_layout.addWidget(button)
         pixmap_layout.addLayout(button_layout)
-    return pixmap_layout
+    pixmap_section.setLayout(pixmap_layout)
+    pixmap_section.setContentsMargins(0, 0, 0, 0)
+    return pixmap_section
 
 
 def make_prompt_tab(target):
@@ -159,7 +190,9 @@ def make_hires_section(target):
               ['Hires upscale', 'Upscale'],
               ['Hires resize', 'Resize'],
               ['Hires steps', 'Steps'],
-              ['Denoising strength', 'Denoising']
+              ['Denoising strength', 'Denoising'],
+              'Refiner',
+              ['Refiner switch at', 'Switch at']
               ]
     hires_group = QGroupBox()
     hires_group.setTitle('Hires.fix')
@@ -269,16 +302,23 @@ def dynamic_thresholding_section(target):
 def make_lora_addnet_tab(target):
     tab_layout = QHBoxLayout()
     lora_group = make_lora_section(target)
-    tab_layout.addWidget(lora_group, 3)
+    tab_layout.addWidget(lora_group, 1)
     addnet_group = make_addnet_section(target)
-    tab_layout.addWidget(addnet_group, 4)
+    tab_layout.addWidget(addnet_group, 1)
     return tab_layout
 
 
 def make_lora_section(target):
     lora_section = QGroupBox()
+    scroll_area = QScrollArea()
+    content_widget = QWidget()
+    content_layout = QVBoxLayout()
     section_layout = QVBoxLayout()
+    scroll_area.setStyleSheet('border: 0px;')
+    scroll_area.setContentsMargins(0, 0, 0, 0)
+    content_widget.setContentsMargins(0, 0, 0, 0)
     lora_num = target.params.get('Lora')
+    ti_num = target.params.get('TI in prompt')
     if not lora_num:
         caption = 'Lora in prompt : 0'
     else:
@@ -290,10 +330,23 @@ def make_lora_section(target):
             title = 'Lora ' + str(i + 1)
             if target.params.get(key):
                 keyring.append([key, title])
-            else:
-                keyring.append([None, None])
         section_layout.addLayout(label_maker(keyring, target, 1, 3))
-    lora_section.setLayout(section_layout)
+    if not ti_num:
+        caption += ', TI in prompt : 0'
+    else:
+        caption += ', TI in prompt : ' + ti_num
+        loop_num = max(int(ti_num), 14) + 1
+        keyring = []
+        for i in range(loop_num):
+            key = 'Ti ' + str(i)
+            title = 'Ti ' + str(i + 1)
+            if target.params.get(key):
+                keyring.append([key, title])
+        section_layout.addLayout(label_maker(keyring, target, 1, 3))
+    content_widget.setLayout(section_layout)
+    scroll_area.setWidget(content_widget)
+    content_layout.addWidget(scroll_area)
+    lora_section.setLayout(content_layout)
     lora_section.setTitle(caption)
     return lora_section
 
@@ -303,9 +356,15 @@ def make_addnet_section(target):
               ['Weight A', 'UNet / TEnc'],
               ['Model', 'Model']
               ]
-    addnet_section = QGroupBox()
     addnet = target.params.get('AddNet Enabled')
+    addnet_section = QGroupBox()
+    scroll_area = QScrollArea()
+    content_widget = QWidget()
+    content_layout = QVBoxLayout()
     section_layout = QVBoxLayout()
+    scroll_area.setStyleSheet('border: 0px;')
+    scroll_area.setContentsMargins(0, 0, 0, 0)
+    content_widget.setContentsMargins(0, 0, 0, 0)
     if not addnet:
         addnet_section.setDisabled(True)
         cnt = 0
@@ -314,11 +373,15 @@ def make_addnet_section(target):
         for i in range(1, 6):
             key = [['AddNet ' + value[0] + ' ' + str(i), value[1]] for value in status]
             if not target.params.get(key[0][0]):
-                key = [None, None, None]
                 cnt = cnt - 1
+                continue
             section_layout.addLayout(label_maker(key, target, 1, 3))
-    addnet_section.setLayout(section_layout)
-    addnet_section.setTitle('Additional Networks : ' + str(cnt))
+    caption = 'Additional Networks : ' + str(cnt)
+    content_widget.setLayout(section_layout)
+    scroll_area.setWidget(content_widget)
+    content_layout.addWidget(scroll_area)
+    addnet_section.setLayout(content_layout)
+    addnet_section.setTitle(caption)
     target.used_params['AddNet Enabled'] = True
     return addnet_section
 
@@ -374,9 +437,7 @@ def region_control_section(target):
     status = [['blend mode', 'Blend mode'],
               ['feather ratio', 'Feather ratio'],
               ['w', 'Width'],
-              ['h', 'Height'],
               ['x', 'X'],
-              ['y', 'Y'],
               ['seed', 'Seed'],
               ]
     region_control_tab = QTabWidget()
@@ -476,7 +537,17 @@ def make_regional_prompter_tab(target):
     ratio_strings_section.setLayout(ratio_strings_section_layout)
     regional_prompter_group.addWidget(ratio_strings_section, 2)
 
-    return regional_prompter_group
+    scroll_area = QScrollArea()
+    content_widget = QWidget()
+    content_widget.setLayout(regional_prompter_group)
+    scroll_area.setWidget(content_widget)
+
+    scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+    scroll_area.setStyleSheet("QScrollArea { border: 0px; }")
+    scroll_area.setContentsMargins(0, 0, 0, 0)
+    content_widget.setContentsMargins(0, 0, 0, 0)
+
+    return scroll_area
 
 
 def make_regional_prompter_status_section(target):
@@ -601,7 +672,14 @@ def make_error_tab(target, parameter):
         return inner_page
 
 
-def label_maker(status, target, stretch_title, stretch_value, selectable=False, remove_if_none=False, minimums=99):
+def label_maker(status,
+                target,
+                stretch_title,
+                stretch_value,
+                selectable=False,
+                remove_if_none=False,
+                minimums=99,
+                restriction=0):
     label_count = 0
     section_layout = QGridLayout()
     for tmp in status:
@@ -630,10 +708,34 @@ def label_maker(status, target, stretch_title, stretch_value, selectable=False, 
                 item = 'False'
             elif name and not remove_if_none:
                 item = 'None'
+
+        if 'w' in key and 'Region' in key:
+            name = 'Width x Height'
+            height_key = key.replace('w', 'h')
+            height_item = target.params.get(height_key)
+            if height_item:
+                item = item + ' x ' + height_item
+                target.used_params[height_key] = True
+            else:
+                item = 'None'
+        elif 'x' in key and 'Region' in key:
+            name = '(X, Y)'
+            y_key = key.replace('x', 'y')
+            y_item = target.params.get(y_key)
+            if y_item:
+                item = '(' + item + ', ' + y_item + ')'
+                target.used_params[y_key] = True
+            else:
+                item = 'None'
+
         if not item and remove_if_none:
             continue
+
         title = QLabel(name)
         value = QLabel(item)
+        if restriction > 0:
+            title.setMinimumWidth(restriction)
+            title.setMaximumWidth(restriction)
         if selectable:
             value.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         if name:
