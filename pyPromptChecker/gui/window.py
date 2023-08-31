@@ -123,6 +123,7 @@ class ResultWindow(QMainWindow):
             self.make_root_tab()
 
     def make_root_tab(self):
+        section_height = config.get('PixmapSize', 350)
         shown_tab = self.root_tab.count()
         total = len(self.params)
         image_count = 0
@@ -145,6 +146,9 @@ class ResultWindow(QMainWindow):
             inner_tab = QTabWidget()
 
             main_section = QGroupBox()
+            main_section.setMinimumHeight(section_height + 100)
+            main_section.setMaximumHeight(section_height + 100)
+            main_section.setContentsMargins(0, 0, 0, 0)
             main_section.setObjectName('main_section')
             main_section_layout = QHBoxLayout()
 

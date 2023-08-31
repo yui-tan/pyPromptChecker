@@ -88,7 +88,7 @@ def make_main_section(target):
               'ENSD',
               'Version'
               ]
-    max_width = config.get('PixmapSize', 350)
+    max_height = config.get('PixmapSize', 350)
     filepath = target.params.get('Filepath')
     if target.params.get('Hires upscaler'):
         del status[14]
@@ -102,22 +102,23 @@ def make_main_section(target):
     for i in range(label_layout.count()):
         label_layout.itemAt(i).widget().setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
     scroll_area = QScrollArea()
-    scroll_area.setMinimumWidth(max_width)
+    scroll_area.setMinimumWidth(350)
+    scroll_area.setMaximumHeight(max_height + 55)
     scroll_area.setContentsMargins(0, 0, 0, 0)
     scroll_area.setStyleSheet('border: 0px;')
     scroll_contents = QWidget()
     scroll_contents.setContentsMargins(0, 0, 0, 0)
     scroll_contents.setLayout(label_layout)
     scroll_area.setWidget(scroll_contents)
-    main_section_layout.addLayout(pixmap_label, 1)
+    main_section_layout.addWidget(pixmap_label, 1)
     main_section_layout.addWidget(scroll_area, 1)
-
     return main_section_layout
 
 
 def make_pixmap_label(filepath):
     scale = config.get('PixmapSize', 350)
     move_delete_enable = config.get('MoveDelete', True)
+    pixmap_section = QWidget()
     pixmap_layout = QVBoxLayout()
     button_layout = QHBoxLayout()
     if os.path.exists(filepath):
@@ -142,7 +143,9 @@ def make_pixmap_label(filepath):
             button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             button_layout.addWidget(button)
         pixmap_layout.addLayout(button_layout)
-    return pixmap_layout
+    pixmap_section.setLayout(pixmap_layout)
+    pixmap_section.setContentsMargins(0, 0, 0, 0)
+    return pixmap_section
 
 
 def make_prompt_tab(target):
