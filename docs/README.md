@@ -75,6 +75,8 @@ mikkumiku -d DIRECTORY, --directory DIRECTORY
 ```
 # Roadmap
  - [x] Tab navigation with thumbnails
+ - [ ] Listview
+ - [ ] Diff mode
  - [ ] Filtering and searching tabs various conditions
  - [x] Add support for other image file formats
     - [x] jpeg
