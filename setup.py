@@ -7,7 +7,8 @@ setup(
     install_requires=[
         'pyQt6',
         'pypng',
-        'pillow'
+        'pillow',
+        'pyqtdarktheme'
     ],
     entry_points={
         'console_scripts': [
