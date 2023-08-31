@@ -655,6 +655,8 @@ def from_main(purpose, target_data=None):
         app = QApplication(sys.argv)
         if theme:
             qdarktheme.setup_theme('dark')
+        else:
+            qdarktheme.setup_theme('light')
 #            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         open_directory = Dialog()
         open_directory.init_dialog('choose-directory', 'Select directory')
@@ -664,6 +666,8 @@ def from_main(purpose, target_data=None):
         app = QApplication(sys.argv)
         if theme:
             qdarktheme.setup_theme('dark')
+        else:
+            qdarktheme.setup_theme('light')
 #            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         open_files = Dialog()
         open_files.init_dialog('choose-files', 'Select files', None, 'PNG')
@@ -675,6 +679,8 @@ def from_main(purpose, target_data=None):
             app = QApplication(sys.argv)
         if theme:
             qdarktheme.setup_theme('dark')
+        else:
+            qdarktheme.setup_theme('light')
 #            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         progress = ProgressDialog()
         return app, progress
@@ -685,6 +691,8 @@ def from_main(purpose, target_data=None):
         result_window = ResultWindow(target_data)
         if theme:
             qdarktheme.setup_theme('dark')
+        else:
+            qdarktheme.setup_theme('light')
 #            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         result_window.show()
         sys.exit(app.exec())
