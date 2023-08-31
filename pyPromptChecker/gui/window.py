@@ -288,6 +288,8 @@ class ResultWindow(QMainWindow):
             self.open_thumbnail()
         elif where_from == 'Search':
             self.not_yet_implemented()
+        elif where_from == 'Listview':
+            self.not_yet_implemented()
 
     def button_clicked(self):
         where_from = self.sender().objectName()
@@ -648,7 +650,7 @@ def add_stylesheet():
 
 def from_main(purpose, target_data=None):
     theme = config.get('AlwaysStartWithDarkMode')
-    qdarktheme.enable_hi_dpi()
+#    qdarktheme.enable_hi_dpi()
     if purpose == 'directory':
         app = QApplication(sys.argv)
         if theme:
