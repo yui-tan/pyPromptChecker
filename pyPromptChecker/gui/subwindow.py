@@ -126,7 +126,7 @@ class ThumbnailView(QMainWindow):
 
         self.setCentralWidget(central_widget)
 
-        scroll_area.setMinimumWidth(thumb.sizeHint().width() + 18)
+        scroll_area.setMinimumWidth(thumb.sizeHint().width() + 25)
         if row > 2:
             scroll_area.setMinimumHeight(portrait_layout.sizeHint().height() * 3)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
