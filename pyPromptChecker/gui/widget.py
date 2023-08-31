@@ -73,12 +73,14 @@ def make_main_section(target):
               'CFG scale',
               ['Dynamic thresholding enabled', 'CFG scale fix'],
               'Model',
+              'VAE',
               ['Variation seed', 'Var. seed'],
               ['Variation seed strength', 'Var. strength'],
               ['Seed resize from', 'Resize from'],
               ['Denoising strength', 'Denoising'],
               'Clip skip',
               ['Lora', 'Lora in prompt'],
+              'TI in prompt',
               ['AddNet Number', 'Add network'],
               ['Hires upscaler', 'Hires.fix'],
               'Extras',
@@ -188,7 +190,9 @@ def make_hires_section(target):
               ['Hires upscale', 'Upscale'],
               ['Hires resize', 'Resize'],
               ['Hires steps', 'Steps'],
-              ['Denoising strength', 'Denoising']
+              ['Denoising strength', 'Denoising'],
+              'Refiner',
+              ['Refiner switch at', 'Switch at']
               ]
     hires_group = QGroupBox()
     hires_group.setTitle('Hires.fix')
@@ -298,9 +302,9 @@ def dynamic_thresholding_section(target):
 def make_lora_addnet_tab(target):
     tab_layout = QHBoxLayout()
     lora_group = make_lora_section(target)
-    tab_layout.addWidget(lora_group, 3)
+    tab_layout.addWidget(lora_group, 1)
     addnet_group = make_addnet_section(target)
-    tab_layout.addWidget(addnet_group, 4)
+    tab_layout.addWidget(addnet_group, 1)
     return tab_layout
 
 
@@ -314,6 +318,7 @@ def make_lora_section(target):
     scroll_area.setContentsMargins(0, 0, 0, 0)
     content_widget.setContentsMargins(0, 0, 0, 0)
     lora_num = target.params.get('Lora')
+    ti_num = target.params.get('TI in prompt')
     if not lora_num:
         caption = 'Lora in prompt : 0'
     else:
@@ -323,6 +328,18 @@ def make_lora_section(target):
         for i in range(loop_num):
             key = 'Lora ' + str(i)
             title = 'Lora ' + str(i + 1)
+            if target.params.get(key):
+                keyring.append([key, title])
+        section_layout.addLayout(label_maker(keyring, target, 1, 3))
+    if not ti_num:
+        caption += ', TI in prompt : 0'
+    else:
+        caption += ', TI in prompt : ' + ti_num
+        loop_num = max(int(ti_num), 14) + 1
+        keyring = []
+        for i in range(loop_num):
+            key = 'Ti ' + str(i)
+            title = 'Ti ' + str(i + 1)
             if target.params.get(key):
                 keyring.append([key, title])
         section_layout.addLayout(label_maker(keyring, target, 1, 3))

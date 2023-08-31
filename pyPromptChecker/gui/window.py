@@ -167,7 +167,7 @@ class ResultWindow(QMainWindow):
 
             hires_tab = ['Hires upscaler', 'Face restoration', 'Extras']
             cfg_fix_auto_tab = ['Dynamic thresholding enabled', 'CFG auto', 'CFG scheduler']
-            lora_tab = ['Lora', 'AddNet Enabled']
+            lora_tab = ['Lora', 'AddNet Enabled', 'TI in prompt']
 
             tabs = [['Prompts', True, True],
                     ['Hires.fix / Extras',
@@ -585,7 +585,7 @@ class ResultWindow(QMainWindow):
                 file_list = os.listdir(directory)
                 file_list = [os.path.join(directory, v) for v in file_list if
                              os.path.isfile(os.path.join(directory, v))]
-                file_list = [v for v in file_list if 'safetensors' in v or 'ckpt' in v]
+                file_list = [v for v in file_list if 'safetensors' in v or 'ckpt' in v or 'vae.pt' in v]
                 operation_progress.setLabelText('Loading model file......')
                 operation_progress.setRange(0, len(file_list) + 1)
                 operation_progress.update_value()
@@ -611,7 +611,7 @@ class ResultWindow(QMainWindow):
             self.dark = False
         else:
             qdarktheme.setup_theme('dark')
-            qdarktheme.setup_theme(additional_qss=add_stylesheet())
+#            qdarktheme.setup_theme(additional_qss=add_stylesheet())
             self.dark = True
 
     def not_yet_implemented(self):
@@ -653,7 +653,7 @@ def from_main(purpose, target_data=None):
         app = QApplication(sys.argv)
         if theme:
             qdarktheme.setup_theme('dark')
-            qdarktheme.setup_theme(additional_qss=add_stylesheet())
+#            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         open_directory = Dialog()
         open_directory.init_dialog('choose-directory', 'Select directory')
         result = open_directory.result
@@ -662,7 +662,7 @@ def from_main(purpose, target_data=None):
         app = QApplication(sys.argv)
         if theme:
             qdarktheme.setup_theme('dark')
-            qdarktheme.setup_theme(additional_qss=add_stylesheet())
+#            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         open_files = Dialog()
         open_files.init_dialog('choose-files', 'Select files', None, 'PNG')
         result = open_files.result
@@ -673,7 +673,7 @@ def from_main(purpose, target_data=None):
             app = QApplication(sys.argv)
         if theme:
             qdarktheme.setup_theme('dark')
-            qdarktheme.setup_theme(additional_qss=add_stylesheet())
+#            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         progress = ProgressDialog()
         return app, progress
     elif purpose == 'result':
@@ -683,6 +683,6 @@ def from_main(purpose, target_data=None):
         result_window = ResultWindow(target_data)
         if theme:
             qdarktheme.setup_theme('dark')
-            qdarktheme.setup_theme(additional_qss=add_stylesheet())
+#            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         result_window.show()
         sys.exit(app.exec())

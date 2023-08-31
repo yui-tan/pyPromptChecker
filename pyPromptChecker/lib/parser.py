@@ -77,6 +77,7 @@ class ChunkData:
 
     def model_name(self, model_list):
         model_hash = self.params.get('Model hash')
+        vae_hash = self.params.get('VAE hash')
         if model_hash:
             model_name = '[' + model_hash + ']'
             if model_list:
@@ -85,6 +86,14 @@ class ChunkData:
                         model_name = tmp[0] + ' [' + tmp[1] + ']'
             self.params['Model'] = model_name
             self.used_params['Model hash'] = True
+        if vae_hash:
+            vae_name = '[' + vae_hash + ']'
+            if model_list:
+                for tmp in model_list:
+                    if tmp[1] == vae_hash:
+                        vae_name = tmp[0] + ' [' + tmp[1] + ']'
+            self.params['VAE'] = vae_name
+            self.used_params['VAE hash'] = True
 
     def import_json(self, json_data):
         self.params = json_data
@@ -95,6 +104,7 @@ def parse_parameter(chunks, filepath, model_list=None):
     target_data.filepath_registration(filepath)
     target_data = prompt_parse(target_data)
     target_data = lora_parse(target_data)
+    target_data = ti_parse(target_data)
     target_data = tiled_diffusion_parse(target_data)
     target_data = control_net_parse(target_data)
     target_data = cfg_scheduler_parse(target_data)
@@ -161,6 +171,18 @@ def lora_parse(target_data):
         loras = [d1.split(':')[0].strip() + ' ' + '[' + d1.split(':')[1].strip() + ']' for d1 in target.split(',')]
         loras = [['Lora ' + str(index), value] for index, value in enumerate(loras)]
         target_data.data_refresh('Lora hashes: "' + target + '",', loras)
+    return target_data
+
+
+def ti_parse(target_data):
+    lora_regex = r'(?<=TI hashes: )"[^"]*"'
+    match = re.search(lora_regex, target_data.data)
+    if match:
+        target = match.group().replace('"', '')
+        tis = [d1.split(':')[0].strip() + ' ' + '[' + d1.split(':')[1].strip() + ']' for d1 in target.split(',')]
+        tis = [['Ti ' + str(index), value] for index, value in enumerate(tis)]
+        tis.append(['TI in prompt', str(len(tis))])
+        target_data.data_refresh('TI hashes: "' + target + '",', tis)
     return target_data
 
 
