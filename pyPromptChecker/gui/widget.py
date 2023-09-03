@@ -6,7 +6,7 @@ from . import config
 from .dialog import PixmapLabel
 from PyQt6.QtWidgets import QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QComboBox, QTextEdit, QSizePolicy
 from PyQt6.QtWidgets import QGroupBox, QTabWidget, QScrollArea, QSplitter, QGridLayout, QWidget
-from PyQt6.QtGui import QPixmap, QPainter, QColor
+from PyQt6.QtGui import QPixmap, QPainter, QColor, QKeySequence
 from PyQt6.QtCore import Qt
 
 
@@ -18,10 +18,18 @@ def make_footer_area(parent):
         button_text.extend(['Export JSON (This)', 'Export JSON (All)'])
     button_text.append('▲Menu')
     for tmp in button_text:
-        footer_button = QPushButton(tmp)
+        footer_button = QPushButton()
         footer_button.setObjectName(tmp)
         footer_button.clicked.connect(parent.button_clicked)
         footer_layout.addWidget(footer_button)
+        if tmp == 'Copy positive':
+            footer_button.setText('Copy &Positive')
+        elif tmp == 'Copy negative':
+            footer_button.setText('Copy &Negative')
+        elif tmp == 'Copy seed':
+            footer_button.setText('Copy &Seed')
+        elif tmp == '▲Menu':
+            footer_button.setText('▲M&enu')
     return footer_layout
 
 
@@ -93,7 +101,7 @@ def make_main_section(target):
     max_height = config.get('PixmapSize', 350)
     filepath = target.params.get('Filepath')
     if target.params.get('Hires upscaler'):
-        del status[14]
+        status = [value for value in status if not isinstance(value, list) or value[0] != 'Denoising strength']
     if os.path.exists(filepath):
         timestamp = datetime.datetime.fromtimestamp(os.path.getctime(filepath))
         target.params['Timestamp'] = timestamp.strftime('%Y/%m/%d %H:%M')
@@ -106,8 +114,7 @@ def make_main_section(target):
     scroll_area = QScrollArea()
     scroll_area.setMinimumWidth(350)
     scroll_area.setMaximumHeight(max_height + 55)
-    scroll_area.setContentsMargins(0, 0, 0, 0)
-    scroll_area.setStyleSheet('border: 0px;')
+    scroll_area.setStyleSheet('border: 0px; padding 0px; ')
     scroll_contents = QWidget()
     scroll_contents.setContentsMargins(0, 0, 0, 0)
     scroll_contents.setLayout(label_layout)
@@ -136,20 +143,28 @@ def make_pixmap_label(filepath):
     pixmap_label.setMinimumSize(scale, scale)
     pixmap_label.setMaximumSize(scale, scale)
     pixmap_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-    pixmap_layout.addWidget(pixmap_label)
+    pixmap_layout.addWidget(pixmap_label, alignment=Qt.AlignmentFlag.AlignCenter)
     if move_delete_enable:
         for tmp in ['Favourite', 'Move to', 'Delete']:
-            button = QPushButton(tmp)
+            button = QPushButton()
             button.setObjectName(tmp)
             button.setMinimumSize(int(scale / 3), 25)
             button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             button_layout.addWidget(button)
+            if tmp == 'Favourite':
+                button.setText('&Favourite')
+            elif tmp == 'Move to':
+                button.setText('&Move to')
+            elif tmp == 'Delete':
+                button.setText('Delete')
+                button.setShortcut(QKeySequence('Delete'))
         pixmap_layout.addLayout(button_layout)
     pixmap_section.setLayout(pixmap_layout)
-    pixmap_section.setContentsMargins(0, 0, 0, 0)
+    pixmap_layout.setContentsMargins(0, 0, 0, 0)
     return pixmap_section
 
 
+# Todo: Make Tokenize functionality
 def make_prompt_tab(target):
     textbox_tab_layout = QVBoxLayout()
     splitter = QSplitter(Qt.Orientation.Vertical)
@@ -299,6 +314,7 @@ def dynamic_thresholding_section(target):
     return section
 
 
+# Todo: unite Textual invention & Lora & Add net extension
 def make_lora_addnet_tab(target):
     tab_layout = QHBoxLayout()
     lora_group = make_lora_section(target)

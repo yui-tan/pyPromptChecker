@@ -44,13 +44,14 @@ class ResultWindow(QMainWindow):
         window_width = size_hint_width if max_width > size_hint_width else max_width
         window_height = size_hint_height if max_height > size_hint_height else max_height
 
-#        self.setMaximumWidth(max_width)
-#        self.setMaximumHeight(max_height)
+        #        self.setMaximumWidth(max_width)
+        #        self.setMaximumHeight(max_height)
 
         self.show()
         self.resize(window_width, window_height)
         self.move_centre_main()
 
+    # Todo: variable inner tab size
     def init_ui(self):
         tab_navigation_enable = config.get('TabNavigation', True)
         tab_minimums = config.get('TabNavigationMinimumTabs', True)
@@ -146,14 +147,14 @@ class ResultWindow(QMainWindow):
             inner_tab = QTabWidget()
 
             main_section = QGroupBox()
-            main_section.setMinimumHeight(section_height + 100)
-            main_section.setMaximumHeight(section_height + 100)
-            main_section.setContentsMargins(0, 0, 0, 0)
+            #            main_section.setMinimumHeight(section_height + 100)
+            #            main_section.setMaximumHeight(section_height + 100)
+            main_section.setStyleSheet('padding 0px 0px 0px 0px; ')
             main_section.setObjectName('main_section')
             main_section_layout = QHBoxLayout()
-
             main_label_layout = make_main_section(tmp)
             main_section_layout.addLayout(main_label_layout)
+            main_section_layout.setContentsMargins(5, 5, 0, 5)
             main_section.setLayout(main_section_layout)
             tab_page_layout.addWidget(main_section)
 
@@ -609,11 +610,11 @@ class ResultWindow(QMainWindow):
     def change_themes(self):
         if self.dark:
             qdarktheme.setup_theme('light')
-#            qdarktheme.setup_theme(additional_qss=add_stylesheet())
+            #            qdarktheme.setup_theme(additional_qss=add_stylesheet())
             self.dark = False
         else:
             qdarktheme.setup_theme('dark')
-#            qdarktheme.setup_theme(additional_qss=add_stylesheet())
+            #            qdarktheme.setup_theme(additional_qss=add_stylesheet())
             self.dark = True
 
     def not_yet_implemented(self):
@@ -640,24 +641,27 @@ def add_stylesheet():
                  "QPushButton:default { background: #86cecb; }" \
                  "QPushButton:default:hover {background: #86cecb; }" \
                  "QPushButton:default:pressed,QPushButton:default:checked {background: #86cecb; }" \
-                 "QLabel { selection-background-color: #137a7f; }"\
-                 "QTextEdit:focus, QTextEdit:selected { selection-background-color: #137a7f; }"\
-                 "QTextEdit:focus { border-color: #86cecb; }"\
+                 "QLabel { selection-background-color: #137a7f; }" \
+                 "QTextEdit:focus, QTextEdit:selected { selection-background-color: #137a7f; }" \
+                 "QTextEdit:focus { border-color: #86cecb; }" \
                  "QSplitter:handle:hover { background-color: #86cecb; }" \
                  "QTabBar:tab:selected:enabled { color: #86cecb; border-color: #86cecb; }"
     return stylesheet
 
 
+# Todo: fix minor bugs around dark theme
+# 1. bit lagged when apply dark/light theme.
+# 2. lagged when apply stylesheet.
 def from_main(purpose, target_data=None):
     theme = config.get('AlwaysStartWithDarkMode')
-#    qdarktheme.enable_hi_dpi()
+    #    qdarktheme.enable_hi_dpi()
     if purpose == 'directory':
         app = QApplication(sys.argv)
         if theme:
             qdarktheme.setup_theme('dark')
         else:
             qdarktheme.setup_theme('light')
-#            qdarktheme.setup_theme(additional_qss=add_stylesheet())
+        #            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         open_directory = Dialog()
         open_directory.init_dialog('choose-directory', 'Select directory')
         result = open_directory.result
@@ -668,7 +672,7 @@ def from_main(purpose, target_data=None):
             qdarktheme.setup_theme('dark')
         else:
             qdarktheme.setup_theme('light')
-#            qdarktheme.setup_theme(additional_qss=add_stylesheet())
+        #            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         open_files = Dialog()
         open_files.init_dialog('choose-files', 'Select files', None, 'PNG')
         result = open_files.result
@@ -681,7 +685,7 @@ def from_main(purpose, target_data=None):
             qdarktheme.setup_theme('dark')
         else:
             qdarktheme.setup_theme('light')
-#            qdarktheme.setup_theme(additional_qss=add_stylesheet())
+        #            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         progress = ProgressDialog()
         return app, progress
     elif purpose == 'result':
@@ -693,6 +697,6 @@ def from_main(purpose, target_data=None):
             qdarktheme.setup_theme('dark')
         else:
             qdarktheme.setup_theme('light')
-#            qdarktheme.setup_theme(additional_qss=add_stylesheet())
+        #            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         result_window.show()
         sys.exit(app.exec())
