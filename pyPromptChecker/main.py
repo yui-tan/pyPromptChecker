@@ -85,6 +85,7 @@ def main():
     group.add_argument('-d', '--directory', type=str, help='Send path to the directory.')
     parser.add_argument('filepaths', metavar='Filepath', type=str, nargs='*', help='Send path to files and directories.')
     args = parser.parse_args()
+    filepaths = []
 
     if args.filepath:
         parameters = args.filepath
@@ -97,8 +98,9 @@ def main():
     else:
         parameters = window.from_main('files')
 
-    depth = config.get('SubDirectoryDepth', 0)
-    filepaths = find_target(parameters, depth)
+    if parameters:
+        depth = config.get('SubDirectoryDepth', 0)
+        filepaths = find_target(parameters, depth)
 
     if filepaths:
         valid_filepath, not_found_list, directory_list, not_png_list = check_files(filepaths)

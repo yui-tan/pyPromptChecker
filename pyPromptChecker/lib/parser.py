@@ -75,7 +75,6 @@ class ChunkData:
         if cfg_auto > 0:
             self.params['CFG auto'] = 'True'
 
-# Todo: ModelListSearchApplyLora, ModelListSearchApplyTi
     def model_name(self, model_list):
         model_hash = self.params.get('Model hash')
         vae_hash = self.params.get('VAE hash')
@@ -95,6 +94,36 @@ class ChunkData:
                         vae_name = tmp[0] + ' [' + tmp[1] + ']'
             self.params['VAE'] = vae_name
             self.used_params['VAE hash'] = True
+
+    def override_lora(self, model_list):
+        for key, value in self.params.items():
+            if 'Lora ' in key and '[' in value:
+                match = re.search(r'\[.*]', value)
+                if match:
+                    lora_hash = match.group().replace('[', '').replace(']', '')
+                    for tmp in model_list:
+                        if tmp[1] == lora_hash:
+                            self.params[key] = tmp[0] + ' [' + lora_hash + ']'
+
+    def override_textual_inversion(self, model_list):
+        for key, value in self.params.items():
+            if 'Ti ' in key and '[' in value:
+                match = re.search(r'\[.*]', value)
+                if match:
+                    ti_hash = match.group().replace('[', '').replace(']', '')
+                    for tmp in model_list:
+                        if tmp[1] in ti_hash:
+                            self.params[key] = tmp[0] + ' [' + ti_hash + ']'
+
+    def override_addnet_model(self, model_list):
+        for key, value in self.params.items():
+            if 'AddNet Model' in key:
+                match = re.search(r'\(.*\)', value)
+                if match:
+                    ti_hash = match.group().replace('(', '').replace(')', '')
+                    for tmp in model_list:
+                        if tmp[1] == ti_hash:
+                            self.params[key] = tmp[0] + ' (' + ti_hash + ')'
 
     def import_json(self, json_data):
         self.params = json_data

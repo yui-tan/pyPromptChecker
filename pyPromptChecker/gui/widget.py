@@ -13,6 +13,7 @@ from PyQt6.QtCore import Qt
 def make_footer_area(parent):
     json_export_enable = config.get('JsonExport', False)
     shortened_window = config.get('OpenWithShortenedWindow', False)
+    now_shortened = parent.hide_tab
     footer_layout = QHBoxLayout()
     button_text = ['Copy positive', 'Copy negative', 'Copy seed']
     if json_export_enable:
@@ -33,11 +34,11 @@ def make_footer_area(parent):
         elif tmp == '▲Menu':
             footer_button.setText('▲M&enu')
         elif tmp == 'Shorten':
-            if shortened_window:
+            if shortened_window or now_shortened:
                 footer_button.setText('Expand')
             else:
                 footer_button.setText('Shorten')
-            footer_button.setShortcut(QKeySequence('Ctrl+A'))
+            footer_button.setShortcut(QKeySequence('Ctrl+Tab'))
     return footer_layout
 
 
@@ -180,11 +181,13 @@ def make_prompt_tab(target):
     positive_prompt = QTextEdit()
     positive_prompt.setPlainText(positive_text)
     positive_prompt.setReadOnly(True)
+    positive_prompt.setMinimumHeight(180)
     positive_prompt.setObjectName('Positive')
     negative_text = target.params.get('Negative', 'None')
     negative_prompt = QTextEdit(negative_text)
     negative_prompt.setPlainText(negative_text)
     negative_prompt.setReadOnly(True)
+    negative_prompt.setMinimumHeight(180)
     negative_prompt.setObjectName('Negative')
 
     splitter.addWidget(positive_prompt)

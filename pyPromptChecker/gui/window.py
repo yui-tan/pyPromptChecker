@@ -83,6 +83,8 @@ class ResultWindow(QMainWindow):
     def extract_data(self, targets):
         png_index = config.get('TargetChunkIndex', 1)
         ignore = config.get('IgnoreIfDataIsNotEmbedded', False)
+        lora_name = config.get('ModelListSearchApplyLora', False)
+        ti_name = config.get('ModelListSearchApplyTi', False)
         valid_total = len(targets)
         is_add = bool(self.params)
 
@@ -105,6 +107,13 @@ class ResultWindow(QMainWindow):
             if parameters.params.get('Positive') == 'This file has no embedded data' and ignore:
                 valid_total -= 1
                 continue
+
+            if lora_name:
+                parameters.override_lora(models)
+                parameters.override_addnet_model(models)
+
+            if ti_name:
+                parameters.override_textual_inversion(models)
 
             self.params.append(parameters)
 
@@ -175,7 +184,7 @@ class ResultWindow(QMainWindow):
                     ['CFG',
                      any(key in v for v in tmp.params for key in cfg_fix_auto_tab),
                      config.get('CFG', True)],
-                    ['Lora / Add networks',
+                    ['LoRa / Add networks',
                      any(key in v for v in tmp.params for key in lora_tab),
                      config.get('LoraAddNet', True)],
                     ['Tiled diffusion',
@@ -338,11 +347,11 @@ class ResultWindow(QMainWindow):
             if self.sender().text() == 'Shorten':
                 self.shorten_window()
                 self.sender().setText('Expand')
-                self.sender().setShortcut(QKeySequence('Ctrl+A'))
+                self.sender().setShortcut(QKeySequence('Ctrl+Tab'))
             else:
                 self.shorten_window(True)
                 self.sender().setText('Shorten')
-                self.sender().setShortcut(QKeySequence('Ctrl+A'))
+                self.sender().setShortcut(QKeySequence('Ctrl+Tab'))
         elif where_from == '▲Menu':
             x = self.sender().mapToGlobal(self.sender().rect().topLeft()).x()
             y = self.sender().mapToGlobal(self.sender().rect().topLeft()).y() - self.main_menu.sizeHint().height()
@@ -611,7 +620,7 @@ class ResultWindow(QMainWindow):
                 file_list = os.listdir(directory)
                 file_list = [os.path.join(directory, v) for v in file_list if
                              os.path.isfile(os.path.join(directory, v))]
-                file_list = [v for v in file_list if 'safetensors' in v or 'ckpt' in v or 'vae.pt' in v]
+                file_list = [v for v in file_list if 'safetensors' in v or 'ckpt' in v or 'pt' in v]
                 operation_progress.setLabelText('Loading model file......')
                 operation_progress.setRange(0, len(file_list) + 1)
                 operation_progress.update_value()

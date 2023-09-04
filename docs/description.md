@@ -158,6 +158,29 @@ Default setting is **2**
 - ### Overview ###
   - If left click on bottom tab (e.g. Prompt, Tiled Diffusion, etc) appears menu with checkbox.
   - Check the checkbox to maintain the selected tab in the bottom, even when you switch tabs in the top.
+# Keybindings
+- ### Ctrl+Tab: Shorten window
+- ### Ctrl+F: Search
+- ### Ctrl+D: Toggle dark/light mode
+- ### Ctrl+N: Replace tabs
+- ### Ctrl+O: Add tabs
+- ### Ctrl+T: Open Thumbnails
+- ### Ctrl+L: Open Listview
+- ### Ctrl+Q: Quit
+
+- ### Alt+F: Add favourite
+- ### Alt+M: Move to
+- ### Delete: Delete image file
+
+- ### Alt+P: Copy positive
+- ### Alt+N: Copy negative
+- ### Alt+S: Copy seed 
+
+- ### Alt+T: Export json (Present image)
+- ### Alt+A: Export json (All image)
+- ### Alt+L: Export json (Image select)
+
+- ### Alt+E: Open menu
 
 # Screenshots
 - ### Main screen
