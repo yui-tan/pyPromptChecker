@@ -30,6 +30,7 @@ class ResultWindow(QMainWindow):
         self.extract_data(targets)
         self.image_window = ImageWindow(self)
         self.thumbnail = ThumbnailView(self)
+        self.listview = Listview(self)
         self.main_menu = MainMenu(self)
         self.tab_linker = TabMenu(self)
         self.tab_linker_enable = [False, 'Prompt']
@@ -313,7 +314,7 @@ class ResultWindow(QMainWindow):
         elif where_from == 'Search':
             self.not_yet_implemented()
         elif where_from == 'Listview':
-            self.not_yet_implemented()
+            self.open_listview()
 
     def button_clicked(self):
         where_from = self.sender().objectName()
@@ -451,6 +452,10 @@ class ResultWindow(QMainWindow):
         for index, tmp in enumerate(self.params):
             filepath_list.append([tmp.params.get('Filepath'), tmp.params.get('Filename'), index])
         self.thumbnail.init_thumbnail(filepath_list)
+
+    def open_listview(self):
+        dictionary_list = [value.params for value in self.params]
+        self.listview.init_listview(dictionary_list)
 
     def import_json_from_files(self):
         self.dialog.init_dialog('choose-files', 'Select JSONs', None, 'JSON')

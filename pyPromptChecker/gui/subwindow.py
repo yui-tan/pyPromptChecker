@@ -4,7 +4,7 @@ from .dialog import ProgressDialog
 from .dialog import PixmapLabel
 from functools import lru_cache
 from PyQt6.QtWidgets import QMainWindow, QApplication, QGridLayout, QGroupBox, QCheckBox, QScrollArea
-from PyQt6.QtWidgets import QVBoxLayout, QWidget, QPushButton, QHBoxLayout
+from PyQt6.QtWidgets import QVBoxLayout, QWidget, QPushButton, QHBoxLayout, QLabel, QSpacerItem
 from PyQt6.QtGui import QPixmap, QImageReader
 from PyQt6.QtCore import Qt
 
@@ -169,12 +169,139 @@ class ThumbnailView(QMainWindow):
         self.close()
 
 
+class Listview(QMainWindow):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.dictionary_list = []
+        self.setWindowTitle('Listview')
+        self.estimated_width = 400
+
+    def init_listview(self, dic_list):
+        self.dictionary_list = dic_list
+        file_counts = len(self.dictionary_list)
+
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
+        root_widget = QWidget()
+        root_layout = QVBoxLayout()
+
+        for i in range(file_counts):
+            group_box = self.groups(i)
+            root_layout.addWidget(group_box)
+
+        root_widget.setLayout(root_layout)
+        estimated_width = root_widget.sizeHint().width() + 50
+
+        scroll_area.setWidget(root_widget)
+        scroll_area.setMinimumWidth(estimated_width)
+
+        self.setCentralWidget(scroll_area)
+        self.show()
+        move_centre(self, self.parent())
+
+    def pixmap_labels(self, index):
+        filepath = self.dictionary_list[index].get('Filepath', None)
+        if filepath:
+            pixmap = portrait_generator(filepath)
+            pixmap_label = QLabel()
+            pixmap_label.setMinimumSize(150, 150)
+            pixmap_label.setMaximumSize(150, 150)
+            pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            pixmap_label.setPixmap(pixmap)
+            return pixmap_label
+        else:
+            return None
+
+    def groups(self, index):
+        group = QGroupBox()
+        group_layout = QHBoxLayout()
+        status_label_layout = QGridLayout()
+        pixmap_label = self.pixmap_labels(index)
+
+        for i, key in enumerate(['Seed', 'Sampler', 'Steps', 'CFG scale', 'Model']):
+
+            item = self.dictionary_list[index].get(key, 'None')
+            title_label = QLabel(key)
+            status_label = QLabel(item)
+            spacer_1 = QSpacerItem(20, 20)
+            spacer_2 = QSpacerItem(20, 20)
+
+            size_policy_title = title_label.sizePolicy()
+            size_policy_value = status_label.sizePolicy()
+            size_policy_title.setHorizontalStretch(1)
+            size_policy_value.setHorizontalStretch(5)
+            title_label.setSizePolicy(size_policy_title)
+            status_label.setSizePolicy(size_policy_value)
+
+            title_label.setMinimumHeight(20)
+            status_label.setMinimumHeight(20)
+            title_label.setMaximumHeight(20)
+            status_label.setMaximumHeight(20)
+            status_label.setMinimumWidth(200)
+
+            status_label_layout.addItem(spacer_1, i, 0)
+            status_label_layout.addWidget(title_label, i, 1)
+            status_label_layout.addItem(spacer_2, i, 2)
+            status_label_layout.addWidget(status_label, i, 3)
+
+        j = 0
+        k = 0
+        addnet = any(key in v for v in self.dictionary_list[index] for key in ['Lora', 'Ti in prompt', 'Add network'])
+        cfg = any(key in v for v in self.dictionary_list[index] for key in ['Dynamic thresholding enabled', 'CFG auto', 'CFG scheduler'])
+
+        extension_label_layout = QGridLayout()
+
+        for condition_list in [['Extras', 'Extras' in self.dictionary_list[index]],
+                  ['Variation', 'Variation seed' in self.dictionary_list[index]],
+                  ['Hires.fix', 'Hires upscaler' in self.dictionary_list[index]],
+                  ['Lora/AddNet', addnet],
+                  ['CFG', cfg],
+                  ['Tiled Diffusion', 'Tiled diffusion' in self.dictionary_list[index]],
+                  ['ControlNet', 'ControlNet' in self.dictionary_list[index]],
+                  ['Regional', 'RP Active' in self.dictionary_list[index]]
+                  ]:
+
+            title, status = condition_list
+
+            extension_label = QLabel(title)
+            extension_label.setMaximumWidth(100)
+            extension_label.setMinimumWidth(100)
+            extension_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            if not status:
+                extension_label.setDisabled(True)
+                extension_label.setStyleSheet("border-radius: 5px ; border: 1px solid palette(shadow);")
+            else:
+                extension_label.setStyleSheet("border-radius: 5px ;"
+                                              "border: 2px solid palette(highlight) ;"
+                                              "background-color: palette(highlight) ;"
+                                              "color: palette(highlightedText) ;")
+            extension_label_layout.addWidget(extension_label, j, k)
+            if j == 4:
+                k += 1
+                j = 0
+            else:
+                j += 1
+
+        check_box = QCheckBox('')
+
+        group_layout.addWidget(check_box)
+        group_layout.addWidget(pixmap_label)
+        group_layout.addLayout(status_label_layout)
+        group_layout.addLayout(extension_label_layout)
+
+        group.setLayout(group_layout)
+        group.setTitle(self.dictionary_list[index].get('Filepath', 'None'))
+
+        return group
+
+
 @lru_cache(maxsize=1000)
 def portrait_generator(filepath):
     image_reader = QImageReader(filepath)
     pixmap = QPixmap.fromImageReader(image_reader)
-    pixmap = pixmap.scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio,
-                           Qt.TransformationMode.FastTransformation)
+    pixmap = pixmap.scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
     return pixmap
 
 
