@@ -37,6 +37,7 @@ def make_footer_area(parent):
                 footer_button.setText('Expand')
             else:
                 footer_button.setText('Shorten')
+            footer_button.setShortcut(QKeySequence('Ctrl+A'))
     return footer_layout
 
 
@@ -343,9 +344,9 @@ def make_lora_section(target):
     lora_num = target.params.get('Lora')
     ti_num = target.params.get('TI in prompt')
     if not lora_num:
-        caption = 'Lora in prompt : 0'
+        caption = 'LoRa : 0'
     else:
-        caption = 'Lora in prompt : ' + lora_num
+        caption = 'LoRa : ' + lora_num
         loop_num = max(int(lora_num), 14) + 1
         keyring = []
         for i in range(loop_num):
@@ -355,9 +356,9 @@ def make_lora_section(target):
                 keyring.append([key, title])
         section_layout.addLayout(label_maker(keyring, target, 1, 3))
     if not ti_num:
-        caption += ', TI in prompt : 0'
+        caption += ', Textual Inversion : 0'
     else:
-        caption += ', TI in prompt : ' + ti_num
+        caption += ', Textual Inversion : ' + ti_num
         loop_num = max(int(ti_num), 14) + 1
         keyring = []
         for i in range(loop_num):

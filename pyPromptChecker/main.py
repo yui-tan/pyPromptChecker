@@ -3,30 +3,33 @@
 import os
 import sys
 import argparse
-import glob
 
 from pyPromptChecker.lib import decoder
 from pyPromptChecker.gui import window
+from pyPromptChecker.gui import config
 
 
-def is_directory_check(filepaths):
-    filepath_list = []
-    if filepaths:
-        for filepath in filepaths:
-            if os.path.isdir(filepath):
-                file_in_directory = directory_to_filelist([filepath])
-                filepath_list = filepath_list + file_in_directory
-        filepaths = filepaths + filepath_list
+def find_target(root, depth):
+    filepaths = []
+
+    def _directory_search(current_dir, current_depth):
+        if current_depth <= depth and os.path.exists(current_dir):
+            for filename in os.listdir(current_dir):
+                fullpath = os.path.join(current_dir, filename)
+                if os.path.isfile(fullpath):
+                    filepaths.append(fullpath)
+                elif os.path.isdir(fullpath):
+                    _directory_search(fullpath, current_depth + 1)
+        else:
+            return
+
+    for path in root:
+        if os.path.isfile(path):
+            filepaths.append(path)
+        else:
+            _directory_search(path, 0)
+
     return filepaths
-
-
-def directory_to_filelist(directory_path):
-    if not os.path.isdir(directory_path[0]):
-        print('This is not a directory')
-        sys.exit()
-    directory = os.path.join(directory_path[0], '*')
-    file_list = glob.glob(directory)
-    return file_list
 
 
 def check_files(target_list):
@@ -71,7 +74,7 @@ def check_files(target_list):
     return valid_file_list, file_is_not_found_list, this_is_directory_list, this_file_is_not_image_file_list
 
 
-def main(test=False):
+def main():
     description_text = 'Script for extracting and formatting PNG chunks.\n'
     description_text = description_text + 'If no options are specified, the script will open a file choose dialog.\n'
     description_text = description_text + 'All options are mutually exclusive.'
@@ -84,17 +87,18 @@ def main(test=False):
     args = parser.parse_args()
 
     if args.filepath:
-        filepaths = args.filepath
-    elif args.filepaths or test:
-        filepaths = args.filepaths
-        filepaths = is_directory_check(filepaths)
+        parameters = args.filepath
+    elif args.filepaths:
+        parameters = args.filepaths
     elif args.directory:
-        filepaths = directory_to_filelist([args.directory])
+        parameters = [args.directory]
     elif args.ask:
-        src = window.from_main('directory')
-        filepaths = directory_to_filelist(src) if src else None
+        parameters = window.from_main('directory')
     else:
-        filepaths = window.from_main('files')
+        parameters = window.from_main('files')
+
+    depth = config.get('SubDirectoryDepth', 0)
+    filepaths = find_target(parameters, depth)
 
     if filepaths:
         valid_filepath, not_found_list, directory_list, not_png_list = check_files(filepaths)

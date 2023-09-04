@@ -10,7 +10,7 @@ def is_json_check(filepath):
         with open(filepath, 'r') as f:
             json.load(f)
         return True
-    except (json.JSONDecodeError, FileNotFoundError):
+    except (json.JSONDecodeError, FileNotFoundError, UnicodeDecodeError):
         return False
 
 

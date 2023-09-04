@@ -75,6 +75,7 @@ class ChunkData:
         if cfg_auto > 0:
             self.params['CFG auto'] = 'True'
 
+# Todo: ModelListSearchApplyLora, ModelListSearchApplyTi
     def model_name(self, model_list):
         model_hash = self.params.get('Model hash')
         vae_hash = self.params.get('VAE hash')

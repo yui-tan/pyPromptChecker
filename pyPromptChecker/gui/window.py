@@ -338,9 +338,11 @@ class ResultWindow(QMainWindow):
             if self.sender().text() == 'Shorten':
                 self.shorten_window()
                 self.sender().setText('Expand')
+                self.sender().setShortcut(QKeySequence('Ctrl+A'))
             else:
                 self.shorten_window(True)
                 self.sender().setText('Shorten')
+                self.sender().setShortcut(QKeySequence('Ctrl+A'))
         elif where_from == '▲Menu':
             x = self.sender().mapToGlobal(self.sender().rect().topLeft()).x()
             y = self.sender().mapToGlobal(self.sender().rect().topLeft()).y() - self.main_menu.sizeHint().height()
