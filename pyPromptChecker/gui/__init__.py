@@ -15,7 +15,7 @@ ini_config.read(config_file, encoding='utf-8')
 ini_section = [['Location', 'ModelList', 'Favourites'],
                ['Window', 'MaxWindowWidth', 'MaxWindowHeight', 'AlwaysStartWithDarkMode'],
                ['Pixmap', 'PixmapSize', 'RegionalPrompterPixmapSize'],
-               ['Features', 'ModelHashExtractor'],
+               ['Features', 'SubDirectoryDepth', 'OpenWithShortenedWindow'],
                ['Features', 'JsonExport', 'JsonSingle', 'JsonMultiple', 'JsonSelected'],
                ['Features', 'MoveDelete', 'UseCopyInsteadOfMove', 'AskIfDelete', 'AskIfClearTrashBin'],
                ['Features', 'TabNavigation', 'TabNavigationWithThumbnails', 'TabNavigationMinimumTabs'],
@@ -65,7 +65,7 @@ for ini in ini_section:
                 value = ini_config[section].get(option)
                 if value:
                     config[option] = value
-            elif option == 'TabNavigationMinimumTabs':
+            elif option == 'TabNavigationMinimumTabs' or option == 'SubDirectoryDepth':
                 try:
                     value = ini_config[section].getint(option)
                 except ValueError:

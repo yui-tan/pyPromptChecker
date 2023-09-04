@@ -12,10 +12,12 @@ from PyQt6.QtCore import Qt
 
 def make_footer_area(parent):
     json_export_enable = config.get('JsonExport', False)
+    shortened_window = config.get('OpenWithShortenedWindow', False)
     footer_layout = QHBoxLayout()
     button_text = ['Copy positive', 'Copy negative', 'Copy seed']
     if json_export_enable:
         button_text.extend(['Export JSON (This)', 'Export JSON (All)'])
+    button_text.append('Shorten')
     button_text.append('▲Menu')
     for tmp in button_text:
         footer_button = QPushButton()
@@ -30,6 +32,11 @@ def make_footer_area(parent):
             footer_button.setText('Copy &Seed')
         elif tmp == '▲Menu':
             footer_button.setText('▲M&enu')
+        elif tmp == 'Shorten':
+            if shortened_window:
+                footer_button.setText('Expand')
+            else:
+                footer_button.setText('Shorten')
     return footer_layout
 
 
@@ -160,7 +167,7 @@ def make_pixmap_label(filepath):
                 button.setShortcut(QKeySequence('Delete'))
         pixmap_layout.addLayout(button_layout)
     pixmap_section.setLayout(pixmap_layout)
-    pixmap_layout.setContentsMargins(0, 0, 0, 0)
+    pixmap_layout.setContentsMargins(0, 5, 0, 0)
     return pixmap_section
 
 

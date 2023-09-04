@@ -13,7 +13,7 @@ from .subwindow import *
 from .widget import *
 from .menu import *
 from PyQt6.QtWidgets import QApplication, QLabel, QTabWidget, QHBoxLayout, QPushButton, QComboBox, QTextEdit
-from PyQt6.QtCore import Qt, QPoint
+from PyQt6.QtCore import Qt, QPoint, QTimer
 
 
 class ResultWindow(QMainWindow):
@@ -24,6 +24,7 @@ class ResultWindow(QMainWindow):
         self.dialog = None
         self.toast_window = None
         self.progress_bar = None
+        self.hide_tab = config.get('OpenWithShortenedWindow', False)
         self.params = []
         self.filepath_list = []
         self.extract_data(targets)
@@ -51,7 +52,6 @@ class ResultWindow(QMainWindow):
         self.resize(window_width, window_height)
         self.move_centre_main()
 
-    # Todo: variable inner tab size
     def init_ui(self):
         tab_navigation_enable = config.get('TabNavigation', True)
         tab_minimums = config.get('TabNavigationMinimumTabs', True)
@@ -147,8 +147,6 @@ class ResultWindow(QMainWindow):
             inner_tab = QTabWidget()
 
             main_section = QGroupBox()
-            #            main_section.setMinimumHeight(section_height + 100)
-            #            main_section.setMaximumHeight(section_height + 100)
             main_section.setStyleSheet('padding 0px 0px 0px 0px; ')
             main_section.setObjectName('main_section')
             main_section_layout = QHBoxLayout()
@@ -221,6 +219,9 @@ class ResultWindow(QMainWindow):
             inner_tab.customContextMenuRequested.connect(self.show_tab_menu)
             inner_tab.currentChanged.connect(self.inner_tab_changed)
 
+            if self.hide_tab:
+                inner_tab.hide()
+
             tab_page_layout.addWidget(inner_tab)
             tab_page.setLayout(tab_page_layout)
 
@@ -257,6 +258,19 @@ class ResultWindow(QMainWindow):
             filelist = [value.params.get('Filename') for value in self.params]
             tab_navigation_box.clear()
             tab_navigation_box.addItems(filelist)
+
+    def shorten_window(self, expand=False):
+        for index in range(self.root_tab.count()):
+            extension_tab = self.root_tab.widget(index).findChild(QTabWidget, 'extension_tab')
+            if expand:
+                extension_tab.show()
+                self.hide_tab = False
+            else:
+                extension_tab.hide()
+                self.hide_tab = True
+        timer = QTimer(self)
+        timer.timeout.connect(lambda: self.adjustSize())
+        timer.start(10)
 
     def tab_changed(self):
         current_index = self.root_tab.currentIndex()
@@ -320,6 +334,13 @@ class ResultWindow(QMainWindow):
             self.export_json_single()
         elif where_from == 'Export JSON (All)':
             self.export_json_all()
+        elif where_from == 'Shorten':
+            if self.sender().text() == 'Shorten':
+                self.shorten_window()
+                self.sender().setText('Expand')
+            else:
+                self.shorten_window(True)
+                self.sender().setText('Shorten')
         elif where_from == '▲Menu':
             x = self.sender().mapToGlobal(self.sender().rect().topLeft()).x()
             y = self.sender().mapToGlobal(self.sender().rect().topLeft()).y() - self.main_menu.sizeHint().height()
