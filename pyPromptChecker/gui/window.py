@@ -8,6 +8,7 @@ from pyPromptChecker.lib import *
 # from lib import *
 
 from . import config
+from .search import *
 from .dialog import *
 from .subwindow import *
 from .widget import *
@@ -31,6 +32,7 @@ class ResultWindow(QMainWindow):
         self.image_window = ImageWindow(self)
         self.thumbnail = ThumbnailView(self)
         self.listview = Listview(self)
+        self.search = SearchWindow(self)
         self.main_menu = MainMenu(self)
         self.tab_linker = TabMenu(self)
         self.tab_linker_enable = [False, 'Prompt']
@@ -45,9 +47,6 @@ class ResultWindow(QMainWindow):
 
         window_width = size_hint_width if max_width > size_hint_width else max_width
         window_height = size_hint_height if max_height > size_hint_height else max_height
-
-        #        self.setMaximumWidth(max_width)
-        #        self.setMaximumHeight(max_height)
 
         self.show()
         self.resize(window_width, window_height)
@@ -109,6 +108,13 @@ class ResultWindow(QMainWindow):
                 valid_total -= 1
                 continue
 
+            if filetype == 0:
+                parameters.params['Extensions'] = 'PNG'
+            elif filetype == 1:
+                parameters.params['Extensions'] = 'JPEG'
+            elif filetype == 2:
+                parameters.params['Extensions'] = 'WEBP'
+
             if lora_name:
                 parameters.override_lora(models)
                 parameters.override_addnet_model(models)
@@ -134,7 +140,6 @@ class ResultWindow(QMainWindow):
             self.make_root_tab()
 
     def make_root_tab(self):
-        section_height = config.get('PixmapSize', 350)
         shown_tab = self.root_tab.count()
         total = len(self.params)
         image_count = 0
@@ -269,6 +274,18 @@ class ResultWindow(QMainWindow):
             tab_navigation_box.clear()
             tab_navigation_box.addItems(filelist)
 
+    def search_tab(self, condition):
+        target_data = [value.params for value in self.params]
+        target_tab = list(search_images(condition, target_data))
+        if target_tab:
+            for i in range(self.root_tab.count()):
+                if i not in target_tab:
+                    self.root_tab.setTabVisible(i, False)
+                else:
+                    self.root_tab.tabBar().setTabTextColor(i, Qt.GlobalColor.darkGreen)
+        else:
+            MessageBox('There is no match to show.', 'Search result', 'ok', 'info', self)
+
     def shorten_window(self, expand=False):
         for index in range(self.root_tab.count()):
             extension_tab = self.root_tab.widget(index).findChild(QTabWidget, 'extension_tab')
@@ -312,7 +329,10 @@ class ResultWindow(QMainWindow):
         elif where_from == 'Thumbnail':
             self.open_thumbnail()
         elif where_from == 'Search':
-            self.not_yet_implemented()
+            model_list = [value.params.get('Model') for value in self.params if not None]
+            model_list = set(model_list)
+            model_list = list(model_list)
+            self.search.init_search_window(model_list)
         elif where_from == 'Listview':
             self.open_listview()
 
@@ -594,6 +614,8 @@ class ResultWindow(QMainWindow):
                 self.image_window.close()
             if self.thumbnail.isVisible():
                 self.thumbnail.close()
+            if self.listview.isVisible():
+                self.listview.close()
             if len(result_list) > 10:
                 self.progress_bar = ProgressDialog()
                 self.progress_bar.setRange(0, len(result_list) * 2)
@@ -647,11 +669,9 @@ class ResultWindow(QMainWindow):
     def change_themes(self):
         if self.dark:
             qdarktheme.setup_theme('light')
-            #            qdarktheme.setup_theme(additional_qss=add_stylesheet())
             self.dark = False
         else:
-            qdarktheme.setup_theme('dark')
-            #            qdarktheme.setup_theme(additional_qss=add_stylesheet())
+            qdarktheme.setup_theme(additional_qss=add_stylesheet())
             self.dark = True
 
     def not_yet_implemented(self):
@@ -686,19 +706,14 @@ def add_stylesheet():
     return stylesheet
 
 
-# Todo: fix minor bugs around dark theme
-# 1. bit lagged when apply dark/light theme.
-# 2. lagged when apply stylesheet.
 def from_main(purpose, target_data=None):
     theme = config.get('AlwaysStartWithDarkMode')
-    #    qdarktheme.enable_hi_dpi()
     if purpose == 'directory':
         app = QApplication(sys.argv)
         if theme:
-            qdarktheme.setup_theme('dark')
+            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         else:
             qdarktheme.setup_theme('light')
-        #            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         open_directory = Dialog()
         open_directory.init_dialog('choose-directory', 'Select directory')
         result = open_directory.result
@@ -706,10 +721,9 @@ def from_main(purpose, target_data=None):
     elif purpose == 'files':
         app = QApplication(sys.argv)
         if theme:
-            qdarktheme.setup_theme('dark')
+            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         else:
             qdarktheme.setup_theme('light')
-        #            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         open_files = Dialog()
         open_files.init_dialog('choose-files', 'Select files', None, 'PNG')
         result = open_files.result
@@ -718,22 +732,20 @@ def from_main(purpose, target_data=None):
         app = QApplication.instance()
         if app is None:
             app = QApplication(sys.argv)
-        if theme:
-            qdarktheme.setup_theme('dark')
-        else:
-            qdarktheme.setup_theme('light')
-        #            qdarktheme.setup_theme(additional_qss=add_stylesheet())
+            if theme:
+                qdarktheme.setup_theme(additional_qss=add_stylesheet())
+            else:
+                qdarktheme.setup_theme('light')
         progress = ProgressDialog()
         return app, progress
     elif purpose == 'result':
         app = QApplication.instance()
         if app is None:
             app = QApplication(sys.argv)
+            if theme:
+                qdarktheme.setup_theme(additional_qss=add_stylesheet())
+            else:
+                qdarktheme.setup_theme('light')
         result_window = ResultWindow(target_data)
-        if theme:
-            qdarktheme.setup_theme('dark')
-        else:
-            qdarktheme.setup_theme('light')
-        #            qdarktheme.setup_theme(additional_qss=add_stylesheet())
         result_window.show()
         sys.exit(app.exec())

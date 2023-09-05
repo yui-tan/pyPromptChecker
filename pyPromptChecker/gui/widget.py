@@ -79,6 +79,7 @@ def tab_navigation(parent):
 
 def make_main_section(target):
     status = [['File count', 'Number'],
+              'Extensions',
               'Filename',
               'Filepath',
               'Timestamp',
