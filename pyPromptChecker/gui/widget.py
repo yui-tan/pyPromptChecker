@@ -123,7 +123,7 @@ def make_main_section(target):
         label_layout.itemAt(i).widget().setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
     scroll_area = QScrollArea()
     scroll_area.setMinimumWidth(350)
-    scroll_area.setMaximumHeight(max_height + 55)
+    scroll_area.setMaximumHeight(max_height + 50)
     scroll_area.setStyleSheet('border: 0px; padding 0px; ')
     scroll_contents = QWidget()
     scroll_contents.setContentsMargins(0, 0, 0, 0)
@@ -131,6 +131,7 @@ def make_main_section(target):
     scroll_area.setWidget(scroll_contents)
     main_section_layout.addWidget(pixmap_label, 1)
     main_section_layout.addWidget(scroll_area, 1)
+    main_section_layout.setContentsMargins(0, 0, 0, 0)
     return main_section_layout
 
 
@@ -182,13 +183,13 @@ def make_prompt_tab(target):
     positive_prompt = QTextEdit()
     positive_prompt.setPlainText(positive_text)
     positive_prompt.setReadOnly(True)
-    positive_prompt.setMinimumHeight(180)
+#    positive_prompt.setMinimumHeight(180)
     positive_prompt.setObjectName('Positive')
     negative_text = target.params.get('Negative', 'None')
     negative_prompt = QTextEdit(negative_text)
     negative_prompt.setPlainText(negative_text)
     negative_prompt.setReadOnly(True)
-    negative_prompt.setMinimumHeight(180)
+#    negative_prompt.setMinimumHeight(180)
     negative_prompt.setObjectName('Negative')
 
     splitter.addWidget(positive_prompt)
@@ -330,9 +331,9 @@ def dynamic_thresholding_section(target):
 def make_lora_addnet_tab(target):
     tab_layout = QHBoxLayout()
     lora_group = make_lora_section(target)
-    tab_layout.addWidget(lora_group, 1)
+    tab_layout.addWidget(lora_group, 2)
     addnet_group = make_addnet_section(target)
-    tab_layout.addWidget(addnet_group, 1)
+    tab_layout.addWidget(addnet_group, 3)
     return tab_layout
 
 
@@ -403,7 +404,7 @@ def make_addnet_section(target):
             if not target.params.get(key[0][0]):
                 cnt = cnt - 1
                 continue
-            section_layout.addLayout(label_maker(key, target, 1, 3))
+            section_layout.addLayout(label_maker(key, target, 1, 2, True, False, 99, 80))
     caption = 'Additional Networks : ' + str(cnt)
     content_widget.setLayout(section_layout)
     scroll_area.setWidget(content_widget)

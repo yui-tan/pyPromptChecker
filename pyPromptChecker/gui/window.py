@@ -162,14 +162,17 @@ class ResultWindow(QMainWindow):
             inner_tab = QTabWidget()
 
             main_section = QGroupBox()
-            main_section.setStyleSheet('padding 0px 0px 0px 0px; ')
             main_section.setObjectName('main_section')
+            main_section.setTitle(tmp.params.get('Filename', 'None'))
             main_section_layout = QHBoxLayout()
             main_label_layout = make_main_section(tmp)
             main_section_layout.addLayout(main_label_layout)
             main_section_layout.setContentsMargins(5, 5, 0, 5)
             main_section.setLayout(main_section_layout)
             tab_page_layout.addWidget(main_section)
+
+            main_section_height = config.get('PixmapSize', 350) + 60
+            main_section.setFixedHeight(main_section_height)
 
             pixmap_label = main_section.findChild(PixmapLabel, 'Pixmap')
             if pixmap_label:
@@ -178,6 +181,9 @@ class ResultWindow(QMainWindow):
                 managing_button = main_section.findChild(QPushButton, button)
                 if managing_button:
                     managing_button.clicked.connect(self.managing_button_clicked)
+
+            dummy_widget = QWidget()
+            tab_page_layout.addWidget(dummy_widget)
 
             hires_tab = ['Hires upscaler', 'Face restoration', 'Extras']
             cfg_fix_auto_tab = ['Dynamic thresholding enabled', 'CFG auto', 'CFG scheduler']
@@ -274,17 +280,36 @@ class ResultWindow(QMainWindow):
             tab_navigation_box.clear()
             tab_navigation_box.addItems(filelist)
 
+# Todo: The scroll buttons do not function properly when 'HideNotMatchTabs' set to True.
     def search_tab(self, condition):
+        hide = config.get('HideNotMatchedTabs')
+        result = condition.get('Result', 'Tabs')
         target_data = [value.params for value in self.params]
         target_tab = list(search_images(condition, target_data))
-        if target_tab:
-            for i in range(self.root_tab.count()):
-                if i not in target_tab:
-                    self.root_tab.setTabVisible(i, False)
-                else:
-                    self.root_tab.tabBar().setTabTextColor(i, Qt.GlobalColor.darkGreen)
+        if len(target_tab) > 0:
+            if result == 'Tabs':
+                for i in range(self.root_tab.count()):
+                    if hide:
+                        self.root_tab.setTabVisible(i, False)
+                        self.root_tab.setTabEnabled(i, False)
+                    if i in target_tab:
+                        self.root_tab.setTabVisible(i, True)
+                        self.root_tab.setTabEnabled(i, True)
+                        self.root_tab.tabBar().setTabTextColor(i, Qt.GlobalColor.darkGreen)
+            elif result == 'Listview':
+                if self.listview.isVisible():
+                    self.listview.close()
+                dictlist = [target_data[i] for i in target_tab]
+                self.listview.init_listview(dictlist)
+            elif result == 'Thumbnails':
+                if self.thumbnail.isVisible():
+                    self.thumbnail.close()
+                filelist = [[target_data[i].get('Filepath'), target_data[i].get('Filename'), i] for i in target_tab]
+                self.thumbnail.init_thumbnail(filelist)
+            text = str(len(target_tab)) + ' image(s) found !'
+            MessageBox(text, 'Search result', 'ok', 'info', self.search)
         else:
-            MessageBox('There is no match to show.', 'Search result', 'ok', 'info', self)
+            MessageBox('There is no match to show.', 'Search result', 'ok', 'info', self.search)
 
     def shorten_window(self, expand=False):
         for index in range(self.root_tab.count()):
@@ -327,14 +352,23 @@ class ResultWindow(QMainWindow):
             target_tab = self.sender().currentIndex()
             self.root_tab.setCurrentIndex(target_tab)
         elif where_from == 'Thumbnail':
-            self.open_thumbnail()
+            if self.thumbnail.isVisible():
+                self.thumbnail.activateWindow()
+            else:
+                self.open_thumbnail()
         elif where_from == 'Search':
-            model_list = [value.params.get('Model') for value in self.params if not None]
-            model_list = set(model_list)
-            model_list = list(model_list)
-            self.search.init_search_window(model_list)
+            if self.search.isVisible():
+                self.search.activateWindow()
+            else:
+                model_list = [value.params.get('Model') for value in self.params if not None]
+                model_list = set(model_list)
+                model_list = list(model_list)
+                self.search.init_search_window(model_list)
         elif where_from == 'Listview':
-            self.open_listview()
+            if self.listview.isVisible():
+                self.listview.activateWindow()
+            else:
+                self.open_listview()
 
     def button_clicked(self):
         where_from = self.sender().objectName()

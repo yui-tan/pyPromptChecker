@@ -2,6 +2,7 @@
 
 from .dialog import ProgressDialog
 from .dialog import PixmapLabel
+from .dialog import MessageBox
 from functools import lru_cache
 from PyQt6.QtWidgets import QMainWindow, QApplication, QGridLayout, QGroupBox, QCheckBox, QScrollArea, QSlider
 from PyQt6.QtWidgets import QVBoxLayout, QWidget, QPushButton, QHBoxLayout, QLabel, QSpacerItem, QLineEdit, QComboBox
@@ -342,40 +343,97 @@ class SearchWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Search")
-        self.setWindowModality(Qt.WindowModality.WindowModal)
+        self.conditions = {}
+        self.result = 'Tabs'
+        self.prompt = None
         self.status = None
         self.extension = None
-        self.search_cfg_label = None
         self.search_box = None
         self.search_model = None
         self.search_seed_box = None
-        self.search_cfg = None
+        self.search_cfg_label = None
 
     def init_search_window(self, model_list):
-        search_label = QLabel('Search prompt : ')
-        search_seed_label = QLabel('Search seed : ')
-        self.search_cfg_label = QLabel('CFG : 0')
-        search_model_label = QLabel('Model : ')
-        self.search_box = QLineEdit(self)
-        self.search_model = QComboBox()
-        self.search_seed_box = QLineEdit(self)
-        self.search_cfg = QSlider()
-        search_button = QPushButton("Search", self)
-        search_button.clicked.connect(self.search)
-        close_button = QPushButton('Close', self)
-        close_button.clicked.connect(self.window_close)
+        model_list.sort()
+        model_list.insert(0, '')
 
         layout = QGridLayout()
 
-        for i, tmp in enumerate(['Negative prompt', 'Region control']):
-            checkbox = QCheckBox(tmp)
-            checkbox.setObjectName(tmp)
-            layout.addWidget(checkbox, 1, i + 1)
+        result_label = QLabel('Result shows: ')
+        result_box = QComboBox()
+        result_box.addItems(['Tabs', 'Listview', 'Thumbnails'])
+        result_box.currentIndexChanged.connect(self.result_change)
 
-        for i, tmp in enumerate(['Exact match', 'Case sensitive']):
+        prompt_group = QGroupBox()
+        prompt_group.setTitle('Search Keywords')
+        prompt_group.setCheckable(True)
+        prompt_group.setChecked(True)
+        prompt_group_layout = QGridLayout()
+
+        search_label = QLabel('Search words : ')
+        self.search_box = QLineEdit(self)
+
+        for i, tmp in enumerate(['Positive', 'Negative', 'Region control']):
             checkbox = QCheckBox(tmp)
             checkbox.setObjectName(tmp)
-            layout.addWidget(checkbox, 2, i + 1)
+            prompt_group_layout.addWidget(checkbox, 2, i + 1)
+            if tmp == 'Positive':
+                checkbox.setChecked(True)
+
+        checkbox = QCheckBox('Case insensitive')
+        checkbox.setObjectName('Case insensitive')
+        prompt_group_layout.addWidget(checkbox, 3, 2, 1, 2)
+
+        checkbox = QCheckBox('Use regex')
+        checkbox.setObjectName('Use regex')
+        checkbox.setDisabled(True)
+        prompt_group_layout.addWidget(checkbox, 3, 1)
+
+        prompt_group_layout.addWidget(search_label, 1, 0)
+        prompt_group_layout.addWidget(self.search_box, 1, 1, 1, 3)
+        prompt_group.setLayout(prompt_group_layout)
+        self.prompt = prompt_group
+
+        status_group = QGroupBox()
+        status_group.setTitle('Status')
+        status_group.setCheckable(True)
+        status_group.setChecked(False)
+        status_group_layout = QGridLayout()
+
+        search_model_label = QLabel('Model : ')
+        self.search_model = QComboBox()
+        self.search_model.addItems(model_list)
+
+        status_group_layout.addWidget(search_model_label, 0, 0)
+        status_group_layout.addWidget(self.search_model, 0, 1, 1, 3)
+
+        search_seed_label = QLabel('Search seed : ')
+        self.search_seed_box = QLineEdit(self)
+        reg_ex = QRegularExpression('^[0-9]*')
+        validator = QRegularExpressionValidator(reg_ex)
+        self.search_seed_box.setValidator(validator)
+
+        self.search_cfg_label = QLabel('CFG : 0')
+        search_cfg = QSlider()
+        search_cfg.setOrientation(Qt.Orientation.Horizontal)
+        search_cfg.setTickInterval(1)
+        search_cfg.setRange(0, 40)
+        search_cfg.valueChanged.connect(self.value_change)
+
+        for i, tmp in enumerate(['Less than', 'Equal to', 'Greater than']):
+            radio_button = QRadioButton(tmp)
+            radio_button.setObjectName(tmp)
+            status_group_layout.addWidget(radio_button, 3, i + 1)
+            if tmp == 'Equal to':
+                radio_button.setChecked(True)
+
+        status_group_layout.addWidget(search_seed_label, 1, 0)
+        status_group_layout.addWidget(self.search_seed_box, 1, 1, 1, 3)
+        status_group_layout.addWidget(self.search_cfg_label, 2, 0)
+        status_group_layout.addWidget(search_cfg, 2, 1, 1, 3)
+
+        status_group.setLayout(status_group_layout)
+        self.status = status_group
 
         extension_group = QGroupBox()
         extension_group.setTitle('Extensions')
@@ -396,102 +454,84 @@ class SearchWindow(QMainWindow):
         extension_group.setLayout(extension_group_layout)
         self.extension = extension_group
 
-        status_group = QGroupBox()
-        status_group.setTitle('Status')
-        status_group.setCheckable(True)
-        status_group.setChecked(False)
-        status_group_layout = QGridLayout()
+        search_button = QPushButton("Search", self)
+        search_button.clicked.connect(self.search)
+        close_button = QPushButton('Close', self)
+        close_button.clicked.connect(self.window_close)
 
-        status_group_layout.addWidget(search_model_label, 0, 0)
-        status_group_layout.addWidget(self.search_model, 0, 1, 1, 3)
-        model_list.insert(0, '')
-        self.search_model.addItems(model_list)
-
-        status_group_layout.addWidget(search_seed_label, 1, 0)
-        status_group_layout.addWidget(self.search_seed_box, 1, 1, 1, 3)
-        reg_ex = QRegularExpression('^[0-9]*')
-        validator = QRegularExpressionValidator(reg_ex)
-        self.search_seed_box.setValidator(validator)
-
-        status_group_layout.addWidget(self.search_cfg_label, 2, 0)
-        status_group_layout.addWidget(self.search_cfg, 2, 1, 1, 3)
-        self.search_cfg.setOrientation(Qt.Orientation.Horizontal)
-        self.search_cfg.setTickInterval(1)
-        self.search_cfg.setRange(0, 40)
-        self.search_cfg.valueChanged.connect(self.value_change)
-
-        for i, tmp in enumerate(['Less than', 'Equal to', 'Greater than']):
-            radio_button = QRadioButton(tmp)
-            radio_button.setObjectName(tmp)
-            status_group_layout.addWidget(radio_button, 3, i + 1)
-            if tmp == 'Equal to':
-                radio_button.setChecked(True)
-
-        status_group.setLayout(status_group_layout)
-        self.status = status_group
-
-        layout.addWidget(search_label, 0, 0, 1, 1)
-        layout.addWidget(self.search_box, 0, 1, 1, 3)
-        layout.addWidget(status_group, 3, 0, 2, 4)
-        layout.addWidget(extension_group, 5, 0, 2, 4)
-        layout.addWidget(search_button, 7, 0, 1, 2)
-        layout.addWidget(close_button, 7, 2, 1, 2)
+        layout.addWidget(result_label, 0, 0)
+        layout.addWidget(result_box, 0, 1, 1, 3)
+        layout.addWidget(prompt_group, 1, 0, 2, 4)
+        layout.addWidget(status_group, 4, 0, 2, 4)
+        layout.addWidget(extension_group, 6, 0, 2, 4)
+        layout.addWidget(search_button, 8, 0, 1, 2)
+        layout.addWidget(close_button, 8, 2, 1, 2)
 
         central_widget = QWidget()
         central_widget.setLayout(layout)
-
         self.setCentralWidget(central_widget)
 
         self.show()
         move_centre(self, self.parent())
 
+    def result_change(self):
+        self.result = self.sender().currentText()
+
     def value_change(self):
-        self.search_cfg_label.setText('CFG : ' + str(self.search_cfg.value() * 0.5))
+        self.search_cfg_label.setText('CFG : ' + str(self.sender().value() * 0.5))
 
     def window_close(self):
         self.close()
 
     def search(self):
-        conditions = {}
-        search_prompt = self.search_box.text()
-        if search_prompt:
-            conditions['Prompt'] = search_prompt
+        self.conditions['Result'] = self.result
+        if self.prompt.isChecked():
+            self.conditions['Search'] = self.search_box.text()
+            for tmp in self.prompt.findChildren(QCheckBox):
+                key = tmp.objectName()
+                self.conditions[key] = tmp.isChecked()
+        self.conditions['Prompt'] = self.prompt.isChecked()
 
         if self.status.isChecked():
-            search_model = self.search_model.currentText()
-            search_seed = self.search_seed_box.text()
-            search_cfg = str(self.search_cfg.value() * 0.5)
-            if search_cfg != 0:
-                for tmp in self.centralWidget().findChildren(QRadioButton):
-                    if tmp.isChecked():
-                        search_cfg = (search_cfg, tmp.objectName())
-                        break
-            if search_model:
-                conditions['Model'] = search_model
-            if search_seed:
-                conditions['Seed'] = search_seed
-            if search_cfg:
-                conditions['CFG'] = search_cfg
+            relation = 'Greater than'
+            for tmp in self.status.findChildren(QRadioButton):
+                if tmp.isChecked():
+                    relation = tmp.objectName()
+                    break
 
-        search_conditions = ['Negative prompt',
-                             'Region control',
-                             'Exact match',
-                             'Case sensitive',
-                             'LoRa / AddNet',
-                             'Hires / Extras',
-                             'CFG',
-                             'Tiled diffusion',
-                             'ControlNet',
-                             'Regional prompter']
+            keys = ['Model', 'Seed', 'CFG', 'Relation']
+            seek = [self.search_model.currentText(),
+                    self.search_seed_box.text(),
+                    self.search_cfg_label.text().replace('CFG : ', ''),
+                    relation]
 
-        for i, tmp in enumerate(search_conditions):
-            widget = self.centralWidget().findChild(QCheckBox, tmp)
-            if widget.isChecked() and i < 4:
-                conditions[tmp] = True
-            elif widget.isChecked() and self.extension.isChecked() and i > 3:
-                conditions[tmp] = True
+            for index, key in enumerate(keys):
+                self.conditions[key] = seek[index]
+        self.conditions['Status'] = self.status.isChecked()
 
-        self.parent().search_tab(conditions)
+        if self.extension.isChecked():
+            for tmp in self.extension.findChildren(QCheckBox):
+                self.conditions[tmp.objectName()] = tmp.isChecked()
+        self.conditions['Extension'] = self.extension.isChecked()
+
+        if self.validation():
+            self.parent().search_tab(self.conditions)
+
+    def validation(self):
+        words = self.conditions.get('Search', 'None')
+        count = words.count('"')
+
+        if count % 2 != 0:
+            text = 'There are not an even number of double quotes.'
+            MessageBox(text, 'Please check it out', 'ok', 'info', self)
+            return False
+
+        if ' | ' in words:
+            text = 'There is space on either side of |.'
+            MessageBox(text, 'Please check it out', 'ok', 'info', self)
+            return False
+
+        return True
 
 
 @lru_cache(maxsize=1000)
