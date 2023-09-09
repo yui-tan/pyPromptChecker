@@ -111,6 +111,8 @@ def search_images(condition_list, target_list):
 
         target_data = target_string_adjust(positive, negative, region, target_list)
         for target in target_data:
+            if not target or target == 'This file has no embedded data':
+                target = '----'
             if all(search_prompt_string(query, target, case_insensitive) for query in search_strings):
                 prompt_result.append(True)
             else:

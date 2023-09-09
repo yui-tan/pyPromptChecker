@@ -218,6 +218,7 @@ class ResultWindow(QMainWindow):
             for index, tab in enumerate(tabs):
                 if tab[1] and tab[2]:
                     inner_page = QWidget()
+                    inner_page.setMinimumHeight(config.get('PixmapSize', 350))
                     if index == 0:
                         inner_page.setLayout(make_prompt_tab(tmp))
                     if index == 1:
@@ -288,7 +289,7 @@ class ResultWindow(QMainWindow):
             tab_navigation_box.clear()
             tab_navigation_box.addItems(filelist)
 
-    def shorten_window(self, expand=False):
+    def change_window(self, expand=False):
         for index in range(self.root_tab.count()):
             extension_tab = self.root_tab.widget(index).findChild(QTabWidget, 'extension_tab')
             if expand:
@@ -365,14 +366,14 @@ class ResultWindow(QMainWindow):
             self.export_json_single()
         elif where_from == 'Export JSON (All)':
             self.export_json_all()
-        elif where_from == 'Shorten':
-            if self.sender().text() == 'Shorten':
-                self.shorten_window()
+        elif where_from == 'Shrink':
+            if self.sender().text() == 'Shrink':
+                self.change_window()
                 self.sender().setText('Expand')
                 self.sender().setShortcut(QKeySequence('Ctrl+Tab'))
             else:
-                self.shorten_window(True)
-                self.sender().setText('Shorten')
+                self.change_window(True)
+                self.sender().setText('Shrink')
                 self.sender().setShortcut(QKeySequence('Ctrl+Tab'))
         elif where_from == '▲Menu':
             x = self.sender().mapToGlobal(self.sender().rect().topLeft()).x()
@@ -491,14 +492,16 @@ class ResultWindow(QMainWindow):
         if self.search.isVisible():
             self.search.activateWindow()
         else:
-            model_list = [value.params.get('Model') for value in self.params if not None]
+            model_list = [value.params.get('Model') for value in self.params if value.params.get('Model') is not None]
             model_list = list(set(model_list))
             model_list.sort()
             model_list.insert(0, '')
+            model_list.append('None')
             self.search.init_search_window(model_list)
 
     def tab_tweak(self, indexes=None):
         hide = config.get('HideNotMatchedTabs', False)
+        restore = self.centralWidget().findChild(QPushButton, 'Restore')
         if indexes:
             for tab_index in reversed(range(self.root_tab.count())):
                 if tab_index not in indexes:
@@ -506,6 +509,7 @@ class ResultWindow(QMainWindow):
                         title = self.root_tab.tabText(tab_index)
                         self.retracted.append([tab_index, self.root_tab.widget(tab_index), title])
                         self.root_tab.removeTab(tab_index)
+                        restore.setDisabled(False)
                 else:
                     self.root_tab.tabBar().setTabTextColor(tab_index, Qt.GlobalColor.green)
         else:
@@ -519,6 +523,7 @@ class ResultWindow(QMainWindow):
                 for widget in reversed(self.retracted):
                     self.root_tab.insertTab(widget[0], widget[1], widget[2])
                 self.retracted = []
+                restore.setDisabled(True)
 
     def open_thumbnail(self, indexes=None):
         size = config.get('ThumbnailPixmapSize', 150)
@@ -710,8 +715,7 @@ class ResultWindow(QMainWindow):
             if directory:
                 operation_progress = ProgressDialog(self)
                 file_list = os.listdir(directory)
-                file_list = [os.path.join(directory, v) for v in file_list if
-                             os.path.isfile(os.path.join(directory, v))]
+                file_list = [os.path.join(directory, v) for v in file_list if os.path.isfile(os.path.join(directory, v))]
                 file_list = [v for v in file_list if 'safetensors' in v or 'ckpt' in v or 'pt' in v]
                 operation_progress.setLabelText('Loading model file......')
                 operation_progress.setRange(0, len(file_list) + 1)

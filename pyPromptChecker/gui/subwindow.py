@@ -152,7 +152,7 @@ class ThumbnailView(QMainWindow):
 
     def check_box_changed(self):
         if self.sender().isChecked():
-            self.sender().parent().setStyleSheet("QGroupBox {border: 1px solid #86cecb; }")
+            self.sender().parent().setStyleSheet("QGroupBox {border: 2px solid #86cecb; padding : 1px 0 0 0; }")
         else:
             self.sender().parent().setStyleSheet("")
 
@@ -360,7 +360,7 @@ class Listview(QMainWindow):
 
     def group_toggle(self):
         if self.sender().isChecked():
-            self.sender().parent().setStyleSheet("QGroupBox {border: 1px solid #86cecb; }")
+            self.sender().parent().setStyleSheet("QGroupBox {border: 2px solid #86cecb; padding : 1px 0 0 0; }")
         else:
             self.sender().parent().setStyleSheet("")
 

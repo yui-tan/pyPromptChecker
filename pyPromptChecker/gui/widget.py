@@ -21,7 +21,7 @@ def make_footer_area(parent):
     if json_export_enable:
         button_text.extend(['Export JSON (This)', 'Export JSON (All)'])
 
-    button_text.extend(['Shorten', '▲Menu'])
+    button_text.extend(['Shrink', '▲Menu'])
 
     for button_name in button_text:
         footer_button = QPushButton()
@@ -41,11 +41,11 @@ def make_footer_area(parent):
             footer_button.setText('Copy &seed')
         elif button_name == '▲Menu':
             footer_button.setText('▲M&enu')
-        elif button_name == 'Shorten':
+        elif button_name == 'Shrink':
             if shortened_window or now_shortened:
                 footer_button.setText('Expand')
             else:
-                footer_button.setText('Shorten')
+                footer_button.setText('Shrink')
             footer_button.setShortcut(QKeySequence('Ctrl+Tab'))
 
     return footer_layout
@@ -79,6 +79,8 @@ def tab_navigation(parent):
         header_layout.addWidget(restore_button, 1)
         restore_shortcut = QShortcut(QKeySequence('Ctrl+R'), parent)
         restore_shortcut.activated.connect(parent.tab_tweak)
+        if not parent.retracted:
+            restore_button.setDisabled(True)
 
     header_layout.addWidget(dropdown_box, 5)
 
