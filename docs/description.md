@@ -44,7 +44,8 @@ Sets the maximum size of the window.
 Not very useful in practice.  
 I'll address this soon, but for now, please treat it as a placeholder.
   - **"AlwaysStartWithDarkMode" option** (Boolean)  
-If this setting set to True, always turn on dark mode at startup.
+If this setting set to True, always turn on dark mode at startup.  
+Default value is **False**.
 - ### [Pixmap] section
   - **"PixmapSize" option** (Integer)  
 Sets the size of the pixmap.  
@@ -69,9 +70,17 @@ The default value is **0**, meaning it will only search for files inside the spe
 If large number is specified, the script may not function properly due to the large number of files.  
 The author has confirmed that it can manage up to 10,000 files somehow.
   - **"UsesNumberAsTabName" option** (Boolean)  
-  - **"OpenWithShortenedWindow" option** (Boolean)
+If set to True, the number is used instead of the filename as tab title.  
+Default value is **False**
+  - **"OpenWithShortenedWindow" option** (Boolean)  
+If set to True, the extension tabs at the bottom of the window will start in a hidden state.  
+Default value is **False**.
   - **"ModelListSearchApplyLora" option** (Boolean)
-  - **"ModelListSearchApplyTi" option** (Boolean)
+  - **"ModelListSearchApplyTi" option** (Boolean)  
+If this is set to True,  
+the same process performed on 'Model Hash' will also be applied to LoRa and textual inversion.  
+In other words, you can freely set the display names for LoRa and textual inversion using 'Model_list.csv'.  
+Default value is **False**.
 
 - ### [Tab] section
   - **"HiresExtras" option** (Boolean)
@@ -81,13 +90,15 @@ The author has confirmed that it can manage up to 10,000 files somehow.
   - **"ControlNet" option** (Boolean)
   - **"RegionalPrompter" option** (Boolean)  
 Setting show/hide tab at the bottom of the window.  
-If set to false, the script don't create tab even if the image uses applicable extension.
+If set to false, the script don't create tab even if the image uses applicable extension.  
+Default value is **True** all.
 - ### [Ignore] section
   - **"IgnoreIfDataIsNotEmbedded" option** (Boolean)  
 Setting behaviour if image has no embedded data.  
 If set to True, the script does not create image's tab.  
 If set to False, it creates image's tab with minimum information.  
-(e.g. filepath, filename, etc)
+(e.g. filepath, filename, etc.)  
+Default value is **False**.
 ## Model_list.csv
 - ### Overview  
     'model_list.csv' is a file what script locate model name from hash values.  
@@ -127,14 +138,15 @@ Depends on number of files, it requires huge mount of time and memories[^2].
   If you use 'import JSON' feature, all tabs will be replaced.
 
 - ### Key bindings
-  - **Alt + T:** Export JSON of present image file 
-  - **Alt + A:** Export JSON of all image file 
-  - **Alt + L:** Export JSON of selected image file
+  - **Alt + T :** Export JSON of present image file 
+  - **Alt + A :** Export JSON of all image file 
+  - **Alt + L :** Export JSON of selected image file
     
 - ### Related values in 'config.ini'
   - ### [Features] section ###
     - **"JsonExport" option** (Boolean)  
-      This option now only mean toggle shown/not shown "Export Json" buttons.
+      This option now only mean toggle shown/not shown "Export Json" buttons.  
+      Default value is **False**.
     - **"JsonSingle" option** (Strings)  
       This option is setting for exported JSONs (single file) default Name. Setting whatever you want.  
       If 'JsonSingle=filename' is set, the image file name will be set as default.
@@ -168,17 +180,19 @@ If enable this feature, three buttons appear beneath pixmap.
       the favourite button will still appear, but this features won't be available.
   - ### [Features] section ###
     - **"MoveDelete" option** (Boolean)  
-      If set to True, 3 buttons will be shown beneath the image.  
+If set to True, 3 buttons will be shown beneath the image.  
+Default value is **True**.
     - **"UseCopyInsteadOfMove" option** (Boolean)   
-      If set to True, this scripts will copy file instead of moving it.  
-      *But this setting is not affect to 'Delete' feature.*  
+If set to True, this scripts will copy file instead of moving it.  
+Default value is **True**.  
+*But this setting is not affect to 'Delete' feature.*
     - **"AskIfDelete" option** (Boolean)  
-      If set to True, confirmation dialog will be shown when the delete button is pressed.
+If set to True, confirmation dialog will be shown when the delete button is pressed.  
+Default value is **True**.
     - **"AskIfClearTrashBin" option[^4]** (Boolean)   
-      If set to True, confirmation dialog will be shown the script exits,   
-      Asking if delete all files within the TrashBin directory.
-
-    Those values are set to True by default.
+If set to True, confirmation dialog will be shown the script exits,   
+Asking if delete all files within the TrashBin directory.  
+Default value is **True**.
 ## Tab navigation ##
 ![tab_navigation](https://user-images.githubusercontent.com/121333129/263465639-d02bc716-bfe9-4940-a655-6f8cade02348.png)
 - ### Overview ###
@@ -190,16 +204,18 @@ A combo box at the top of the window and a thumbnail window are provided.
     - **Ctrl + L :** Open listview window
 - ### Related values in 'config.ini' ###  
   - ### [Features] section ###
-    - **"TabNavigation" option** (Boolean)
-Toggle to enable or to disable tab navigation.
-    - **"TabNavigationWithThumbnails" option** (Boolean)
+    - **"TabNavigation" option** (Boolean)  
+Toggle to enable or to disable tab navigation.  
+Default value is **True**.
+    - **"TabNavigationWithThumbnails" option** (Boolean)  
 Toggle to enable or to disable thumbnail view.  
 If set to True, thumbnail button appears next to 'Jump to' button, right top of the window.  
-This setting has no meanings unless "TabNavigation" option is enable.
-    - **"TabNavigationMinimumTabs" option** (Integer)
+This setting has no meanings unless "TabNavigation" option is enable.  
+Default value is **True**.
+    - **"TabNavigationMinimumTabs" option** (Integer)  
 Setting appear tab navigation when how many files are opens.   
-This setting is meaningless unless both of the above settings are enabled.
-Default setting is **2**
+This setting is meaningless unless both of the above settings are enabled.  
+Default value is **2**
 ## Compare extension
 ![compare](https://user-images.githubusercontent.com/121333129/263465633-7bda6efe-f70a-445a-b1ae-2436b41a7e15.png)
 - ### Overview ###
