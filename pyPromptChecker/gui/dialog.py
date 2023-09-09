@@ -10,6 +10,7 @@ class PixmapLabel(QLabel):
 
     def __init__(self, parent=None):
         super(PixmapLabel, self).__init__(parent)
+        self.setStyleSheet("border: none;")
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:

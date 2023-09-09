@@ -14,6 +14,7 @@ from .subwindow import *
 from .widget import *
 from .menu import *
 from PyQt6.QtWidgets import QApplication, QLabel, QTabWidget, QHBoxLayout, QPushButton, QComboBox, QTextEdit
+from PyQt6.QtGui import QKeySequence, QPalette
 from PyQt6.QtCore import Qt, QPoint, QTimer
 
 
@@ -27,7 +28,7 @@ class ResultWindow(QMainWindow):
         self.progress_bar = None
         self.hide_tab = config.get('OpenWithShortenedWindow', False)
         self.params = []
-        self.filepath_list = []
+        self.retracted = []
         self.extract_data(targets)
         self.image_window = ImageWindow(self)
         self.thumbnail = ThumbnailView(self)
@@ -47,6 +48,8 @@ class ResultWindow(QMainWindow):
 
         window_width = size_hint_width if max_width > size_hint_width else max_width
         window_height = size_hint_height if max_height > size_hint_height else max_height
+
+        make_keybindings(self)
 
         self.show()
         self.resize(window_width, window_height)
@@ -164,6 +167,8 @@ class ResultWindow(QMainWindow):
             main_section = QGroupBox()
             main_section.setObjectName('main_section')
             main_section.setTitle(tmp.params.get('Filename', 'None'))
+            tmp.used_params['Filename'] = True
+
             main_section_layout = QHBoxLayout()
             main_label_layout = make_main_section(tmp)
             main_section_layout.addLayout(main_label_layout)
@@ -249,7 +254,10 @@ class ResultWindow(QMainWindow):
             if 'File count' in tmp.params:
                 del tmp.params['File count']
 
-            self.root_tab.addTab(tab_page, tmp.params.get('Filename', '---'))
+            if config.get('UsesNumberAsTabName', False):
+                self.root_tab.addTab(tab_page, str(image_count + 1))
+            else:
+                self.root_tab.addTab(tab_page, tmp.params.get('Filename', '---'))
             self.root_tab.setTabToolTip(shown_tab + image_count, tmp.params.get('Filename', '---'))
             image_count += 1
 
@@ -279,37 +287,6 @@ class ResultWindow(QMainWindow):
             filelist = [value.params.get('Filename') for value in self.params]
             tab_navigation_box.clear()
             tab_navigation_box.addItems(filelist)
-
-# Todo: The scroll buttons do not function properly when 'HideNotMatchTabs' set to True.
-    def search_tab(self, condition):
-        hide = config.get('HideNotMatchedTabs')
-        result = condition.get('Result', 'Tabs')
-        target_data = [value.params for value in self.params]
-        target_tab = list(search_images(condition, target_data))
-        if len(target_tab) > 0:
-            if result == 'Tabs':
-                for i in range(self.root_tab.count()):
-                    if hide:
-                        self.root_tab.setTabVisible(i, False)
-                        self.root_tab.setTabEnabled(i, False)
-                    if i in target_tab:
-                        self.root_tab.setTabVisible(i, True)
-                        self.root_tab.setTabEnabled(i, True)
-                        self.root_tab.tabBar().setTabTextColor(i, Qt.GlobalColor.darkGreen)
-            elif result == 'Listview':
-                if self.listview.isVisible():
-                    self.listview.close()
-                dictlist = [target_data[i] for i in target_tab]
-                self.listview.init_listview(dictlist)
-            elif result == 'Thumbnails':
-                if self.thumbnail.isVisible():
-                    self.thumbnail.close()
-                filelist = [[target_data[i].get('Filepath'), target_data[i].get('Filename'), i] for i in target_tab]
-                self.thumbnail.init_thumbnail(filelist)
-            text = str(len(target_tab)) + ' image(s) found !'
-            MessageBox(text, 'Search result', 'ok', 'info', self.search)
-        else:
-            MessageBox('There is no match to show.', 'Search result', 'ok', 'info', self.search)
 
     def shorten_window(self, expand=False):
         for index in range(self.root_tab.count()):
@@ -352,23 +329,13 @@ class ResultWindow(QMainWindow):
             target_tab = self.sender().currentIndex()
             self.root_tab.setCurrentIndex(target_tab)
         elif where_from == 'Thumbnail':
-            if self.thumbnail.isVisible():
-                self.thumbnail.activateWindow()
-            else:
-                self.open_thumbnail()
+            self.open_thumbnail()
         elif where_from == 'Search':
-            if self.search.isVisible():
-                self.search.activateWindow()
-            else:
-                model_list = [value.params.get('Model') for value in self.params if not None]
-                model_list = set(model_list)
-                model_list = list(model_list)
-                self.search.init_search_window(model_list)
+            self.tab_search_window()
+        elif where_from == 'Restore':
+            self.tab_tweak()
         elif where_from == 'Listview':
-            if self.listview.isVisible():
-                self.listview.activateWindow()
-            else:
-                self.open_listview()
+            self.open_listview()
 
     def button_clicked(self):
         where_from = self.sender().objectName()
@@ -501,15 +468,79 @@ class ResultWindow(QMainWindow):
         frame_geometry.moveCenter(screen_center)
         self.move(frame_geometry.topLeft())
 
-    def open_thumbnail(self):
-        filepath_list = []
-        for index, tmp in enumerate(self.params):
-            filepath_list.append([tmp.params.get('Filepath'), tmp.params.get('Filename'), index])
-        self.thumbnail.init_thumbnail(filepath_list)
+    def tab_search(self, condition):
+        result = condition.get('Result', 'Tabs')
+        self.tab_tweak()
 
-    def open_listview(self):
-        dictionary_list = [value.params for value in self.params]
-        self.listview.init_listview(dictionary_list)
+        target_data = [value.params for value in self.params]
+        target_tab = list(search_images(condition, target_data))
+
+        if len(target_tab) > 0:
+            if result == 'Tabs':
+                self.tab_tweak(target_tab)
+            elif result == 'Listview':
+                self.open_listview(target_tab)
+            elif result == 'Thumbnails':
+                self.open_thumbnail(target_tab)
+            text = str(len(target_tab)) + ' image(s) found !'
+            MessageBox(text, 'Search result', 'ok', 'info', self.search)
+        else:
+            MessageBox('There is no match to show.', 'Search result', 'ok', 'info', self.search)
+
+    def tab_search_window(self):
+        if self.search.isVisible():
+            self.search.activateWindow()
+        else:
+            model_list = [value.params.get('Model') for value in self.params if not None]
+            model_list = list(set(model_list))
+            model_list.sort()
+            model_list.insert(0, '')
+            self.search.init_search_window(model_list)
+
+    def tab_tweak(self, indexes=None):
+        hide = config.get('HideNotMatchedTabs', False)
+        if indexes:
+            for tab_index in reversed(range(self.root_tab.count())):
+                if tab_index not in indexes:
+                    if hide:
+                        title = self.root_tab.tabText(tab_index)
+                        self.retracted.append([tab_index, self.root_tab.widget(tab_index), title])
+                        self.root_tab.removeTab(tab_index)
+                else:
+                    self.root_tab.tabBar().setTabTextColor(tab_index, Qt.GlobalColor.green)
+        else:
+            palette = self.root_tab.palette()
+            text_color = palette.color(QPalette.ColorRole.Text)
+            for index in range(self.root_tab.count()):
+                color = self.root_tab.tabBar().tabTextColor(index)
+                if color == Qt.GlobalColor.green:
+                    self.root_tab.tabBar().setTabTextColor(index, text_color)
+            if self.retracted:
+                for widget in reversed(self.retracted):
+                    self.root_tab.insertTab(widget[0], widget[1], widget[2])
+                self.retracted = []
+
+    def open_thumbnail(self, indexes=None):
+        size = config.get('ThumbnailPixmapSize', 150)
+        if self.thumbnail.isVisible():
+            self.thumbnail.activateWindow()
+        else:
+            if indexes:
+                dictionary_list = [self.params[i].params for i in indexes]
+            else:
+                dictionary_list = [value.params for value in self.params]
+            self.thumbnail.init_thumbnail(dictionary_list, size)
+
+    def open_listview(self, indexes=None):
+        size = config.get('ListViewPixmapSize', 200)
+        if self.listview.isVisible():
+            self.listview.activateWindow()
+        else:
+            if indexes:
+                dictionary_list = [self.params[i].params for i in indexes]
+            else:
+                dictionary_list = [value.params for value in self.params]
+            self.listview.init_listview(dictionary_list, size)
 
     def import_json_from_files(self):
         self.dialog.init_dialog('choose-files', 'Select JSONs', None, 'JSON')
@@ -708,9 +739,6 @@ class ResultWindow(QMainWindow):
             qdarktheme.setup_theme(additional_qss=add_stylesheet())
             self.dark = True
 
-    def not_yet_implemented(self):
-        MessageBox('Sorry this feature is not yet implemented.', 'pyPromptChecker', 'ok', 'info', self)
-
     def closeEvent(self, event):
         trash_bin = os.path.join(os.path.abspath(''), '.trash')
         if os.path.exists(trash_bin):
@@ -736,7 +764,9 @@ def add_stylesheet():
                  "QTextEdit:focus, QTextEdit:selected { selection-background-color: #137a7f; }" \
                  "QTextEdit:focus { border-color: #86cecb; }" \
                  "QSplitter:handle:hover { background-color: #86cecb; }" \
-                 "QTabBar:tab:selected:enabled { color: #86cecb; border-color: #86cecb; }"
+                 "QTabBar:tab:selected:enabled { color: #86cecb; border-color: #86cecb; }" \
+                 "QProgressBar::chunk {background: #86cecb; }" \
+                 "QCheckBox:hover,QRadioButton:hover {border-bottom:2px solid #86cecb; }"
     return stylesheet
 
 

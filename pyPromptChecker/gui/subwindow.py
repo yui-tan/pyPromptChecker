@@ -27,8 +27,10 @@ class ImageWindow(QMainWindow):
         screen_height = int(self.max_screen.height() * 0.95)
         pixmap_width = pixmap.width()
         pixmap_height = pixmap.height()
+
         width = screen_width if pixmap_width > screen_width else pixmap_width
         height = screen_height if pixmap_height > screen_height else pixmap_height
+
         pixmap = pixmap.scaled(width, height, Qt.AspectRatioMode.KeepAspectRatio,
                                Qt.TransformationMode.SmoothTransformation)
 
@@ -58,49 +60,49 @@ class ThumbnailView(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle('Thumbnail View')
-        self.filelist_for_return = []
-        self.filelist_original = []
 
-    def init_thumbnail(self, filelist):
-        self.filelist_original = filelist
+    def init_thumbnail(self, dictionary_list, size):
 
         progress = ProgressDialog()
         progress.setLabelText('Loading...')
-        progress.setRange(0, len(filelist))
+        progress.setRange(0, len(dictionary_list))
 
         base_layout = QGridLayout()
-        row = col = 0
+        row = col = width = 0
 
-        for array in filelist:
-            filepath, filename, tab_index = array
+        for index, dictionary in enumerate(dictionary_list):
+            filepath = dictionary.get('Filepath')
+            filename = dictionary.get('Filename')
 
             portrait_border = QGroupBox()
-            portrait_border.setMaximumWidth(190)
-            portrait_border.setMinimumWidth(190)
+            portrait_border.setMaximumWidth(size + 40)
+            portrait_border.setMinimumWidth(size + 40)
 
             portrait_layout = QVBoxLayout()
             portrait_border.setLayout(portrait_layout)
 
-            pixmap = portrait_generator(filepath)
+            pixmap = portrait_generator(filepath, size)
             pixmap_label = PixmapLabel()
-            pixmap_label.setMinimumSize(150, 150)
+            pixmap_label.setMinimumSize(size, size)
             pixmap_label.setPixmap(pixmap)
             pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
             pixmap_label.setToolTip(filename)
-            pixmap_label.setObjectName(str(tab_index))
+            pixmap_label.setObjectName(str(index))
             pixmap_label.clicked.connect(self.pixmap_clicked)
 
             check_box = QCheckBox(filename)
-            check_box.setObjectName(filename)
-            check_box.stateChanged.connect(self.check_box_changed)
+            check_box.setObjectName(str(index))
+            check_box.toggled.connect(self.check_box_changed)
 
             portrait_layout.addWidget(pixmap_label)
             portrait_layout.addWidget(check_box)
             base_layout.addWidget(portrait_border, row, col)
 
-            col = col + 1
-            if col == 5:
-                col = 0
+            width += (size + 40)
+            col += 1
+
+            if width > 900:
+                col = width = 0
                 row = row + 1
 
             progress.update_value()
@@ -115,11 +117,13 @@ class ThumbnailView(QMainWindow):
         central_widget_layout = QVBoxLayout()
 
         button_layout = QHBoxLayout()
+
         json_button = QPushButton('Export selected images JSON')
         json_button.clicked.connect(self.json_button_clicked)
+        button_layout.addWidget(json_button)
+
         close_button = QPushButton('Close')
         close_button.clicked.connect(self.close_button_clicked)
-        button_layout.addWidget(json_button)
         button_layout.addWidget(close_button)
 
         central_widget_layout.addWidget(scroll_area)
@@ -129,29 +133,28 @@ class ThumbnailView(QMainWindow):
         self.setCentralWidget(central_widget)
 
         scroll_area.setMinimumWidth(thumb.sizeHint().width() + 25)
+
+        estimated_height = portrait_layout.sizeHint().height()
         if row > 2:
-            scroll_area.setMinimumHeight(portrait_layout.sizeHint().height() * 3)
+            if estimated_height < 300:
+                scroll_area.setMinimumHeight(estimated_height * 3)
+            else:
+                scroll_area.setMaximumHeight(estimated_height + 25)
+
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setWidgetResizable(True)
 
         progress.close()
+
         self.show()
         move_centre(self, self.parent())
 
     def check_box_changed(self):
-        filename = self.sender().objectName()
-        self.sender().parent().setStyleSheet("QGroupBox {background-color: #86cecb;}")
         if self.sender().isChecked():
-            for array in self.filelist_original:
-                if filename == array[1]:
-                    self.filelist_for_return.append(array[0])
-                    break
+            self.sender().parent().setStyleSheet("QGroupBox {border: 1px solid #86cecb; }")
         else:
-            for array in self.filelist_original:
-                self.sender().parent().setStyleSheet("")
-                if filename == array[1]:
-                    self.filelist_for_return.remove(array[0])
+            self.sender().parent().setStyleSheet("")
 
     def pixmap_clicked(self):
         target_tab = self.sender().objectName()
@@ -159,13 +162,13 @@ class ThumbnailView(QMainWindow):
         self.parent().activateWindow()
 
     def json_button_clicked(self):
-        index_list = []
-        for filepath in self.filelist_for_return:
-            for array in self.filelist_original:
-                if filepath == array[0]:
-                    index_list.append(array[2])
-                    break
-        self.parent().export_json_selected(index_list)
+        indexes = []
+        for widget in self.centralWidget().findChildren(QCheckBox):
+            if widget.isChecked():
+                index = widget.objectName()
+                indexes.append(int(index))
+        if indexes:
+            self.parent().export_json_selected(indexes)
 
     def close_button_clicked(self):
         self.close()
@@ -177,8 +180,10 @@ class Listview(QMainWindow):
         self.dictionary_list = []
         self.setWindowTitle('Listview')
         self.estimated_width = 400
+        self.size = 0
 
-    def init_listview(self, dic_list):
+    def init_listview(self, dic_list, size):
+        self.size = size
         self.dictionary_list = dic_list
         file_counts = len(self.dictionary_list)
 
@@ -192,9 +197,12 @@ class Listview(QMainWindow):
             group_box = self.groups(i)
             root_layout.addWidget(group_box)
 
+        groupbox_count = 4 if file_counts > 4 else file_counts
         root_widget.setLayout(root_layout)
         estimated_width = root_widget.sizeHint().width() + 50
-        estimated_height = group_box.sizeHint().height() * 4 + 50
+        estimated_height = group_box.sizeHint().height() * groupbox_count + 50
+        if estimated_height > 750:
+            estimated_height = 750
 
         scroll_area.setWidget(root_widget)
         scroll_area.setMinimumWidth(estimated_width)
@@ -212,7 +220,7 @@ class Listview(QMainWindow):
 
     def footer_button(self):
         footer_layout = QHBoxLayout()
-        for tmp in ['Export JSON', 'Close']:
+        for tmp in ['Export selected JSON', 'Close']:
             button = QPushButton(tmp)
             button.setObjectName(tmp)
             footer_layout.addWidget(button)
@@ -223,27 +231,32 @@ class Listview(QMainWindow):
         where_from = self.sender().objectName()
         if where_from == 'Close':
             self.close()
+        elif where_from == 'Export selected JSON':
+            self.check_group()
 
-    def pixmap_labels(self, index):
+    def pixmap_label(self, index):
         filepath = self.dictionary_list[index].get('Filepath', None)
-        pixmap_label = QLabel()
+        pixmap_label = PixmapLabel()
         if filepath:
-            pixmap = portrait_generator(filepath)
+            pixmap = portrait_generator(filepath, self.size)
             pixmap_label.setPixmap(pixmap)
+            pixmap_label.clicked.connect(self.pixmap_clicked)
+            pixmap_label.setObjectName(str(index))
         else:
             pixmap_label.setText("Couldn't load image.")
-        pixmap_label.setMinimumSize(150, 150)
-        pixmap_label.setMaximumSize(150, 150)
+        pixmap_label.setMinimumSize(self.size, self.size)
+        pixmap_label.setMaximumSize(self.size, self.size)
         pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         return pixmap_label
 
     def groups(self, index):
         group = QGroupBox()
+        group.setObjectName(str(index))
         group_layout = QHBoxLayout()
         status_label_layout = QGridLayout()
-        pixmap_label = self.pixmap_labels(index)
+        pixmap_label = self.pixmap_label(index)
 
-        for i, key in enumerate(['Seed', 'Sampler', 'Steps', 'CFG scale', 'Model']):
+        for i, key in enumerate(['Seed', 'Sampler', 'Steps', 'CFG scale', 'Model', 'VAE', 'Version']):
 
             item = self.dictionary_list[index].get(key, 'None')
             title_label = QLabel(key)
@@ -327,6 +340,8 @@ class Listview(QMainWindow):
                 j += 1
 
         check_box = QCheckBox('')
+        check_box.setStyleSheet("QCheckBox { spacing: 0px; }")
+        check_box.toggled.connect(self.group_toggle)
 
         group_layout.addWidget(check_box)
         group_layout.addWidget(pixmap_label)
@@ -337,6 +352,26 @@ class Listview(QMainWindow):
         group.setTitle(self.dictionary_list[index].get('Filepath', 'None'))
 
         return group
+
+    def pixmap_clicked(self):
+        target_tab = self.sender().objectName()
+        self.parent().root_tab.setCurrentIndex(int(target_tab))
+        self.parent().activateWindow()
+
+    def group_toggle(self):
+        if self.sender().isChecked():
+            self.sender().parent().setStyleSheet("QGroupBox {border: 1px solid #86cecb; }")
+        else:
+            self.sender().parent().setStyleSheet("")
+
+    def check_group(self):
+        indexes = []
+        for widget in self.centralWidget().findChildren(QCheckBox):
+            if widget.isChecked():
+                index = widget.parent().objectName()
+                indexes.append(int(index))
+        if indexes:
+            self.parent().export_json_selected(indexes)
 
 
 class SearchWindow(QMainWindow):
@@ -354,9 +389,6 @@ class SearchWindow(QMainWindow):
         self.search_cfg_label = None
 
     def init_search_window(self, model_list):
-        model_list.sort()
-        model_list.insert(0, '')
-
         layout = QGridLayout()
 
         result_label = QLabel('Result shows: ')
@@ -515,7 +547,7 @@ class SearchWindow(QMainWindow):
         self.conditions['Extension'] = self.extension.isChecked()
 
         if self.validation():
-            self.parent().search_tab(self.conditions)
+            self.parent().tab_search(self.conditions)
 
     def validation(self):
         words = self.conditions.get('Search', 'None')
@@ -535,10 +567,10 @@ class SearchWindow(QMainWindow):
 
 
 @lru_cache(maxsize=1000)
-def portrait_generator(filepath):
+def portrait_generator(filepath, size):
     image_reader = QImageReader(filepath)
     pixmap = QPixmap.fromImageReader(image_reader)
-    pixmap = pixmap.scaled(150, 150, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
+    pixmap = pixmap.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
     return pixmap
 
 

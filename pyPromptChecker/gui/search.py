@@ -90,7 +90,7 @@ def search_prompt_string(query, target_text, case):
         if isinstance(query, list):
             query = query[0]
         if case:
-            return query.lower in target_text.lower()
+            return query.lower() in target_text.lower()
         else:
             return query in target_text
 

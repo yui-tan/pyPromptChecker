@@ -31,6 +31,7 @@ But source code edition still has requirements as follows.
 - pillow (PIL)
 - pypng
 - PyQt6
+- pyqtdarktheme
 
 # Installation
 ### pyPromptChecker binary edition (for Linux and Windows users)  
@@ -75,9 +76,9 @@ mikkumiku -d DIRECTORY, --directory DIRECTORY
 ```
 # Roadmap
  - [x] Tab navigation with thumbnails
- - [ ] Listview
+ - [x] Listview
  - [ ] Diff mode
- - [ ] Filtering and searching tabs various conditions
+ - [x] Filtering and searching tabs various conditions
  - [x] Add support for other image file formats
     - [x] jpeg
     - [x] webp

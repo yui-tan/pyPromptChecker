@@ -2,11 +2,12 @@
 
 import datetime
 import os
+import sys
 from . import config
 from .dialog import PixmapLabel
 from PyQt6.QtWidgets import QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QComboBox, QTextEdit, QSizePolicy
 from PyQt6.QtWidgets import QGroupBox, QTabWidget, QScrollArea, QSplitter, QGridLayout, QWidget
-from PyQt6.QtGui import QPixmap, QPainter, QColor, QKeySequence
+from PyQt6.QtGui import QPixmap, QPainter, QColor, QKeySequence, QShortcut
 from PyQt6.QtCore import Qt
 
 
@@ -16,35 +17,44 @@ def make_footer_area(parent):
     now_shortened = parent.hide_tab
     footer_layout = QHBoxLayout()
     button_text = ['Copy positive', 'Copy negative', 'Copy seed']
+
     if json_export_enable:
         button_text.extend(['Export JSON (This)', 'Export JSON (All)'])
-    button_text.append('Shorten')
-    button_text.append('▲Menu')
-    for tmp in button_text:
+
+    button_text.extend(['Shorten', '▲Menu'])
+
+    for button_name in button_text:
         footer_button = QPushButton()
-        footer_button.setObjectName(tmp)
+        footer_button.setObjectName(button_name)
         footer_button.clicked.connect(parent.button_clicked)
         footer_layout.addWidget(footer_button)
-        if tmp == 'Copy positive':
-            footer_button.setText('Copy &Positive')
-        elif tmp == 'Copy negative':
-            footer_button.setText('Copy &Negative')
-        elif tmp == 'Copy seed':
-            footer_button.setText('Copy &Seed')
-        elif tmp == '▲Menu':
+
+        if button_name == 'Copy positive':
+            footer_button.setText('Copy &positive')
+        elif button_name == 'Copy negative':
+            footer_button.setText('Copy &negative')
+        elif button_name == 'Export JSON (This)':
+            footer_button.setText('Export JSON (&This)')
+        elif button_name == 'Export JSON (All)':
+            footer_button.setText('Export JSON (&All)')
+        elif button_name == 'Copy seed':
+            footer_button.setText('Copy &seed')
+        elif button_name == '▲Menu':
             footer_button.setText('▲M&enu')
-        elif tmp == 'Shorten':
+        elif button_name == 'Shorten':
             if shortened_window or now_shortened:
                 footer_button.setText('Expand')
             else:
                 footer_button.setText('Shorten')
             footer_button.setShortcut(QKeySequence('Ctrl+Tab'))
+
     return footer_layout
 
 
 def tab_navigation(parent):
     tab_search = config.get('TabSearch', True)
     thumbnails = config.get('TabNavigationWithThumbnails', True)
+    listview = config.get('TabNavigationWithListview', True)
     filename_list = [value.params.get('Filename') for value in parent.params]
 
     header_layout = QHBoxLayout()
@@ -55,24 +65,38 @@ def tab_navigation(parent):
     dropdown_box.setObjectName('Combo')
     dropdown_box.currentIndexChanged.connect(parent.header_button_clicked)
 
-    listview_button = QPushButton('Listview')
-    listview_button.setObjectName('Listview')
-    listview_button.clicked.connect(parent.header_button_clicked)
-
     if tab_search:
         search_button = QPushButton('Search')
         search_button.setObjectName('Search')
         search_button.clicked.connect(parent.header_button_clicked)
         header_layout.addWidget(search_button, 1)
+        search_shortcut = QShortcut(QKeySequence('Ctrl+F'), parent)
+        search_shortcut.activated.connect(parent.tab_search_window)
+
+        restore_button = QPushButton('Restore')
+        restore_button.setObjectName('Restore')
+        restore_button.clicked.connect(parent.header_button_clicked)
+        header_layout.addWidget(restore_button, 1)
+        restore_shortcut = QShortcut(QKeySequence('Ctrl+R'), parent)
+        restore_shortcut.activated.connect(parent.tab_tweak)
 
     header_layout.addWidget(dropdown_box, 5)
-    header_layout.addWidget(listview_button, 1)
+
+    if listview:
+        listview_button = QPushButton('Listview')
+        listview_button.setObjectName('Listview')
+        listview_button.clicked.connect(parent.header_button_clicked)
+        header_layout.addWidget(listview_button, 1)
+        listview_shortcut = QShortcut(QKeySequence('Ctrl+L'), parent)
+        listview_shortcut.activated.connect(parent.open_listview)
 
     if thumbnails:
         thumbnail_button = QPushButton('Thumbnail')
         thumbnail_button.setObjectName('Thumbnail')
         thumbnail_button.clicked.connect(parent.header_button_clicked)
         header_layout.addWidget(thumbnail_button, 1)
+        thumbnail_shortcut = QShortcut(QKeySequence('Ctrl+T'), parent)
+        thumbnail_shortcut.activated.connect(parent.open_thumbnail)
 
     return header_layout
 
@@ -80,7 +104,6 @@ def tab_navigation(parent):
 def make_main_section(target):
     status = [['File count', 'Number'],
               'Extensions',
-              'Filename',
               'Filepath',
               'Timestamp',
               'Size',
@@ -792,3 +815,15 @@ def label_maker(status,
             section_layout.addWidget(margin, label_count, 0)
             label_count = label_count + 1
     return section_layout
+
+
+def make_keybindings(parent=None):
+    toggle_theme_shortcut = QShortcut(QKeySequence('Ctrl+D'), parent)
+    add_tab_shortcut = QShortcut(QKeySequence('Ctrl+O'), parent)
+    replace_tab_shortcut = QShortcut(QKeySequence('Ctrl+N'), parent)
+    quit_shortcut = QShortcut(QKeySequence('Ctrl+Q'), parent)
+
+    toggle_theme_shortcut.activated.connect(parent.change_themes)
+    add_tab_shortcut.activated.connect(parent.reselect_files_append)
+    replace_tab_shortcut.activated.connect(parent.reselect_files)
+    quit_shortcut.activated.connect(lambda: sys.exit())

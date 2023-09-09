@@ -17,17 +17,34 @@
     
 # Descriptions about features
 The authors themselves had no idea it would be so feature-rich.  
+## Key bindings
+Here are some common key bindings.  
+The key bindings for each feature, see the feature description.
+- ### Basic
+  - **Ctrl + Tab :** Toggle expand / shorten window
+  - **Ctrl + D :** Toggle dark/light theme
+  - **Ctrl + Q :** Quit
+- ### Tab control
+  - **Ctrl + O :** Add tabs
+  - **Ctrl + N :** Replace tabs
+- ### Button control
+  - **Alt + P :** Copy positive
+  - **Alt + N :** Copy negative
+  - **Alt + S :** Copy seed
+  - **Alt + E :** Open menu
 ## Config.ini
 - ### Overview
-  - The behaviour of the script is configured in 'config.ini'.  
-  - It will work with the default values even without it, but you may want to create your own favourite settings.  
-  - The description of each configuration value is given here, but see below for a description of the individual features.
+  The behaviour of the script is configured in 'config.ini'.  
+  It will work with the default values even without it, but you may want to create your own favourite settings.  
+  The description of each configuration value is given here, but see below for a description of the individual features.
 - ### [Window] section
   - **"MaxWindowWidth" option** (Integer)
   - **"MaxWindowHeight" option** (Integer)   
 Sets the maximum size of the window.  
 Not very useful in practice.  
 I'll address this soon, but for now, please treat it as a placeholder.
+  - **"AlwaysStartWithDarkMode" option** (Boolean)  
+If this setting set to True, always turn on dark mode at startup.
 - ### [Pixmap] section
   - **"PixmapSize" option** (Integer)  
 Sets the size of the pixmap.  
@@ -39,6 +56,23 @@ The default value is **350**.
 Set the size of pixmap of regional prompter tab.  
 This value also has the same overview as the previous 'PixmapSize' option.  
 The default value is **500**.
+  - **"ThumbnailPixmapSize" option** (Integer)  
+Set the pixmap size of thumbnail mode.  
+The default value is **150**.
+  - **"ListViewPixmapSize" option** (Integer)  
+Set the pixmap size of Listview mode.  
+The default value is **200**.
+- ### [Features] section
+  - **"SubDirectoryDepth" option** (Integer)  
+Sets how many levels of subdirectories are searched when a directory path is passed to the script.  
+The default value is **0**, meaning it will only search for files inside the specified directory.  
+If large number is specified, the script may not function properly due to the large number of files.  
+The author has confirmed that it can manage up to 10,000 files somehow.
+  - **"UsesNumberAsTabName" option** (Boolean)  
+  - **"OpenWithShortenedWindow" option** (Boolean)
+  - **"ModelListSearchApplyLora" option** (Boolean)
+  - **"ModelListSearchApplyTi" option** (Boolean)
+
 - ### [Tab] section
   - **"HiresExtras" option** (Boolean)
   - **"CFG" option** (Boolean)
@@ -56,10 +90,10 @@ If set to False, it creates image's tab with minimum information.
 (e.g. filepath, filename, etc)
 ## Model_list.csv
 - ### Overview  
-  - 'model_list.csv' is a file what script locate model name from hash values.  
-  - This file can be place anywhere of your choice.  
-  - But if you move from initial place, declare new path in 'config.ini'  
-  - And you **can not** rename this file from 'model_list.csv'
+    'model_list.csv' is a file what script locate model name from hash values.  
+     This file can be place anywhere of your choice.  
+     But if you move from initial place, declare new path in 'config.ini'  
+     And you **can not** rename this file from 'model_list.csv'
 
 - ### Format  
   The structure of 'model_list.csv' is as following:  
@@ -73,6 +107,12 @@ If set to False, it creates image's tab with minimum information.
   - The script uses the first and second columns for searching.  
   - Therefore, you can delete columns from the third onward or add something in columns from the sixth onward without any issues.  
 
+- ### Model hash extractor  
+  The feature that extract model hash from your own model files and create 'model_list.csv' file or append data to it.  
+Now it can be find in menu > model hash extractor.  
+Depends on number of files, it requires huge mount of time and memories[^2].
+
+
 - ### Related values in 'config.ini'
   - ### [Location] section ###
     - **"ModelList" option** (Directory path)  
@@ -81,10 +121,15 @@ If set to False, it creates image's tab with minimum information.
 
 ## JSON import and export
 - ### Overview
-  - Export creation data as JSON formatted data.
-  - It can now be found in the menu > Export JSON
-  - 'Import JSON' feature is not intended to import any JSON other than what it has exported[^1].
-  - If use 'import JSON' feature, all tabs will be replaced.
+  Export creation data as JSON formatted data.  
+  It can now be found in the menu > Export JSON
+  'Import JSON' feature is not intended to import any JSON other than what it has exported[^1].
+  If you use 'import JSON' feature, all tabs will be replaced.
+
+- ### Key bindings
+  - **Alt + T:** Export JSON of present image file 
+  - **Alt + A:** Export JSON of all image file 
+  - **Alt + L:** Export JSON of selected image file
     
 - ### Related values in 'config.ini'
   - ### [Features] section ###
@@ -99,23 +144,21 @@ If set to False, it creates image's tab with minimum information.
     - **"JsonSelected" option** (Strings)  
       This option is setting for exported JSONs (selected) default Name. Setting whatever you want.  
       If 'JsonSelected=selected' is set, the first image's name + "-and-so-on" will be set as default. maybe...
-      
-## Model hash extractor
-- ### Overview
-  - The feature that extract model hash from your own model files and create 'model_list.csv' file or append data to it.
-  - Now it can be find in menu > model hash extractor.
-  - Depends on number of files, it requires huge mount of time and memories[^2].
-  
-- ### Related values in 'config.ini'
-  - ### [Features] section ###
-    - **"ModelHashExtractor" option** (Boolean)  
-    *Deprecated*
 
 ## Move/Delete feature
-- ### Overview
+- ### Overview  
+  Provides simple file management functions.  
+Images can be moved to a pre-registered favourite directory,  
+moved to an arbitrary directory and can be deleted.  
+If enable this feature, three buttons appear beneath pixmap.
   - Favourite button: Move/copy image to favourite directory.
   - Move to button: Move/copy image to any directory.
   - Delete button: Delete[^3] image file.
+
+- ### Key bindings
+  - **Alt + F :** Add favourite
+  - **Alt + M :** Move to
+  - **Delete :** Delete image
 
 - ### Related values in 'config.ini'
   - ### [Location] section ###
@@ -139,8 +182,12 @@ If set to False, it creates image's tab with minimum information.
 ## Tab navigation ##
 ![tab_navigation](https://user-images.githubusercontent.com/121333129/263465639-d02bc716-bfe9-4940-a655-6f8cade02348.png)
 - ### Overview ###
-    - This is provided to allow navigation between tabs when many tabs are generated.
-    - A combo box at the top of the window and a thumbnail window are provided.    
+  This is provided to allow navigation between tabs when many tabs are generated.  
+A combo box at the top of the window and a thumbnail window are provided.    
+- ### Key bindings
+    - **Ctrl + F :** Search
+    - **Ctrl + T :** Open thumbnail window
+    - **Ctrl + L :** Open listview window
 - ### Related values in 'config.ini' ###  
   - ### [Features] section ###
     - **"TabNavigation" option** (Boolean)
@@ -156,32 +203,8 @@ Default setting is **2**
 ## Compare extension
 ![compare](https://user-images.githubusercontent.com/121333129/263465633-7bda6efe-f70a-445a-b1ae-2436b41a7e15.png)
 - ### Overview ###
-  - If left click on bottom tab (e.g. Prompt, Tiled Diffusion, etc) appears menu with checkbox.
-  - Check the checkbox to maintain the selected tab in the bottom, even when you switch tabs in the top.
-# Keybindings
-- ### Ctrl+Tab: Shorten window
-- ### Ctrl+F: Search
-- ### Ctrl+D: Toggle dark/light mode
-- ### Ctrl+N: Replace tabs
-- ### Ctrl+O: Add tabs
-- ### Ctrl+T: Open Thumbnails
-- ### Ctrl+L: Open Listview
-- ### Ctrl+Q: Quit
-
-- ### Alt+F: Add favourite
-- ### Alt+M: Move to
-- ### Delete: Delete image file
-
-- ### Alt+P: Copy positive
-- ### Alt+N: Copy negative
-- ### Alt+S: Copy seed 
-
-- ### Alt+T: Export json (Present image)
-- ### Alt+A: Export json (All image)
-- ### Alt+L: Export json (Image select)
-
-- ### Alt+E: Open menu
-
+  If left click on bottom tab (e.g. Prompt, Tiled Diffusion, etc) appears menu with checkbox.  
+  Check the checkbox to maintain the selected tab in the bottom, even when you switch tabs in the top.
 # Screenshots
 - ### Main screen
 ![main_screen](https://user-images.githubusercontent.com/121333129/261905025-69283ba2-ac9d-4b92-944e-bd187ce2abc2.png)
