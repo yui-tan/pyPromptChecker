@@ -55,9 +55,6 @@ class ResultWindow(QMainWindow):
         self.resize(window_width, window_height)
         self.move_centre_main()
 
-        text = config.get('IconPath')
-        MessageBox(text)
-
     def init_ui(self):
         tab_navigation_enable = config.get('TabNavigation', True)
         tab_minimums = config.get('TabNavigationMinimumTabs', True)
