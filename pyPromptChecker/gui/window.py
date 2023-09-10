@@ -801,6 +801,8 @@ def from_main(purpose, target_data=None):
         app = QApplication.instance()
         if app is None:
             app = QApplication(sys.argv)
+            if icon_path:
+                app.setWindowIcon(QIcon(icon_path))
             if theme:
                 qdarktheme.setup_theme(additional_qss=add_stylesheet())
             else:
