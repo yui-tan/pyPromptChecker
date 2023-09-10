@@ -160,9 +160,9 @@ Depends on number of files, it requires huge mount of time and memories[^2].
 ## Move/Delete feature
 - ### Overview  
   Provides simple file management functions.  
-Images can be moved to a pre-registered favourite directory,  
-moved to an arbitrary directory and can be deleted.  
-If enable this feature, three buttons appear beneath pixmap.
+  Images can be moved to a pre-registered favourite directory,  
+  Moved to an arbitrary directory and can be deleted.  
+  If enable this feature, three buttons appear beneath pixmap.
   - Favourite button: Move/copy image to favourite directory.
   - Move to button: Move/copy image to any directory.
   - Delete button: Delete[^3] image file.
@@ -216,6 +216,43 @@ Default value is **True**.
 Setting appear tab navigation when how many files are opens.   
 This setting is meaningless unless both of the above settings are enabled.  
 Default value is **2**
+## Tab search
+![tab_search](https://user-images.githubusercontent.com/121333129/266839621-7dd517b9-4a41-426b-ac42-d1e83e2045f9.png)
+- ### Overview ###
+  Search loaded image files using specified criteria.  
+For now, search using following conditions.
+  - Text string in positive prompt, negative prompt and region control.
+  - Model name
+  - Seed
+  - CFG (less than, equal to, greater than)
+  - Whether extensions are used or not.
+- ### Search conditions
+  - **Words separated by spaces are treated as AND conditions.**  
+    e.g. [hatsune miku] is treated as [hatsune AND miku]  
+    Matches [hatsune miku], [hatsune -the goddess of sound- miku] and [miku hatsune]  
+  - **Words split by | are treated as OR conditions.**  
+    e.g. [kagamine rin|len] is treated as [kagamine AND (rin OR len)]
+    Matches [kagamine rin, kagamine len], [kagamine rin] and [kagamine len]
+  - **Sentences enclosed in double quotes are treated as phrases.**  
+    e.g. ["megurine luka"] doesn't match [megurine the pink hair luka] and [luka megurine], only matches [megurine luka]  
+  - **Model name, seed, cfg and extension conditions are all treated as AND conditions.**
+  - Above images means:  
+  "hatsune miku" AND (sitting OR reclining) AND "bikini" in (Positive prompt OR Region control)  
+  AND AbyssOrangeMix2 hard used  
+  AND CFG is greater than 8.0  
+  AND Tiled diffusion used
+- ### Related values in 'config.ini' ###  
+  - ### [Features] section ###  
+    - **"TabSearch" option** (Boolean)  
+This value toggles enables / disables the tab search features.  
+If set to True, appears 'Search' and 'Restore' buttons.  
+And tab search feature to be enabled.  
+Default value is **True**.
+    - **"HideNotMatchedTabs" option** (Boolean)  
+When search results are shown in tabs, hide the tabs that were not match by the search.  
+If set to True, hide the tab.
+If set to False, only change the tab title colour to green.
+  
 ## Compare extension
 ![compare](https://user-images.githubusercontent.com/121333129/263465633-7bda6efe-f70a-445a-b1ae-2436b41a7e15.png)
 - ### Overview ###
