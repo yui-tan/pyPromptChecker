@@ -14,7 +14,7 @@ from .subwindow import *
 from .widget import *
 from .menu import *
 from PyQt6.QtWidgets import QApplication, QLabel, QTabWidget, QHBoxLayout, QPushButton, QComboBox, QTextEdit
-from PyQt6.QtGui import QKeySequence, QPalette
+from PyQt6.QtGui import QKeySequence, QPalette, QIcon
 from PyQt6.QtCore import Qt, QPoint, QTimer
 
 
@@ -54,6 +54,9 @@ class ResultWindow(QMainWindow):
         self.show()
         self.resize(window_width, window_height)
         self.move_centre_main()
+
+        text = config.get('IconPath')
+        MessageBox(text)
 
     def init_ui(self):
         tab_navigation_enable = config.get('TabNavigation', True)
@@ -776,6 +779,7 @@ def add_stylesheet():
 
 def from_main(purpose, target_data=None):
     theme = config.get('AlwaysStartWithDarkMode')
+    icon_path = config.get('IconPath')
     if purpose == 'directory':
         app = QApplication(sys.argv)
         if theme:
@@ -810,6 +814,8 @@ def from_main(purpose, target_data=None):
         app = QApplication.instance()
         if app is None:
             app = QApplication(sys.argv)
+            if icon_path:
+                app.setWindowIcon(QIcon(icon_path))
             if theme:
                 qdarktheme.setup_theme(additional_qss=add_stylesheet())
             else:

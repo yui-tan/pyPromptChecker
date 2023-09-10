@@ -86,3 +86,7 @@ if not config.get('ModelList'):
         config['ModelList'] = model_list
     else:
         config['ModelList'] = os.path.join(os.path.abspath(''), 'model_list.csv')
+
+estimated_icon_path = os.path.abspath(os.path.join((os.path.dirname(__file__)), "../../icon/icon.png"))
+if os.path.exists(estimated_icon_path):
+    config['IconPath'] = estimated_icon_path
