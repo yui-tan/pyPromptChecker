@@ -135,28 +135,35 @@ def make_main_section(target):
               ]
     max_height = config.get('PixmapSize', 350)
     filepath = target.params.get('Filepath')
+
     if target.params.get('Hires upscaler'):
         status = [value for value in status if not isinstance(value, list) or value[0] != 'Denoising strength']
     if os.path.exists(filepath):
         timestamp = datetime.datetime.fromtimestamp(os.path.getctime(filepath))
         target.params['Timestamp'] = timestamp.strftime('%Y/%m/%d %H:%M')
+
     main_section_layout = QHBoxLayout()
     pixmap_label = make_pixmap_label(filepath)
     label_layout = label_maker(status, target, 1, 1, True, True, 20, 90)
     label_layout.setSpacing(5)
+
     for i in range(label_layout.count()):
         label_layout.itemAt(i).widget().setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+
     scroll_area = QScrollArea()
     scroll_area.setMinimumWidth(350)
     scroll_area.setMaximumHeight(max_height + 50)
     scroll_area.setStyleSheet('border: 0px; padding 0px; ')
+
     scroll_contents = QWidget()
     scroll_contents.setContentsMargins(0, 0, 0, 0)
     scroll_contents.setLayout(label_layout)
     scroll_area.setWidget(scroll_contents)
+
     main_section_layout.addWidget(pixmap_label, 1)
     main_section_layout.addWidget(scroll_area, 1)
     main_section_layout.setContentsMargins(0, 0, 0, 0)
+
     return main_section_layout
 
 
@@ -166,6 +173,7 @@ def make_pixmap_label(filepath):
     pixmap_section = QWidget()
     pixmap_layout = QVBoxLayout()
     button_layout = QHBoxLayout()
+
     if os.path.exists(filepath):
         pixmap = QPixmap(filepath)
         pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio,
@@ -174,12 +182,14 @@ def make_pixmap_label(filepath):
         pixmap_label.setPixmap(pixmap)
     else:
         pixmap_label = QLabel("Couldn't load image")
+
     pixmap_label.setObjectName('Pixmap')
     pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
     pixmap_label.setMinimumSize(scale, scale)
     pixmap_label.setMaximumSize(scale, scale)
     pixmap_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
     pixmap_layout.addWidget(pixmap_label, alignment=Qt.AlignmentFlag.AlignCenter)
+
     if move_delete_enable:
         for tmp in ['Favourite', 'Move to', 'Delete']:
             button = QPushButton()
@@ -195,8 +205,10 @@ def make_pixmap_label(filepath):
                 button.setText('Delete')
                 button.setShortcut(QKeySequence('Delete'))
         pixmap_layout.addLayout(button_layout)
+
     pixmap_section.setLayout(pixmap_layout)
     pixmap_layout.setContentsMargins(0, 5, 0, 0)
+
     return pixmap_section
 
 
@@ -204,17 +216,17 @@ def make_pixmap_label(filepath):
 def make_prompt_tab(target):
     textbox_tab_layout = QVBoxLayout()
     splitter = QSplitter(Qt.Orientation.Vertical)
+
     positive_text = target.params.get('Positive', 'None')
     positive_prompt = QTextEdit()
     positive_prompt.setPlainText(positive_text)
     positive_prompt.setReadOnly(True)
-#    positive_prompt.setMinimumHeight(180)
     positive_prompt.setObjectName('Positive')
+
     negative_text = target.params.get('Negative', 'None')
     negative_prompt = QTextEdit(negative_text)
     negative_prompt.setPlainText(negative_text)
     negative_prompt.setReadOnly(True)
-#    negative_prompt.setMinimumHeight(180)
     negative_prompt.setObjectName('Negative')
 
     splitter.addWidget(positive_prompt)
@@ -525,14 +537,17 @@ def make_control_net_tab(target, starts):
     control_tab = QScrollArea()
     controlnet_widget = QWidget()
     page_layout = QHBoxLayout()
-    status = [['model', 'Model'],
-              ['control mode', 'Control mode'],
-              ['pixel perfect', 'Pixel perfect'],
-              ['preprocessor', 'Preprocessor'],
-              ['resize mode', 'Resize mode'],
-              ['starting/ending', 'Starting/ending'],
-              ['weight', 'Weight'],
-              ['preprocessor params', 'Preproc. params'],
+    status = [['Model', 'Model'],
+              ['Control Mode', 'Control mode'],
+              ['Module', 'Module'],
+              ['Pixel Perfect', 'Pixel perfect'],
+              ['Resize Mode', 'Resize mode'],
+              ['Guidance Start', 'Guidance start'],
+              ['Guidance End', 'Guidance end'],
+              ['Weight', 'Weight'],
+              ['Threshold A', 'Threshold A'],
+              ['Low Vram', 'Low vram'],
+              ['Preprocessor params', 'Preproc. params']
               ]
     control_tab.setWidgetResizable(True)
     control_tab.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
@@ -542,7 +557,12 @@ def make_control_net_tab(target, starts):
     loop_num = 2 if 2 > unit_num else unit_num
     for i in range(starts, loop_num):
         control_net_enable = target.params.get('ControlNet ' + str(i))
-        status_key = [['ControlNet ' + str(i) + ' ' + value[0], value[1]] for value in status]
+        if target.params.get('ControlNet ' + str(i) + ' starting/ending'):
+            status = [value for value in status if 'Guidance' not in value[0]]
+            status.insert(5, ['starting/ending', 'Starting / Ending'])
+            status_key = [['ControlNet ' + str(i) + ' ' + value[0].lower(), value[1]] for value in status]
+        else:
+            status_key = [['ControlNet ' + str(i) + ' ' + value[0], value[1]] for value in status]
         section = QGroupBox()
         section.setTitle('ControlNet Unit ' + str(i))
         if not control_net_enable:
@@ -760,6 +780,13 @@ def label_maker(status,
         else:
             if name == 'Keep input size':
                 item = 'False'
+            elif 'ControlNet' in key and 'module' in key and not item:
+                tmp_key = key.replace('module', 'preprocessor')
+                item = target.params.get(tmp_key)
+                if item:
+                    target.used_params[tmp_key] = True
+                else:
+                    item = 'None'
             elif name and not remove_if_none:
                 item = 'None'
 

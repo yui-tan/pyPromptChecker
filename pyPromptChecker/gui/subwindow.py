@@ -178,14 +178,20 @@ class Listview(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.dictionary_list = []
-        self.setWindowTitle('Listview')
+        self.status = ['Timestamp', 'Seed', 'Sampler', 'Steps', 'CFG scale', 'Model', 'VAE', 'Version']
         self.estimated_width = 400
         self.size = 0
+
+        self.setWindowTitle('Listview')
 
     def init_listview(self, dic_list, size):
         self.size = size
         self.dictionary_list = dic_list
         file_counts = len(self.dictionary_list)
+
+        progress = ProgressDialog()
+        progress.setLabelText('Loading...')
+        progress.setRange(0, len(self.dictionary_list))
 
         central_widget = QWidget()
         central_widget_layout = QVBoxLayout()
@@ -196,6 +202,7 @@ class Listview(QMainWindow):
         for i in range(file_counts):
             group_box = self.groups(i)
             root_layout.addWidget(group_box)
+            progress.update_value()
 
         groupbox_count = 4 if file_counts > 4 else file_counts
         root_widget.setLayout(root_layout)
@@ -210,6 +217,7 @@ class Listview(QMainWindow):
         scroll_area.setWidgetResizable(True)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
+        central_widget_layout.addLayout(self.header_section())
         central_widget_layout.addWidget(scroll_area)
         central_widget_layout.addLayout(self.footer_button())
 
@@ -218,16 +226,81 @@ class Listview(QMainWindow):
         self.show()
         move_centre(self, self.parent())
 
+    def header_section(self):
+        row = 1
+        col = 0
+        header_layout = QGridLayout()
+        header_label = QLabel('Status')
+        combo_items = ['Timestamp',
+                       'Size',
+                       'Seed',
+                       'Sampler',
+                       'Eta',
+                       'Steps',
+                       'CFG scale',
+                       'Model',
+                       'VAE',
+                       'Var. seed',
+                       'Var. strength',
+                       'Resize from',
+                       'Denoising',
+                       'Clip skip',
+                       'ENSD',
+                       'Version'
+                       ]
+
+        header_label.setMinimumWidth(50)
+        header_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header_layout.addWidget(header_label, 0, 0, 1, 4)
+
+        for index, status in enumerate(self.status):
+            combo_box = QComboBox()
+            combo_box.setObjectName(str(index))
+            combo_box.currentIndexChanged.connect(self.status_changed)
+            header_layout.addWidget(combo_box, row, col)
+            combo_box.addItems(combo_items)
+            combo_box.setCurrentText(status)
+            col += 1
+            if col == 4:
+                row += 1
+                col = 0
+
+        return header_layout
+
+    def status_changed(self):
+        if self.centralWidget():
+            status_number = self.sender().objectName()
+            status_str = self.sender().currentText()
+            if status_str == 'Var. seed':
+                search_str = 'Variation seed'
+            elif status_str == 'Var. strength':
+                search_str = 'Variation seed strength'
+            elif status_str == 'Resize from':
+                search_str = 'Seed resize from'
+            elif status_str == 'Denoising':
+                search_str = 'Denoising strength'
+            else:
+                search_str = status_str
+
+            group_boxes = [widget for widget in self.centralWidget().findChildren(QGroupBox)]
+            for index, group_box in enumerate(group_boxes):
+                value = self.dictionary_list[index].get(search_str, 'None')
+                title_label = group_box.findChild(QLabel, status_number + '_title')
+                value_label = group_box.findChild(QLabel, status_number + '_value')
+
+                title_label.setText(status_str)
+                value_label.setText(value)
+
     def footer_button(self):
         footer_layout = QHBoxLayout()
         for tmp in ['Export selected JSON', 'Close']:
             button = QPushButton(tmp)
             button.setObjectName(tmp)
             footer_layout.addWidget(button)
-            button.clicked.connect(self.button_push)
+            button.clicked.connect(self.footer_button_clicked)
         return footer_layout
 
-    def button_push(self):
+    def footer_button_clicked(self):
         where_from = self.sender().objectName()
         if where_from == 'Close':
             self.close()
@@ -256,11 +329,13 @@ class Listview(QMainWindow):
         status_label_layout = QGridLayout()
         pixmap_label = self.pixmap_label(index)
 
-        for i, key in enumerate(['Seed', 'Sampler', 'Steps', 'CFG scale', 'Model', 'VAE', 'Version']):
+        for i, key in enumerate(self.status):
 
             item = self.dictionary_list[index].get(key, 'None')
             title_label = QLabel(key)
+            title_label.setObjectName(str(i) + '_title')
             status_label = QLabel(item)
+            status_label.setObjectName(str(i) + '_value')
             spacer_1 = QSpacerItem(20, 20)
             spacer_2 = QSpacerItem(20, 20)
 
@@ -271,10 +346,8 @@ class Listview(QMainWindow):
             title_label.setSizePolicy(size_policy_title)
             status_label.setSizePolicy(size_policy_value)
 
-            title_label.setMinimumHeight(20)
-            status_label.setMinimumHeight(20)
-            title_label.setMaximumHeight(20)
-            status_label.setMaximumHeight(20)
+            title_label.setFixedSize(100, 20)
+            status_label.setFixedHeight(20)
             status_label.setMinimumWidth(200)
 
             status_label_layout.addItem(spacer_1, i, 0)
@@ -286,11 +359,18 @@ class Listview(QMainWindow):
         k = 0
         addnet = any(key in v for v in self.dictionary_list[index] for key in ['Lora', 'Ti in prompt', 'Add network'])
         cfg = any(key in v for v in self.dictionary_list[index] for key in ['Dynamic thresholding enabled', 'CFG auto', 'CFG scheduler'])
+        creation = 'T2I'
+
+        if any(key in v for v in self.dictionary_list[index] for key in ['Upscaler', 'Extras']):
+            creation = 'I2I'
+        if self.dictionary_list[index].get('Positive') == 'This file has no embedded data':
+            creation = '---'
 
         extension_label_layout = QGridLayout()
 
         for condition_list in [
             [self.dictionary_list[index].get('Extensions', '---'), 'Extension'],
+            [creation, 'Creation'],
             ['Extras', 'Extras' in self.dictionary_list[index]],
             ['Variation', 'Variation seed' in self.dictionary_list[index]],
             ['Hires.fix', 'Hires upscaler' in self.dictionary_list[index]],
@@ -323,6 +403,20 @@ class Listview(QMainWindow):
                     extension_label.setStyleSheet(style_sheet)
                 elif title == 'WEBP':
                     style_sheet = style_sheet.replace('@@@', 'red')
+                    extension_label.setStyleSheet(style_sheet)
+                else:
+                    extension_label.setDisabled(True)
+                    extension_label.setStyleSheet("border-radius: 5px ; border: 1px solid palette(shadow);")
+            elif status == 'Creation':
+                style_sheet = "border-radius: 5px ;" \
+                              "border: 2px solid @@@ ;" \
+                              "background-color: @@@ ;" \
+                              "color: white ;"
+                if title == 'I2I':
+                    style_sheet = style_sheet.replace('@@@', 'red')
+                    extension_label.setStyleSheet(style_sheet)
+                elif title == 'T2I':
+                    style_sheet = style_sheet.replace('@@@', 'palette(highlight)')
                     extension_label.setStyleSheet(style_sheet)
                 else:
                     extension_label.setDisabled(True)

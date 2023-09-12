@@ -22,11 +22,11 @@ class ResultWindow(QMainWindow):
     def __init__(self, targets=None):
         super().__init__()
         self.dark = config.get('AlwaysStartWithDarkMode')
+        self.hide_tab = config.get('OpenWithShortenedWindow', False)
         self.root_tab = None
         self.dialog = None
         self.toast_window = None
         self.progress_bar = None
-        self.hide_tab = config.get('OpenWithShortenedWindow', False)
         self.params = []
         self.retracted = []
         self.extract_data(targets)
@@ -68,6 +68,7 @@ class ResultWindow(QMainWindow):
 
         if tab_navigation_enable and self.root_tab.count() > tab_minimums:
             root_layout.addLayout(tab_navigation(self))
+
         root_layout.addWidget(self.root_tab)
         root_layout.addLayout(footer_layout)
 
@@ -100,13 +101,14 @@ class ResultWindow(QMainWindow):
 
         for array in targets:
             filepath, filetype = array
-
             chunk_data = chunk_text_extractor(filepath, filetype, png_index)
+
             if not chunk_data and ignore:
                 valid_total -= 1
                 continue
 
             parameters = parse_parameter(chunk_data, filepath, models)
+
             if parameters.params.get('Positive') == 'This file has no embedded data' and ignore:
                 valid_total -= 1
                 continue
@@ -298,6 +300,7 @@ class ResultWindow(QMainWindow):
             else:
                 extension_tab.hide()
                 self.hide_tab = True
+
         timer = QTimer(self)
         timer.timeout.connect(lambda: self.adjustSize())
         timer.start(10)
@@ -307,6 +310,7 @@ class ResultWindow(QMainWindow):
         current_page = self.root_tab.widget(current_index)
         extension_tab = current_page.findChild(QTabWidget, 'extension_tab')
         combobox = self.centralWidget().findChild(QComboBox, 'Combo')
+
         if combobox:
             combobox.setCurrentIndex(current_index)
         if self.image_window.isVisible():
@@ -326,6 +330,7 @@ class ResultWindow(QMainWindow):
 
     def header_button_clicked(self):
         where_from = self.sender().objectName()
+
         if where_from == 'Combo':
             target_tab = self.sender().currentIndex()
             self.root_tab.setCurrentIndex(target_tab)
@@ -342,6 +347,7 @@ class ResultWindow(QMainWindow):
         where_from = self.sender().objectName()
         clipboard = QApplication.clipboard()
         current_page = self.root_tab.currentWidget()
+
         if where_from == 'Copy positive':
             text_edit = current_page.findChild(QTextEdit, 'Positive')
             if text_edit:
@@ -349,6 +355,7 @@ class ResultWindow(QMainWindow):
                 if text and not text == 'This file has no embedded data':
                     clipboard.setText(text)
                     self.toast_window.init_toast('Positive Copied!', 1000)
+
         elif where_from == 'Copy negative':
             text_edit = current_page.findChild(QTextEdit, 'Negative')
             if text_edit:
@@ -356,12 +363,14 @@ class ResultWindow(QMainWindow):
                 if text:
                     clipboard.setText(text)
                     self.toast_window.init_toast('Negative Copied!', 1000)
+
         elif where_from == 'Copy seed':
             label = current_page.findChild(QLabel, 'Seed_value')
             if label:
                 text = label.text()
                 clipboard.setText(text)
                 self.toast_window.init_toast('Seed Copied!', 1000)
+
         elif where_from == 'Export JSON (This)':
             self.export_json_single()
         elif where_from == 'Export JSON (All)':
