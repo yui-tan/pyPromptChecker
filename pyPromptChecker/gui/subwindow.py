@@ -186,6 +186,7 @@ class Listview(QMainWindow):
 
     def init_listview(self, dic_list, size):
         self.size = size
+        self.setCentralWidget(None)
         self.dictionary_list = dic_list
         file_counts = len(self.dictionary_list)
 
@@ -199,10 +200,10 @@ class Listview(QMainWindow):
         root_widget = QWidget()
         root_layout = QVBoxLayout()
 
-        for i in range(file_counts):
-            group_box = self.groups(i)
-            root_layout.addWidget(group_box)
+        for file_count in range(file_counts):
+            group_box = self.groups(file_count)
             progress.update_value()
+            root_layout.addWidget(group_box)
 
         groupbox_count = 4 if file_counts > 4 else file_counts
         root_widget.setLayout(root_layout)
@@ -415,9 +416,11 @@ class Listview(QMainWindow):
                 if title == 'I2I':
                     style_sheet = style_sheet.replace('@@@', 'red')
                     extension_label.setStyleSheet(style_sheet)
+                    extension_label.setText('Img2Img')
                 elif title == 'T2I':
                     style_sheet = style_sheet.replace('@@@', 'palette(highlight)')
                     extension_label.setStyleSheet(style_sheet)
+                    extension_label.setText('Txt2Img')
                 else:
                     extension_label.setDisabled(True)
                     extension_label.setStyleSheet("border-radius: 5px ; border: 1px solid palette(shadow);")

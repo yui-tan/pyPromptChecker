@@ -101,7 +101,7 @@ class ResultWindow(QMainWindow):
 
         for array in targets:
             filepath, filetype = array
-            chunk_data = chunk_text_extractor(filepath, filetype, png_index)
+            chunk_data, original_size = chunk_text_extractor(filepath, filetype, png_index)
 
             if not chunk_data and ignore:
                 valid_total -= 1
@@ -112,6 +112,8 @@ class ResultWindow(QMainWindow):
             if parameters.params.get('Positive') == 'This file has no embedded data' and ignore:
                 valid_total -= 1
                 continue
+
+            parameters.params['Image Size'] = original_size
 
             if filetype == 0:
                 parameters.params['Extensions'] = 'PNG'
@@ -489,8 +491,12 @@ class ResultWindow(QMainWindow):
             if result == 'Tabs':
                 self.tab_tweak(target_tab)
             elif result == 'Listview':
+                if self.listview.isVisible():
+                    self.listview.close()
                 self.open_listview(target_tab)
             elif result == 'Thumbnails':
+                if self.thumbnail.isVisible():
+                    self.thumbnail.close()
                 self.open_thumbnail(target_tab)
             text = str(len(target_tab)) + ' image(s) found !'
             MessageBox(text, 'Search result', 'ok', 'info', self.search)
