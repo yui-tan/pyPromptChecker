@@ -108,7 +108,7 @@ def make_main_section(target):
               'Extensions',
               'Filepath',
               'Timestamp',
-              ['Image Size', 'Size'],
+              ['Image size', 'Size'],
               ['Size', 'Initial Size'],
               'Seed',
               'Sampler',
@@ -124,7 +124,7 @@ def make_main_section(target):
               ['Denoising strength', 'Denoising'],
               'Clip skip',
               ['Lora', 'Lora in prompt'],
-              'TI in prompt',
+              'Textual inversion',
               ['AddNet Number', 'Add network'],
               ['Hires upscaler', 'Hires.fix'],
               'Extras',
@@ -145,7 +145,7 @@ def make_main_section(target):
 
     main_section_layout = QHBoxLayout()
     pixmap_label = make_pixmap_label(filepath)
-    label_layout = label_maker(status, target, 1, 1, True, True, 20, 90)
+    label_layout = label_maker(status, target, 1, 1, True, True, 20, 100)
     label_layout.setSpacing(5)
 
     for i in range(label_layout.count()):
@@ -385,7 +385,7 @@ def make_lora_section(target):
     scroll_area.setContentsMargins(0, 0, 0, 0)
     content_widget.setContentsMargins(0, 0, 0, 0)
     lora_num = target.params.get('Lora')
-    ti_num = target.params.get('TI in prompt')
+    ti_num = target.params.get('Textual inversion')
     if not lora_num:
         caption = 'LoRa : 0'
     else:

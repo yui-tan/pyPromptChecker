@@ -13,6 +13,9 @@ from .dialog import *
 from .subwindow import *
 from .widget import *
 from .menu import *
+from .viewer import *
+from .thumbnail import *
+from .listview import *
 from PyQt6.QtWidgets import QApplication, QLabel, QTabWidget, QHBoxLayout, QPushButton, QComboBox, QTextEdit
 from PyQt6.QtGui import QKeySequence, QPalette, QIcon
 from PyQt6.QtCore import Qt, QPoint, QTimer
@@ -25,6 +28,7 @@ class ResultWindow(QMainWindow):
         self.hide_tab = config.get('OpenWithShortenedWindow', False)
         self.root_tab = None
         self.dialog = None
+        self.search = None
         self.toast_window = None
         self.progress_bar = None
         self.params = []
@@ -33,7 +37,6 @@ class ResultWindow(QMainWindow):
         self.image_window = ImageWindow(self)
         self.thumbnail = ThumbnailView(self)
         self.listview = Listview(self)
-        self.search = SearchWindow(self)
         self.main_menu = MainMenu(self)
         self.tab_linker = TabMenu(self)
         self.tab_linker_enable = [False, 'Prompt']
@@ -107,20 +110,15 @@ class ResultWindow(QMainWindow):
                 valid_total -= 1
                 continue
 
-            parameters = parse_parameter(chunk_data, filepath, models)
+            parameters = ChunkData(chunk_data, filepath, filetype, original_size)
+            parameters.init_class()
 
             if parameters.params.get('Positive') == 'This file has no embedded data' and ignore:
                 valid_total -= 1
                 continue
 
-            parameters.params['Image Size'] = original_size
-
-            if filetype == 0:
-                parameters.params['Extensions'] = 'PNG'
-            elif filetype == 1:
-                parameters.params['Extensions'] = 'JPEG'
-            elif filetype == 2:
-                parameters.params['Extensions'] = 'WEBP'
+            parameters.model_name(models)
+            parameters.vae_name(models)
 
             if lora_name:
                 parameters.override_lora(models)
@@ -196,7 +194,7 @@ class ResultWindow(QMainWindow):
 
             hires_tab = ['Hires upscaler', 'Face restoration', 'Extras']
             cfg_fix_auto_tab = ['Dynamic thresholding enabled', 'CFG auto', 'CFG scheduler']
-            lora_tab = ['Lora', 'AddNet Enabled', 'TI in prompt']
+            lora_tab = ['Lora', 'AddNet Enabled', 'Textual inversion']
 
             tabs = [['Prompts', True, True],
                     ['Hires.fix / Extras',
@@ -271,6 +269,13 @@ class ResultWindow(QMainWindow):
 
         if self.progress_bar:
             self.progress_bar.close()
+
+        model_list = [value.params.get('Model') for value in self.params if value.params.get('Model') is not None]
+        model_list = list(set(model_list))
+        model_list.sort()
+        model_list.insert(0, '')
+        model_list.append('None')
+        self.search = SearchWindow(model_list, self)
 
     def post_add_tab(self):
         total = self.root_tab.count()
@@ -507,12 +512,7 @@ class ResultWindow(QMainWindow):
         if self.search.isVisible():
             self.search.activateWindow()
         else:
-            model_list = [value.params.get('Model') for value in self.params if value.params.get('Model') is not None]
-            model_list = list(set(model_list))
-            model_list.sort()
-            model_list.insert(0, '')
-            model_list.append('None')
-            self.search.init_search_window(model_list)
+            self.search.show_dialog()
 
     def tab_tweak(self, indexes=None):
         hide = config.get('HideNotMatchedTabs', False)
@@ -541,7 +541,6 @@ class ResultWindow(QMainWindow):
                 restore.setDisabled(True)
 
     def open_thumbnail(self, indexes=None):
-        size = config.get('ThumbnailPixmapSize', 150)
         if self.thumbnail.isVisible():
             self.thumbnail.activateWindow()
         else:
@@ -549,10 +548,9 @@ class ResultWindow(QMainWindow):
                 dictionary_list = [self.params[i].params for i in indexes]
             else:
                 dictionary_list = [value.params for value in self.params]
-            self.thumbnail.init_thumbnail(dictionary_list, size)
+            self.thumbnail.init_thumbnail(dictionary_list)
 
     def open_listview(self, indexes=None):
-        size = config.get('ListViewPixmapSize', 200)
         if self.listview.isVisible():
             self.listview.activateWindow()
         else:
@@ -560,7 +558,7 @@ class ResultWindow(QMainWindow):
                 dictionary_list = [self.params[i].params for i in indexes]
             else:
                 dictionary_list = [value.params for value in self.params]
-            self.listview.init_listview(dictionary_list, size)
+            self.listview.init_listview(dictionary_list)
 
     def import_json_from_files(self):
         self.dialog.init_dialog('choose-files', 'Select JSONs', None, 'JSON')

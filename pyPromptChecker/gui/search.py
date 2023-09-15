@@ -159,7 +159,7 @@ def search_images(condition_list, target_list):
     if condition_list.get('Extension'):
         hires_keys = ['Hires upscaler', 'Face restoration', 'Extras']
         cfg_keys = ['Dynamic thresholding enabled', 'CFG auto', 'CFG scheduler']
-        lora_keys = ['Lora', 'AddNet Enabled', 'TI in prompt']
+        lora_keys = ['Lora', 'AddNet Enabled', 'Textual inversion']
         hires_enable = condition_list.get('Hires / Extras')
         lora_enable = condition_list.get('LoRa / AddNet')
         cfg_enable = condition_list.get('CFG')
