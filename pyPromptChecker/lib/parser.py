@@ -2,6 +2,7 @@
 
 import os
 import re
+import datetime
 
 
 class ChunkData:
@@ -42,6 +43,11 @@ class ChunkData:
 
         filename = os.path.basename(self.filepath)
         self.data_list.extend([['Filename', filename], ['Filepath', self.filepath], ['Extensions', ext], ['Image size', self.size]])
+
+        if os.path.exists(self.filepath):
+            timestamp = datetime.datetime.fromtimestamp(os.path.getctime(self.filepath))
+            self.data_list.append(['Timestamp', timestamp.strftime('%Y/%m/%d %H:%M')])
+
         self.prompt_parse()
 
         if 'Tiled Diffusion' in self.data:
@@ -74,9 +80,7 @@ class ChunkData:
                     self.error_list.append(value)
 
     def make_dictionary(self):
-        control_net = 0
         add_net = 0
-        region_control = 0
         extras = False
         cfg_auto = False
 
@@ -113,7 +117,7 @@ class ChunkData:
             model_name = '[' + model_hash + ']'
             if model_list:
                 for tmp in model_list:
-                    if tmp[1] == model_hash:
+                    if model_hash in tmp[1]:
                         model_name = tmp[0] + ' [' + tmp[1] + ']'
             self.params['Model'] = model_name
             self.used_params['Model hash'] = True
@@ -124,7 +128,7 @@ class ChunkData:
             vae_name = '[' + vae_hash + ']'
             if model_list:
                 for tmp in model_list:
-                    if tmp[1] == vae_hash:
+                    if vae_hash in tmp[1]:
                         vae_name = tmp[0] + ' [' + tmp[1] + ']'
             self.params['VAE'] = vae_name
             self.used_params['VAE hash'] = True
@@ -144,10 +148,10 @@ class ChunkData:
             if 'AddNet Model' in key:
                 match = re.search(r'\(.*\)', value)
                 if match:
-                    ti_hash = match.group().replace('(', '').replace(')', '')
+                    lora_hash = match.group().replace('(', '').replace(')', '')
                     for tmp in model_list:
-                        if tmp[1] == ti_hash:
-                            self.params[key] = tmp[0] + ' (' + ti_hash + ')'
+                        if lora_hash in tmp[1]:
+                            self.params[key] = tmp[0] + ' (' + lora_hash + ')'
 
     def override_textual_inversion(self, model_list):
         for key, value in self.params.items():

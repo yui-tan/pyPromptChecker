@@ -109,6 +109,9 @@ class ResultWindow(QMainWindow):
             if not chunk_data and ignore:
                 valid_total -= 1
                 continue
+            elif not original_size:
+                valid_total -= 1
+                continue
 
             parameters = ChunkData(chunk_data, filepath, filetype, original_size)
             parameters.init_class()
@@ -717,24 +720,22 @@ class ResultWindow(QMainWindow):
                 self.toast_window.init_toast('Replaced!', 1000)
 
     def model_hash_extractor(self):
-        text = 'This operation requires a significant amount of time.' \
-               '\n...And more than 32GiB of memory.' \
-               '\nDo you still want to run it ?'
-        result = MessageBox(text, 'Confirm', 'okcancel', 'question', self)
+        which_mode = SelectDialog(self)
+        result = which_mode.exec()
+        mode = which_mode.selected
 
-        if result.success:
+        if result == QDialog.DialogCode.Accepted:
             self.dialog.init_dialog('choose-directory', 'Select Directory', None, '')
             directory = self.dialog.result[0] if self.dialog.result else None
             if directory:
                 operation_progress = ProgressDialog(self)
                 file_list = os.listdir(directory)
                 file_list = [os.path.join(directory, v) for v in file_list if os.path.isfile(os.path.join(directory, v))]
-                file_list = [v for v in file_list if 'safetensors' in v or 'ckpt' in v or 'pt' in v]
+                file_list = [v for v in file_list if '.safetensors' in v or '.ckpt' in v or '.pt' in v]
+                file_list.sort()
                 operation_progress.setLabelText('Loading model file......')
                 operation_progress.setRange(0, len(file_list) + 1)
-                operation_progress.update_value()
-                QApplication.processEvents()
-                io.model_hash_maker(file_list, operation_progress)
+                io.model_hash_maker(file_list, operation_progress, mode)
                 MessageBox('Finished', "I'm knackered", 'ok', 'info', self)
 
     def tab_link(self):

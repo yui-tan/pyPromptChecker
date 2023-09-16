@@ -2,6 +2,7 @@
 
 import os
 from PyQt6.QtWidgets import QFileDialog, QProgressDialog, QMessageBox, QLabel, QWidget, QVBoxLayout, QApplication
+from PyQt6.QtWidgets import QDialog, QRadioButton, QPushButton, QHBoxLayout
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 
 
@@ -17,6 +18,44 @@ class PixmapLabel(QLabel):
             self.clicked.emit()
         return QLabel.mousePressEvent(self, event)
 
+
+class SelectDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('Model hash extractor')
+        self.selected = 0
+        self.model = None
+        self.lora = None
+        self.init_select_dialog()
+        self.resize(200, 80)
+
+    def init_select_dialog(self):
+        layout = QVBoxLayout()
+        button_layout = QHBoxLayout()
+
+        ok_button = QPushButton('OK')
+        ok_button.clicked.connect(self.accept)
+        cancel_button = QPushButton('Cancel')
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(ok_button)
+        button_layout.addWidget(cancel_button)
+
+        self.model = QRadioButton('Model / VAE hash')
+        self.model.setChecked(True)
+        self.model.toggled.connect(self.toggle_radio_button)
+        self.lora = QRadioButton('LoRa / Textual inversion hash')
+        self.lora.toggled.connect(self.toggle_radio_button)
+        layout.addWidget(self.model)
+        layout.addWidget(self.lora)
+        layout.addLayout(button_layout)
+
+        self.setLayout(layout)
+
+    def toggle_radio_button(self):
+        if self.model.isChecked():
+            self.selected = 0
+        elif self.lora.isChecked():
+            self.selected = 1
 
 class Dialog(QFileDialog):
 

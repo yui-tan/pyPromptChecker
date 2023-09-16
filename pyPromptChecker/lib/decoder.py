@@ -69,7 +69,7 @@ def chunk_text_extractor(target, method, index=1):
                 return text, original_size
             else:
                 print('{} has not valid parameters'.format(target))
-                return None, None
+                return None, original_size
 
         except Exception as e:
             print('An error occurred while decoding: {}\n{}'.format(target, str(e)))
@@ -88,13 +88,10 @@ def chunk_text_extractor(target, method, index=1):
                 original_size = str(width) + 'x' + str(height)
                 return text, original_size
             else:
+                original_size = str(width) + 'x' + str(height)
                 print('{} has not valid parameters'.format(target))
-                return None, None
+                return None, original_size
 
         except Exception as e:
             print('An error occurred while decoding: {}\n{}'.format(target, str(e)))
             return None, None
-
-    else:
-        print("couldn't extract parameter from {}\nBecause this feature is not yet implemented.".format(target))
-        return None, None

@@ -139,13 +139,10 @@ def make_main_section(target):
 
     if target.params.get('Hires upscaler'):
         status = [value for value in status if not isinstance(value, list) or value[0] != 'Denoising strength']
-    if os.path.exists(filepath):
-        timestamp = datetime.datetime.fromtimestamp(os.path.getctime(filepath))
-        target.params['Timestamp'] = timestamp.strftime('%Y/%m/%d %H:%M')
 
     main_section_layout = QHBoxLayout()
     pixmap_label = make_pixmap_label(filepath)
-    label_layout = label_maker(status, target, 1, 1, True, True, 20, 100)
+    label_layout = label_maker(status, target, 1, 1, True, True, 20, 95)
     label_layout.setSpacing(5)
 
     for i in range(label_layout.count()):
@@ -177,8 +174,7 @@ def make_pixmap_label(filepath):
 
     if os.path.exists(filepath):
         pixmap = QPixmap(filepath)
-        pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio,
-                               Qt.TransformationMode.FastTransformation)
+        pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
         pixmap_label = PixmapLabel()
         pixmap_label.setPixmap(pixmap)
     else:
@@ -825,7 +821,7 @@ def label_maker(status,
             value.setObjectName(name + '_value')
         if name == 'Filepath' or name == 'Filename':
             value.setToolTip(item)
-            value.setMaximumWidth(200)
+            value.setMaximumWidth(250)
         size_policy_title = title.sizePolicy()
         size_policy_value = value.sizePolicy()
         size_policy_title.setHorizontalStretch(stretch_title)

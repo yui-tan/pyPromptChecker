@@ -3,6 +3,7 @@
 from . import config
 from .dialog import ProgressDialog
 from .dialog import PixmapLabel
+from .viewer import DiffWindow
 from .subwindow import portrait_generator
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QGroupBox, QScrollArea
@@ -14,9 +15,11 @@ class ThumbnailView(QMainWindow):
         super().__init__(parent)
         self.size = config.get('ThumbnailPixmapSize', 150)
         self.setWindowTitle('Thumbnail View')
+        self.params = []
 
     def init_thumbnail(self, param_list):
         self.setCentralWidget(None)
+        self.params = param_list
 
         progress = ProgressDialog()
         progress.setLabelText('Loading...')
@@ -76,6 +79,10 @@ class ThumbnailView(QMainWindow):
         json_button.clicked.connect(self.json_button_clicked)
         button_layout.addWidget(json_button)
 
+        diff_button = QPushButton('Diff')
+        diff_button.clicked.connect(self.diff_button_clicked)
+        button_layout.addWidget(diff_button)
+
         close_button = QPushButton('Close')
         close_button.clicked.connect(self.close_button_clicked)
         button_layout.addWidget(close_button)
@@ -124,6 +131,17 @@ class ThumbnailView(QMainWindow):
                 indexes.append(int(index))
         if indexes:
             self.parent().export_json_selected(indexes)
+
+    def diff_button_clicked(self):
+        indexes = []
+        for widget in self.centralWidget().findChildren(QCheckBox):
+            if widget.isChecked():
+                index = widget.objectName()
+                indexes.append(int(index))
+        if len(indexes) == 2:
+            result = [self.params[i] for i in indexes]
+            diff = DiffWindow(result, self)
+            diff.show()
 
     def close_button_clicked(self):
         self.close()
