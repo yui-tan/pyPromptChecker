@@ -58,7 +58,7 @@ class SelectDialog(QDialog):
             self.selected = 1
 
 
-class Dialog(QFileDialog):
+class FileDialog(QFileDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)

@@ -8,9 +8,8 @@ from pyPromptChecker.lib import *
 # from lib import *
 
 from . import config
-from .search import *
+from .search import SearchWindow
 from .dialog import *
-from .subwindow import *
 from .widget import *
 from .menu import *
 from .viewer import *
@@ -85,7 +84,7 @@ class ResultWindow(QMainWindow):
         self.root_tab.setTabBarAutoHide(True)
 
         self.toast_window = Toast(self)
-        self.dialog = Dialog(self)
+        self.dialog = FileDialog(self)
 
     def extract_data(self, targets):
         png_index = config.get('TargetChunkIndex', 1)
@@ -488,29 +487,6 @@ class ResultWindow(QMainWindow):
         frame_geometry.moveCenter(screen_center)
         self.move(frame_geometry.topLeft())
 
-    def tab_search(self, condition):
-        result = condition.get('Result', 'Tabs')
-        self.tab_tweak()
-
-        target_data = [value.params for value in self.params]
-        target_tab = list(search_images(condition, target_data))
-
-        if len(target_tab) > 0:
-            if result == 'Tabs':
-                self.tab_tweak(target_tab)
-            elif result == 'Listview':
-                if self.listview.isVisible():
-                    self.listview.close()
-                self.open_listview(target_tab)
-            elif result == 'Thumbnails':
-                if self.thumbnail.isVisible():
-                    self.thumbnail.close()
-                self.open_thumbnail(target_tab)
-            text = str(len(target_tab)) + ' image(s) found !'
-            MessageBox(text, 'Search result', 'ok', 'info', self.search)
-        else:
-            MessageBox('There is no match to show.', 'Search result', 'ok', 'info', self.search)
-
     def tab_search_window(self):
         if self.search.isVisible():
             self.search.activateWindow()
@@ -797,7 +773,7 @@ def from_main(purpose, target_data=None):
             qdarktheme.setup_theme(additional_qss=add_stylesheet())
         else:
             qdarktheme.setup_theme('light')
-        open_directory = Dialog()
+        open_directory = FileDialog()
         open_directory.init_dialog('choose-directory', 'Select directory')
         result = open_directory.result
         return result
@@ -807,7 +783,7 @@ def from_main(purpose, target_data=None):
             qdarktheme.setup_theme(additional_qss=add_stylesheet())
         else:
             qdarktheme.setup_theme('light')
-        open_files = Dialog()
+        open_files = FileDialog()
         open_files.init_dialog('choose-files', 'Select files', None, 'PNG')
         result = open_files.result
         return result
