@@ -3,7 +3,8 @@
 from . import config
 from .dialog import PixmapLabel
 from .dialog import ProgressDialog
-from .subwindow import portrait_generator
+from .viewer import DiffWindow
+from .widget import portrait_generator
 from PyQt6.QtWidgets import QApplication, QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QGroupBox, QScrollArea
 from PyQt6.QtWidgets import QWidget, QCheckBox, QComboBox, QLabel, QPushButton, QSpacerItem
 from PyQt6.QtCore import Qt
@@ -126,7 +127,7 @@ class Listview(QMainWindow):
 
     def footer_button(self):
         footer_layout = QHBoxLayout()
-        for tmp in ['Export selected JSON', 'Close']:
+        for tmp in ['Export selected JSON', 'Diff', 'Close']:
             button = QPushButton(tmp)
             button.setObjectName(tmp)
             footer_layout.addWidget(button)
@@ -139,6 +140,8 @@ class Listview(QMainWindow):
             self.close()
         elif where_from == 'Export selected JSON':
             self.check_group()
+        elif where_from == 'Diff':
+            self.check_group(True)
 
     def pixmap_label(self, index):
         filepath = self.param_list[index].get('Filepath', None)
@@ -293,14 +296,20 @@ class Listview(QMainWindow):
         else:
             self.sender().parent().setStyleSheet("")
 
-    def check_group(self):
+    def check_group(self, diff=False):
         indexes = []
         for widget in self.centralWidget().findChildren(QCheckBox):
             if widget.isChecked():
                 index = widget.parent().objectName()
                 indexes.append(int(index))
         if indexes:
-            self.parent().export_json_selected(indexes)
+            if diff and len(indexes) == 2:
+                result = [self.param_list[i] for i in indexes]
+                diff = DiffWindow(result, self)
+                diff.show()
+                diff.move_centre()
+            elif not diff:
+                self.parent().export_json_selected(indexes)
 
     def move_centre(self):
         if not self.parent() or not self.parent().isVisible():

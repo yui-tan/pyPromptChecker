@@ -57,6 +57,7 @@ class SelectDialog(QDialog):
         elif self.lora.isChecked():
             self.selected = 1
 
+
 class Dialog(QFileDialog):
 
     def __init__(self, parent=None):

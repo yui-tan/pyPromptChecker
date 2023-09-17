@@ -4,7 +4,7 @@ from . import config
 from .dialog import ProgressDialog
 from .dialog import PixmapLabel
 from .viewer import DiffWindow
-from .subwindow import portrait_generator
+from .widget import portrait_generator
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QGroupBox, QScrollArea
 from PyQt6.QtWidgets import QWidget, QPushButton, QCheckBox
@@ -142,6 +142,7 @@ class ThumbnailView(QMainWindow):
             result = [self.params[i] for i in indexes]
             diff = DiffWindow(result, self)
             diff.show()
+            diff.move_centre()
 
     def close_button_clicked(self):
         self.close()

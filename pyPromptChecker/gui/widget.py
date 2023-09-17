@@ -5,9 +5,10 @@ import os
 import sys
 from . import config
 from .dialog import PixmapLabel
+from functools import lru_cache
 from PyQt6.QtWidgets import QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QComboBox, QTextEdit, QSizePolicy
 from PyQt6.QtWidgets import QGroupBox, QTabWidget, QScrollArea, QSplitter, QGridLayout, QWidget
-from PyQt6.QtGui import QPixmap, QPainter, QColor, QKeySequence, QShortcut
+from PyQt6.QtGui import QPixmap, QPainter, QColor, QKeySequence, QShortcut, QImageReader
 from PyQt6.QtCore import Qt
 
 
@@ -853,3 +854,11 @@ def make_keybindings(parent=None):
     add_tab_shortcut.activated.connect(parent.reselect_files_append)
     replace_tab_shortcut.activated.connect(parent.reselect_files)
     quit_shortcut.activated.connect(lambda: sys.exit())
+
+
+@lru_cache(maxsize=1000)
+def portrait_generator(filepath, size):
+    image_reader = QImageReader(filepath)
+    pixmap = QPixmap.fromImageReader(image_reader)
+    pixmap = pixmap.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
+    return pixmap
