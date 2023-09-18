@@ -5,6 +5,7 @@ from .dialog import PixmapLabel
 from .dialog import ProgressDialog
 from .viewer import DiffWindow
 from .widget import portrait_generator
+from .widget import make_keybindings
 from PyQt6.QtWidgets import QApplication, QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QGroupBox, QScrollArea
 from PyQt6.QtWidgets import QWidget, QCheckBox, QComboBox, QLabel, QPushButton, QSpacerItem
 from PyQt6.QtCore import Qt
@@ -15,8 +16,10 @@ class Listview(QMainWindow):
         super().__init__(parent)
         self.size = config.get('ListViewPixmapSize', 200)
         self.setWindowTitle('Listview')
+        self.root_layout = None
         self.param_list = []
         self.status = ['Timestamp', 'Seed', 'Sampler', 'Steps', 'CFG scale', 'Model', 'VAE', 'Version']
+        make_keybindings(self)
 
     def init_listview(self, param_list):
         self.setCentralWidget(None)
@@ -31,17 +34,18 @@ class Listview(QMainWindow):
         central_widget_layout = QVBoxLayout()
         scroll_area = QScrollArea()
         root_widget = QWidget()
-        root_layout = QVBoxLayout()
+        self.root_layout = QVBoxLayout()
 
         for file_count in range(file_counts):
             group_box = self.groups(file_count)
             progress.update_value()
-            root_layout.addWidget(group_box)
+            self.root_layout.addWidget(group_box)
 
         groupbox_count = 4 if file_counts > 4 else file_counts
-        root_widget.setLayout(root_layout)
+        root_widget.setLayout(self.root_layout)
         estimated_width = root_widget.sizeHint().width() + 50
         estimated_height = group_box.sizeHint().height() * groupbox_count + 50
+
         if estimated_height > 750:
             estimated_height = 750
 

@@ -92,8 +92,6 @@ class ChunkData:
             key, value = tmp
             if key == 'Tiled Diffusion scale factor' or key == 'Tiled Diffusion upscaler':
                 continue
-            elif 'NoiseInv' in key:
-                key = key.replace('NoiseInv', 'Noise inversion')
             elif 'AddNet Module' in key:
                 add_net += 1
             elif 'Postprocess' in key:
@@ -140,7 +138,7 @@ class ChunkData:
                 if match:
                     lora_hash = match.group().replace('[', '').replace(']', '')
                     for tmp in model_list:
-                        if tmp[1] == lora_hash:
+                        if lora_hash in tmp[1]:
                             self.params[key] = tmp[0] + ' [' + lora_hash + ']'
 
     def override_addnet_model(self, model_list):
@@ -239,7 +237,7 @@ class ChunkData:
                     target = [[number + item.split(':')[0].replace('_', ' '), item.split(':')[1]] for item in target]
                     region_status_list += target
 
-                region_status_list.append(['Region control', str(len(region_status))])
+                region_status_list.append(['Region control number', str(len(region_status))])
 
             tiled_diffusion_status = tiled_diffusion_status.replace('Tiled Diffusion: {', 'Tiled diffusion: True, ')
             tiled_diffusion_status = tiled_diffusion_status.replace('Tile tile', 'Tile')
@@ -251,6 +249,7 @@ class ChunkData:
 
             result = [[d2.replace('<comma>', ',').strip() for d2 in d1] for d1 in result]
             result = [[d2.replace('<colon>', ':').strip() for d2 in d1] for d1 in result]
+            result = [[d2.replace('NoiseInv', 'Noise inversion') for d2 in d1] for d1 in result]
             result = [d1 for d1 in result if any(d1)]
             self.data_refresh(match.group(), result)
 

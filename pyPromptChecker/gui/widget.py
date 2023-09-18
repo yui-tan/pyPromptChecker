@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import datetime
 import os
 import sys
 from . import config
@@ -130,7 +129,7 @@ def make_main_section(target):
               ['Hires upscaler', 'Hires.fix'],
               'Extras',
               'Tiled diffusion',
-              'Region control',
+              ['Region control number', 'Region control'],
               'ControlNet',
               'ENSD',
               'Version'
@@ -368,7 +367,7 @@ def make_lora_addnet_tab(target):
     lora_group = make_lora_section(target)
     tab_layout.addWidget(lora_group, 2)
     addnet_group = make_addnet_section(target)
-    tab_layout.addWidget(addnet_group, 3)
+    tab_layout.addWidget(addnet_group, 4)
     return tab_layout
 
 
@@ -505,6 +504,7 @@ def region_control_section(target):
               ['seed', 'Seed'],
               ]
     region_control_tab = QTabWidget()
+    target.used_params['Region control'] = True
     for i in range(1, 9):
         region_number = 'Region ' + str(i)
         check = target.params.get(region_number + ' enable')
@@ -850,9 +850,13 @@ def make_keybindings(parent=None):
     replace_tab_shortcut = QShortcut(QKeySequence('Ctrl+N'), parent)
     quit_shortcut = QShortcut(QKeySequence('Ctrl+Q'), parent)
 
-    toggle_theme_shortcut.activated.connect(parent.change_themes)
-    add_tab_shortcut.activated.connect(parent.reselect_files_append)
-    replace_tab_shortcut.activated.connect(parent.reselect_files)
+    tab = parent
+    if parent.parent() is not None:
+        tab = parent.parent()
+
+    toggle_theme_shortcut.activated.connect(tab.change_themes)
+    add_tab_shortcut.activated.connect(tab.reselect_files_append)
+    replace_tab_shortcut.activated.connect(tab.reselect_files)
     quit_shortcut.activated.connect(lambda: sys.exit())
 
 

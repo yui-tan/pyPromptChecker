@@ -77,13 +77,18 @@ mikkumiku -d DIRECTORY, --directory DIRECTORY
 # Roadmap
  - [x] Tab navigation with thumbnails
  - [x] Listview
- - [ ] Diff mode
+ - [x] Diff mode
  - [x] Filtering and searching tabs various conditions
  - [x] Add support for other image file formats
     - [x] jpeg
     - [x] webp
  - [x] Add support for import JSON
- - [ ] Export Data to Stable-Diffusion-Webui via API
+ - [ ] Automated LoRa creation
+    - [ ] Positive prompt export to txt files.
+    - [ ] Implement interrogate feature.
+    - [ ] Import configure from files.
+    - [ ] Linking sd-scripts.
+ - [ ] ~~Export Data to Stable-Diffusion-Webui via API~~
  - [ ] Get marry to Miku
 
  # Author

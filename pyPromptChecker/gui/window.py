@@ -382,8 +382,10 @@ class ResultWindow(QMainWindow):
 
         elif where_from == 'Export JSON (This)':
             self.export_json_single()
+
         elif where_from == 'Export JSON (All)':
             self.export_json_all()
+
         elif where_from == 'Shrink':
             if self.sender().text() == 'Shrink':
                 self.change_window()
@@ -393,6 +395,7 @@ class ResultWindow(QMainWindow):
                 self.change_window(True)
                 self.sender().setText('Shrink')
                 self.sender().setShortcut(QKeySequence('Ctrl+Tab'))
+
         elif where_from == '▲Menu':
             x = self.sender().mapToGlobal(self.sender().rect().topLeft()).x()
             y = self.sender().mapToGlobal(self.sender().rect().topLeft()).y() - self.main_menu.sizeHint().height()
@@ -400,15 +403,18 @@ class ResultWindow(QMainWindow):
             self.main_menu.exec(adjusted_pos)
 
     def managing_button_clicked(self):
+        is_move = not config.get('UseCopyInsteadOfMove')
+
         where_from = self.sender().objectName()
         current_page = self.root_tab.currentWidget()
         current_index = self.root_tab.currentIndex()
-        is_move = not config.get('UseCopyInsteadOfMove')
         source = self.params[current_index].params.get('Filepath')
         filename = self.params[current_index].params.get('Filename')
+
         if not os.path.exists(source):
             text = "Couldn't find this image file."
             MessageBox(text, 'Error', 'ok', 'critical', self)
+
         elif where_from == 'Favourite':
             destination = config.get('Favourites')
             if not destination:
@@ -429,6 +435,7 @@ class ResultWindow(QMainWindow):
                     self.toast_window.init_toast('Added!', 1000)
                 else:
                     MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
+
         elif where_from == 'Move to':
             self.dialog.init_dialog('choose-directory', 'Select Directory')
             destination = self.dialog.result[0] if self.dialog.result else None
@@ -444,6 +451,7 @@ class ResultWindow(QMainWindow):
                     self.toast_window.init_toast('Moved!', 1000)
                 else:
                     MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
+
         elif where_from == 'Delete':
             destination = os.path.join(os.path.abspath(''), '.trash')
             os.makedirs(destination, exist_ok=True)
@@ -461,8 +469,7 @@ class ResultWindow(QMainWindow):
                 self.params[current_index].params['Filepath'] = os.path.join(destination, filename)
                 self.toast_window.init_toast('Deleted!', 1000)
             else:
-                MessageBox(result.replace('moving/copying', 'deleting') + '\n' + str(e), 'Error', 'ok', 'critical',
-                           self)
+                MessageBox(result.replace('moving/copying', 'deleting') + '\n' + str(e), 'Error', 'ok', 'critical', self)
 
     def pixmap_clicked(self):
         if not self.image_window.isVisible():

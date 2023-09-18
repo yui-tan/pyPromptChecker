@@ -2,8 +2,8 @@
 
 import difflib
 from .dialog import PixmapLabel
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QGridLayout, QScrollArea, QLabel
-from PyQt6.QtWidgets import QTextEdit, QSplitter
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QGridLayout
+from PyQt6.QtWidgets import QScrollArea, QLabel, QTextEdit, QSplitter, QPushButton
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
 
@@ -64,10 +64,13 @@ class DiffWindow(QMainWindow):
         self.params = params
         self.setWindowTitle('Diff Window')
         self.init_diff()
-        self.setMinimumWidth(800)
+        self.setMinimumSize(1000, 1000)
 
     def init_diff(self):
-        statuses = ['Image size',
+        statuses = ['Filepath',
+                    'Extensions',
+                    'Timestamp',
+                    'Image size',
                     'Size',
                     'Seed',
                     'Sampler',
@@ -92,9 +95,10 @@ class DiffWindow(QMainWindow):
         for i in range(len(self.params)):
             pixmap_label = PixmapLabel()
             pixmap = QPixmap(self.params[i].get('Filepath'))
-            pixmap = pixmap.scaled(350, 350, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            pixmap = pixmap.scaled(500, 500, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             pixmap_label.setPixmap(pixmap)
             pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
+            pixmap_label.setFixedSize(500, 500)
 
             diff_layout.addWidget(pixmap_label, 0, i)
 
@@ -121,7 +125,7 @@ class DiffWindow(QMainWindow):
             elif status == 'Denoising strength':
                 status = 'Denoising'
 
-            if not source == target:
+            if not source == target and index > 2:
                 status = html_tag.replace('@@@', status)
                 source = html_tag.replace('@@@', source)
                 target = html_tag.replace('@@@', target)
@@ -167,6 +171,10 @@ class DiffWindow(QMainWindow):
 
         diff_layout.addWidget(source_splitter, 1, 0, 4, 1)
         diff_layout.addWidget(target_splitter, 1, 1, 4, 1)
+
+        close_button = QPushButton('Close')
+        close_button.clicked.connect(lambda: self.close())
+        diff_layout.addWidget(close_button, 5, 0, 1, 2)
 
         diff.setLayout(diff_layout)
         central_widget_layout.addWidget(diff)

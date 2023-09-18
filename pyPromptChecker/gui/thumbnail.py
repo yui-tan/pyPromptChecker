@@ -5,6 +5,7 @@ from .dialog import ProgressDialog
 from .dialog import PixmapLabel
 from .viewer import DiffWindow
 from .widget import portrait_generator
+from .widget import make_keybindings
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QGroupBox, QScrollArea
 from PyQt6.QtWidgets import QWidget, QPushButton, QCheckBox
@@ -16,6 +17,7 @@ class ThumbnailView(QMainWindow):
         self.size = config.get('ThumbnailPixmapSize', 150)
         self.setWindowTitle('Thumbnail View')
         self.params = []
+        make_keybindings(self)
 
     def init_thumbnail(self, param_list):
         self.setCentralWidget(None)

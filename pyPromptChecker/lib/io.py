@@ -104,8 +104,10 @@ def extract_lora_hash(filename):
         n = int.from_bytes(header, "little")
         offset = n + 8
         f.seek(offset)
+
         for chunk in iter(lambda: f.read(block), b''):
             lora_hash.update(chunk)
+
     return lora_hash.hexdigest()
 
 
@@ -116,4 +118,5 @@ def extract_model_hash(filename):
     with open(filename, 'rb') as f:
         for chunk in iter(lambda: f.read(block), b''):
             model_hash.update(chunk)
+
     return model_hash.hexdigest()
