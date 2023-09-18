@@ -8,11 +8,13 @@ from pyPromptChecker.lib import *
 # from lib import *
 
 from . import config
-from .search import *
+from .search import SearchWindow
 from .dialog import *
-from .subwindow import *
 from .widget import *
 from .menu import *
+from .viewer import *
+from .thumbnail import *
+from .listview import *
 from PyQt6.QtWidgets import QApplication, QLabel, QTabWidget, QHBoxLayout, QPushButton, QComboBox, QTextEdit
 from PyQt6.QtGui import QKeySequence, QPalette, QIcon
 from PyQt6.QtCore import Qt, QPoint, QTimer
@@ -22,18 +24,18 @@ class ResultWindow(QMainWindow):
     def __init__(self, targets=None):
         super().__init__()
         self.dark = config.get('AlwaysStartWithDarkMode')
+        self.hide_tab = config.get('OpenWithShortenedWindow', False)
         self.root_tab = None
         self.dialog = None
+        self.search = None
         self.toast_window = None
         self.progress_bar = None
-        self.hide_tab = config.get('OpenWithShortenedWindow', False)
         self.params = []
         self.retracted = []
         self.extract_data(targets)
         self.image_window = ImageWindow(self)
         self.thumbnail = ThumbnailView(self)
         self.listview = Listview(self)
-        self.search = SearchWindow(self)
         self.main_menu = MainMenu(self)
         self.tab_linker = TabMenu(self)
         self.tab_linker_enable = [False, 'Prompt']
@@ -68,6 +70,7 @@ class ResultWindow(QMainWindow):
 
         if tab_navigation_enable and self.root_tab.count() > tab_minimums:
             root_layout.addLayout(tab_navigation(self))
+
         root_layout.addWidget(self.root_tab)
         root_layout.addLayout(footer_layout)
 
@@ -81,7 +84,7 @@ class ResultWindow(QMainWindow):
         self.root_tab.setTabBarAutoHide(True)
 
         self.toast_window = Toast(self)
-        self.dialog = Dialog(self)
+        self.dialog = FileDialog(self)
 
     def extract_data(self, targets):
         png_index = config.get('TargetChunkIndex', 1)
@@ -100,23 +103,24 @@ class ResultWindow(QMainWindow):
 
         for array in targets:
             filepath, filetype = array
+            chunk_data, original_size = chunk_text_extractor(filepath, filetype, png_index)
 
-            chunk_data = chunk_text_extractor(filepath, filetype, png_index)
             if not chunk_data and ignore:
                 valid_total -= 1
                 continue
+            elif not original_size:
+                valid_total -= 1
+                continue
 
-            parameters = parse_parameter(chunk_data, filepath, models)
+            parameters = ChunkData(chunk_data, filepath, filetype, original_size)
+            parameters.init_class()
+
             if parameters.params.get('Positive') == 'This file has no embedded data' and ignore:
                 valid_total -= 1
                 continue
 
-            if filetype == 0:
-                parameters.params['Extensions'] = 'PNG'
-            elif filetype == 1:
-                parameters.params['Extensions'] = 'JPEG'
-            elif filetype == 2:
-                parameters.params['Extensions'] = 'WEBP'
+            parameters.model_name(models)
+            parameters.vae_name(models)
 
             if lora_name:
                 parameters.override_lora(models)
@@ -192,7 +196,7 @@ class ResultWindow(QMainWindow):
 
             hires_tab = ['Hires upscaler', 'Face restoration', 'Extras']
             cfg_fix_auto_tab = ['Dynamic thresholding enabled', 'CFG auto', 'CFG scheduler']
-            lora_tab = ['Lora', 'AddNet Enabled', 'TI in prompt']
+            lora_tab = ['Lora', 'AddNet Enabled', 'Textual inversion']
 
             tabs = [['Prompts', True, True],
                     ['Hires.fix / Extras',
@@ -268,6 +272,13 @@ class ResultWindow(QMainWindow):
         if self.progress_bar:
             self.progress_bar.close()
 
+        model_list = [value.params.get('Model') for value in self.params if value.params.get('Model') is not None]
+        model_list = list(set(model_list))
+        model_list.sort()
+        model_list.insert(0, '')
+        model_list.append('None')
+        self.search = SearchWindow(model_list, self)
+
     def post_add_tab(self):
         total = self.root_tab.count()
         tab_navigation_enable = config.get('TabNavigation', True)
@@ -298,6 +309,7 @@ class ResultWindow(QMainWindow):
             else:
                 extension_tab.hide()
                 self.hide_tab = True
+
         timer = QTimer(self)
         timer.timeout.connect(lambda: self.adjustSize())
         timer.start(10)
@@ -307,6 +319,7 @@ class ResultWindow(QMainWindow):
         current_page = self.root_tab.widget(current_index)
         extension_tab = current_page.findChild(QTabWidget, 'extension_tab')
         combobox = self.centralWidget().findChild(QComboBox, 'Combo')
+
         if combobox:
             combobox.setCurrentIndex(current_index)
         if self.image_window.isVisible():
@@ -326,6 +339,7 @@ class ResultWindow(QMainWindow):
 
     def header_button_clicked(self):
         where_from = self.sender().objectName()
+
         if where_from == 'Combo':
             target_tab = self.sender().currentIndex()
             self.root_tab.setCurrentIndex(target_tab)
@@ -342,6 +356,7 @@ class ResultWindow(QMainWindow):
         where_from = self.sender().objectName()
         clipboard = QApplication.clipboard()
         current_page = self.root_tab.currentWidget()
+
         if where_from == 'Copy positive':
             text_edit = current_page.findChild(QTextEdit, 'Positive')
             if text_edit:
@@ -349,6 +364,7 @@ class ResultWindow(QMainWindow):
                 if text and not text == 'This file has no embedded data':
                     clipboard.setText(text)
                     self.toast_window.init_toast('Positive Copied!', 1000)
+
         elif where_from == 'Copy negative':
             text_edit = current_page.findChild(QTextEdit, 'Negative')
             if text_edit:
@@ -356,16 +372,20 @@ class ResultWindow(QMainWindow):
                 if text:
                     clipboard.setText(text)
                     self.toast_window.init_toast('Negative Copied!', 1000)
+
         elif where_from == 'Copy seed':
             label = current_page.findChild(QLabel, 'Seed_value')
             if label:
                 text = label.text()
                 clipboard.setText(text)
                 self.toast_window.init_toast('Seed Copied!', 1000)
+
         elif where_from == 'Export JSON (This)':
             self.export_json_single()
+
         elif where_from == 'Export JSON (All)':
             self.export_json_all()
+
         elif where_from == 'Shrink':
             if self.sender().text() == 'Shrink':
                 self.change_window()
@@ -375,6 +395,7 @@ class ResultWindow(QMainWindow):
                 self.change_window(True)
                 self.sender().setText('Shrink')
                 self.sender().setShortcut(QKeySequence('Ctrl+Tab'))
+
         elif where_from == '▲Menu':
             x = self.sender().mapToGlobal(self.sender().rect().topLeft()).x()
             y = self.sender().mapToGlobal(self.sender().rect().topLeft()).y() - self.main_menu.sizeHint().height()
@@ -382,15 +403,18 @@ class ResultWindow(QMainWindow):
             self.main_menu.exec(adjusted_pos)
 
     def managing_button_clicked(self):
+        is_move = not config.get('UseCopyInsteadOfMove')
+
         where_from = self.sender().objectName()
         current_page = self.root_tab.currentWidget()
         current_index = self.root_tab.currentIndex()
-        is_move = not config.get('UseCopyInsteadOfMove')
         source = self.params[current_index].params.get('Filepath')
         filename = self.params[current_index].params.get('Filename')
+
         if not os.path.exists(source):
             text = "Couldn't find this image file."
             MessageBox(text, 'Error', 'ok', 'critical', self)
+
         elif where_from == 'Favourite':
             destination = config.get('Favourites')
             if not destination:
@@ -411,6 +435,7 @@ class ResultWindow(QMainWindow):
                     self.toast_window.init_toast('Added!', 1000)
                 else:
                     MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
+
         elif where_from == 'Move to':
             self.dialog.init_dialog('choose-directory', 'Select Directory')
             destination = self.dialog.result[0] if self.dialog.result else None
@@ -426,6 +451,7 @@ class ResultWindow(QMainWindow):
                     self.toast_window.init_toast('Moved!', 1000)
                 else:
                     MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
+
         elif where_from == 'Delete':
             destination = os.path.join(os.path.abspath(''), '.trash')
             os.makedirs(destination, exist_ok=True)
@@ -443,8 +469,7 @@ class ResultWindow(QMainWindow):
                 self.params[current_index].params['Filepath'] = os.path.join(destination, filename)
                 self.toast_window.init_toast('Deleted!', 1000)
             else:
-                MessageBox(result.replace('moving/copying', 'deleting') + '\n' + str(e), 'Error', 'ok', 'critical',
-                           self)
+                MessageBox(result.replace('moving/copying', 'deleting') + '\n' + str(e), 'Error', 'ok', 'critical', self)
 
     def pixmap_clicked(self):
         if not self.image_window.isVisible():
@@ -469,35 +494,11 @@ class ResultWindow(QMainWindow):
         frame_geometry.moveCenter(screen_center)
         self.move(frame_geometry.topLeft())
 
-    def tab_search(self, condition):
-        result = condition.get('Result', 'Tabs')
-        self.tab_tweak()
-
-        target_data = [value.params for value in self.params]
-        target_tab = list(search_images(condition, target_data))
-
-        if len(target_tab) > 0:
-            if result == 'Tabs':
-                self.tab_tweak(target_tab)
-            elif result == 'Listview':
-                self.open_listview(target_tab)
-            elif result == 'Thumbnails':
-                self.open_thumbnail(target_tab)
-            text = str(len(target_tab)) + ' image(s) found !'
-            MessageBox(text, 'Search result', 'ok', 'info', self.search)
-        else:
-            MessageBox('There is no match to show.', 'Search result', 'ok', 'info', self.search)
-
     def tab_search_window(self):
         if self.search.isVisible():
             self.search.activateWindow()
         else:
-            model_list = [value.params.get('Model') for value in self.params if value.params.get('Model') is not None]
-            model_list = list(set(model_list))
-            model_list.sort()
-            model_list.insert(0, '')
-            model_list.append('None')
-            self.search.init_search_window(model_list)
+            self.search.show_dialog()
 
     def tab_tweak(self, indexes=None):
         hide = config.get('HideNotMatchedTabs', False)
@@ -526,7 +527,6 @@ class ResultWindow(QMainWindow):
                 restore.setDisabled(True)
 
     def open_thumbnail(self, indexes=None):
-        size = config.get('ThumbnailPixmapSize', 150)
         if self.thumbnail.isVisible():
             self.thumbnail.activateWindow()
         else:
@@ -534,10 +534,9 @@ class ResultWindow(QMainWindow):
                 dictionary_list = [self.params[i].params for i in indexes]
             else:
                 dictionary_list = [value.params for value in self.params]
-            self.thumbnail.init_thumbnail(dictionary_list, size)
+            self.thumbnail.init_thumbnail(dictionary_list)
 
     def open_listview(self, indexes=None):
-        size = config.get('ListViewPixmapSize', 200)
         if self.listview.isVisible():
             self.listview.activateWindow()
         else:
@@ -545,7 +544,7 @@ class ResultWindow(QMainWindow):
                 dictionary_list = [self.params[i].params for i in indexes]
             else:
                 dictionary_list = [value.params for value in self.params]
-            self.listview.init_listview(dictionary_list, size)
+            self.listview.init_listview(dictionary_list)
 
     def import_json_from_files(self):
         self.dialog.init_dialog('choose-files', 'Select JSONs', None, 'JSON')
@@ -704,24 +703,22 @@ class ResultWindow(QMainWindow):
                 self.toast_window.init_toast('Replaced!', 1000)
 
     def model_hash_extractor(self):
-        text = 'This operation requires a significant amount of time.' \
-               '\n...And more than 32GiB of memory.' \
-               '\nDo you still want to run it ?'
-        result = MessageBox(text, 'Confirm', 'okcancel', 'question', self)
+        which_mode = SelectDialog(self)
+        result = which_mode.exec()
+        mode = which_mode.selected
 
-        if result.success:
+        if result == QDialog.DialogCode.Accepted:
             self.dialog.init_dialog('choose-directory', 'Select Directory', None, '')
             directory = self.dialog.result[0] if self.dialog.result else None
             if directory:
                 operation_progress = ProgressDialog(self)
                 file_list = os.listdir(directory)
                 file_list = [os.path.join(directory, v) for v in file_list if os.path.isfile(os.path.join(directory, v))]
-                file_list = [v for v in file_list if 'safetensors' in v or 'ckpt' in v or 'pt' in v]
+                file_list = [v for v in file_list if '.safetensors' in v or '.ckpt' in v or '.pt' in v]
+                file_list.sort()
                 operation_progress.setLabelText('Loading model file......')
                 operation_progress.setRange(0, len(file_list) + 1)
-                operation_progress.update_value()
-                QApplication.processEvents()
-                io.model_hash_maker(file_list, operation_progress)
+                io.model_hash_maker(file_list, operation_progress, mode)
                 MessageBox('Finished', "I'm knackered", 'ok', 'info', self)
 
     def tab_link(self):
@@ -783,7 +780,7 @@ def from_main(purpose, target_data=None):
             qdarktheme.setup_theme(additional_qss=add_stylesheet())
         else:
             qdarktheme.setup_theme('light')
-        open_directory = Dialog()
+        open_directory = FileDialog()
         open_directory.init_dialog('choose-directory', 'Select directory')
         result = open_directory.result
         return result
@@ -793,7 +790,7 @@ def from_main(purpose, target_data=None):
             qdarktheme.setup_theme(additional_qss=add_stylesheet())
         else:
             qdarktheme.setup_theme('light')
-        open_files = Dialog()
+        open_files = FileDialog()
         open_files.init_dialog('choose-files', 'Select files', None, 'PNG')
         result = open_files.result
         return result

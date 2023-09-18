@@ -2,95 +2,131 @@
 
 import os
 import re
+import datetime
 
 
 class ChunkData:
-    def __init__(self, data):
+    def __init__(self, data, filepath=None, filetype=None, size=None):
+        self.prompt_regex = r'([\S\s]*)(?=Steps: )'
+        self.lora_regex = r'(?<=Lora hashes: )"[^"]*"'
+        self.ti_regex = r'(?<=TI hashes: )"[^"]*"'
+        self.tiled_diffusion_regex = r'Tiled Diffusion: \{.*},'
+        self.region_regex = r'"Region [0-9][^}]*}'
+        self.region_control_regex = r'(?<="Region control": ).*$'
+        self.control_net_regex = r'(ControlNet.*"[^"]*",)'
+        self.cfg_regex = r' CFG Scheduler Info: ".*",'
+        self.hyphened_target = r'\"[^"]*"'
+        self.filepath = filepath
+        self.type = filetype
+        self.size = size
         self.data = data
         self.original_data = data
         self.data_list = []
         self.error_list = []
         self.params = {}
         self.used_params = {}
-        if not data:
+
+    def init_class(self):
+        if not self.data:
             self.data = 'This file has no embedded data'
+
+        if self.type == 0:
+            ext = 'PNG'
+        elif self.type == 1:
+            ext = 'JPEG'
+        elif self.type == 2:
+            ext = 'WEBP'
+        elif self.type == 9:
+            ext = 'JSON'
+        else:
+            ext = '---'
+
+        filename = os.path.basename(self.filepath)
+        self.data_list.extend([['Filename', filename], ['Filepath', self.filepath], ['Extensions', ext], ['Image size', self.size]])
+
+        if os.path.exists(self.filepath):
+            timestamp = datetime.datetime.fromtimestamp(os.path.getctime(self.filepath))
+            self.data_list.append(['Timestamp', timestamp.strftime('%Y/%m/%d %H:%M')])
+
+        self.prompt_parse()
+
+        if 'Tiled Diffusion' in self.data:
+            self.tiled_diffusion_parse()
+
+        if 'Lora' in self.data:
+            self.lora_parse()
+
+        if 'TI' in self.data:
+            self.ti_parse()
+
+        if 'ControlNet' in self.data:
+            self.control_net_parse()
+
+        if 'CFG Scheduler Info' in self.data:
+            self.cfg_scheduler_parse()
+
+        self.main_status_parse()
+        self.make_dictionary()
 
     def data_refresh(self, delete_target, add_list):
         if delete_target:
             self.data = self.data.replace(delete_target, '')
-        if len(add_list) > 0:
+
+        if add_list is not None and len(add_list) > 0:
             for index, value in enumerate(add_list):
                 if len(value) == 2:
-                    self.data_list = self.data_list + [value]
+                    self.data_list.append(value)
                 else:
-                    self.error_list = self.error_list + [value]
-
-    def filepath_registration(self, filepath):
-        filename = os.path.basename(filepath)
-        self.data_list = self.data_list + [['Filename', filename], ['Filepath', filepath]]
+                    self.error_list.append(value)
 
     def make_dictionary(self):
-        control_net = 0
-        loras = 0
         add_net = 0
-        region_control = 0
-        extras = 0
-        cfg_auto = 0
+        extras = False
+        cfg_auto = False
+
         if not self.data_list:
             return None
+
         self.data_list = [[value.strip() for value in d1] for d1 in self.data_list]
         for tmp in self.data_list:
             key, value = tmp
-            if key == 'Tiled Diffusion scale factor':
+            if key == 'Tiled Diffusion scale factor' or key == 'Tiled Diffusion upscaler':
                 continue
-            if key == 'Tiled Diffusion upscaler':
-                continue
-            if 'NoiseInv' in key:
-                key = key.replace('NoiseInv', 'Noise inversion')
+            elif 'AddNet Module' in key:
+                add_net += 1
+            elif 'Postprocess' in key:
+                extras += 1
+            elif key == 'Scheduler':
+                cfg_auto += 1
             if value == 'true':
                 value = 'True'
-            if 'ControlNet' in key and 'True' in value:
-                control_net += 1
-            if 'Lora' in key:
-                loras += 1
-            if 'AddNet Module' in key:
-                add_net += 1
-            if 'Region' in key and 'enable' in key:
-                region_control += 1
-            if 'Postprocess' in key:
-                extras += 1
-            if key == 'Scheduler':
-                cfg_auto += 1
             self.params[key] = value
-        if control_net > 0:
-            self.params['ControlNet'] = str(control_net)
-        if loras > 0:
-            self.params['Lora'] = str(loras)
+
         if add_net > 0:
             self.params['AddNet Number'] = str(add_net)
-        if region_control > 0:
-            self.params['Region control'] = str(region_control)
-        if extras > 0:
+        if extras:
             self.params['Extras'] = 'True'
-        if cfg_auto > 0:
+        if cfg_auto:
             self.params['CFG auto'] = 'True'
 
     def model_name(self, model_list):
         model_hash = self.params.get('Model hash')
-        vae_hash = self.params.get('VAE hash')
         if model_hash:
             model_name = '[' + model_hash + ']'
             if model_list:
                 for tmp in model_list:
-                    if tmp[1] == model_hash:
+                    if model_hash in tmp[1]:
                         model_name = tmp[0] + ' [' + tmp[1] + ']'
             self.params['Model'] = model_name
             self.used_params['Model hash'] = True
+
+    def vae_name(self, model_list):
+        vae_hash = self.params.get('VAE hash')
         if vae_hash:
             vae_name = '[' + vae_hash + ']'
             if model_list:
                 for tmp in model_list:
-                    if tmp[1] == vae_hash:
+                    if vae_hash in tmp[1]:
                         vae_name = tmp[0] + ' [' + tmp[1] + ']'
             self.params['VAE'] = vae_name
             self.used_params['VAE hash'] = True
@@ -102,8 +138,18 @@ class ChunkData:
                 if match:
                     lora_hash = match.group().replace('[', '').replace(']', '')
                     for tmp in model_list:
-                        if tmp[1] == lora_hash:
+                        if lora_hash in tmp[1]:
                             self.params[key] = tmp[0] + ' [' + lora_hash + ']'
+
+    def override_addnet_model(self, model_list):
+        for key, value in self.params.items():
+            if 'AddNet Model' in key:
+                match = re.search(r'\(.*\)', value)
+                if match:
+                    lora_hash = match.group().replace('(', '').replace(')', '')
+                    for tmp in model_list:
+                        if lora_hash in tmp[1]:
+                            self.params[key] = tmp[0] + ' (' + lora_hash + ')'
 
     def override_textual_inversion(self, model_list):
         for key, value in self.params.items():
@@ -115,172 +161,139 @@ class ChunkData:
                         if tmp[1] in ti_hash:
                             self.params[key] = tmp[0] + ' [' + ti_hash + ']'
 
-    def override_addnet_model(self, model_list):
-        for key, value in self.params.items():
-            if 'AddNet Model' in key:
-                match = re.search(r'\(.*\)', value)
-                if match:
-                    ti_hash = match.group().replace('(', '').replace(')', '')
-                    for tmp in model_list:
-                        if tmp[1] == ti_hash:
-                            self.params[key] = tmp[0] + ' (' + ti_hash + ')'
-
     def import_json(self, json_data):
         self.params = json_data
 
+    def prompt_parse(self):
+        result = [['Positive', 'None'], ['Negative', 'None']]
+        if self.data == 'This file has no embedded data':
+            result = [['Positive', self.data]]
+            self.data_refresh(self.data, result)
+            return
 
-def parse_parameter(chunks, filepath, model_list=None):
-    target_data = ChunkData(chunks)
-    target_data.filepath_registration(filepath)
-    target_data = prompt_parse(target_data)
-    target_data = lora_parse(target_data)
-    target_data = ti_parse(target_data)
-    target_data = tiled_diffusion_parse(target_data)
-    target_data = control_net_parse(target_data)
-    target_data = cfg_scheduler_parse(target_data)
-    target_data = main_status_parse(target_data)
-    target_data.make_dictionary()
-    target_data.model_name(model_list)
-    return target_data
-
-
-def main_status_parse(target_data):
-    target_str = target_data.data
-    comma_in_hyphen_regex = r'\"[^"]*"'
-    if target_str == 'This file has no embedded data':
-        return target_data
-    if target_str:
-        target_str = re.sub(comma_in_hyphen_regex, lambda match: match.group().replace(',', '<comma>'), target_str)
-        noise_match = re.search(r'\nTemplate:[\s\S]*$', target_str)
-        if noise_match:
-            target_str = target_str.replace(noise_match.group(), '')
-        result = [[value.split(':')[0], value.split(':')[1]] for value in target_str.split(',')]
-        result = [[d2.replace('<comma>', ',').replace('"', '').strip() for d2 in d1] for d1 in result]
-        target_data.data_refresh(target_str, result)
-    return target_data
-
-
-def prompt_parse(target_data):
-    prompt_regex = r'([\S\s]*)(?=Steps: )'
-    result = [['Positive', 'None'], ['Negative', 'None']]
-    prompt = target_data.data
-    if prompt == 'This file has no embedded data':
-        result = [['Positive', prompt]]
-        target_data.data_refresh(prompt, result)
-        return target_data
-    match = re.search(prompt_regex, prompt)
-    if match:
-        matched_prompt = match.group()
-        if re.search(r'^parameters', matched_prompt):
-            matched_prompt = matched_prompt.replace('parameters', '', 1)
-            send_prompt = 'parameters' + matched_prompt
-        elif re.search(r'^UNICODE', matched_prompt):
-            matched_prompt = matched_prompt.replace('UNICODE', '', 1)
-            send_prompt = 'UNICODE' + matched_prompt
-        else:
-            send_prompt = prompt
-        tmp = matched_prompt.split('Negative prompt: ')
-        result[0][1] = tmp[0]
-        if len(tmp) == 2:
-            result[1][1] = tmp[1]
-        target_data.data_refresh(send_prompt, result)
-    else:
-        match = re.search(r'^parameters', prompt)
+        match = re.search(self.prompt_regex, self.data)
         if match:
-            matched_prompt = match.group()
-            matched_prompt = matched_prompt.replace('parameters', '', 1)
-            target_data.data_refresh('parameters', matched_prompt)
-    return target_data
+            prompt = match.group()
+            matched_prompt = prompt
 
+            if re.search(r'^parameters', prompt):
+                matched_prompt = prompt.replace('parameters', '', 1)
+            elif re.search(r'^UNICODE', prompt):
+                matched_prompt = prompt.replace('UNICODE', '', 1)
 
-def lora_parse(target_data):
-    lora_regex = r'(?<=Lora hashes: )"[^"]*"'
-    match = re.search(lora_regex, target_data.data)
-    if match:
-        target = match.group().replace('"', '')
-        loras = [d1.split(':')[0].strip() + ' ' + '[' + d1.split(':')[1].strip() + ']' for d1 in target.split(',')]
-        loras = [['Lora ' + str(index), value] for index, value in enumerate(loras)]
-        target_data.data_refresh('Lora hashes: "' + target + '",', loras)
-    return target_data
+            tmp = matched_prompt.split('Negative prompt: ')
+            result[0][1] = tmp[0]
+            if len(tmp) == 2:
+                result[1][1] = tmp[1]
+            self.data_refresh(prompt, result)
+        else:
+            match = re.search(r'^parameters', self.data)
+            if match:
+                matched_prompt = match.group()
+                matched_prompt = matched_prompt.replace('parameters', '', 1)
+                self.data_refresh('parameters', matched_prompt)
+            else:
+                unicode_match = re.search(r'^UNICODE', self.data)
+                if unicode_match:
+                    matched_prompt = unicode_match.group()
+                    matched_prompt = matched_prompt.replace('UNICODE', '', 1)
+                    self.data_refresh('UNICODE', matched_prompt)
 
+    def lora_parse(self):
+        match = re.search(self.lora_regex, self.data)
+        if match:
+            target = match.group().replace('"', '')
+            loras = [d1.split(':')[0].strip() + ' ' + '[' + d1.split(':')[1].strip() + ']' for d1 in target.split(',')]
+            loras = [['Lora ' + str(index), value] for index, value in enumerate(loras)]
+            loras.append(['Lora', str(len(loras))])
+            self.data_refresh('Lora hashes: "' + target + '",', loras)
 
-def ti_parse(target_data):
-    lora_regex = r'(?<=TI hashes: )"[^"]*"'
-    match = re.search(lora_regex, target_data.data)
-    if match:
-        target = match.group().replace('"', '')
-        tis = [d1.split(':')[0].strip() + ' ' + '[' + d1.split(':')[1].strip() + ']' for d1 in target.split(',')]
-        tis = [['Ti ' + str(index), value] for index, value in enumerate(tis)]
-        tis.append(['TI in prompt', str(len(tis))])
-        target_data.data_refresh('TI hashes: "' + target + '",', tis)
-    return target_data
+    def ti_parse(self):
+        match = re.search(self.ti_regex, self.data)
+        if match:
+            target = match.group().replace('"', '')
+            tis = [d1.split(':')[0].strip() + ' ' + '[' + d1.split(':')[1].strip() + ']' for d1 in target.split(',')]
+            tis = [['Ti ' + str(index), value] for index, value in enumerate(tis)]
+            tis.append(['Textual inversion', str(len(tis))])
+            self.data_refresh('TI hashes: "' + target + '",', tis)
 
+    def tiled_diffusion_parse(self):
+        region_status_list = []
+        match = re.search(self.tiled_diffusion_regex, self.data)
+        if match:
+            tiled_diffusion_status = match.group()
 
-def tiled_diffusion_parse(target_data):
-    tiled_diffusion_regex = r'Tiled Diffusion: \{.*},'
-    region_regex = r'"Region [0-9][^}]*}'
-    region_control_regex = r'(?<="Region control": ).*$'
-    hyphened_target = r'\"[^"]*"'
-    region_status_list = []
-    match = re.search(tiled_diffusion_regex, target_data.data)
-    if match:
-        tiled_diffusion_status = match.group()
-        if 'Region' in tiled_diffusion_status:
-            region_status = re.findall(region_regex, tiled_diffusion_status)
-            tiled_diffusion_status = re.sub(region_control_regex, 'True', tiled_diffusion_status)
-            for tmp in region_status:
-                tmp = re.sub(hyphened_target, lambda match: match.group().replace(',', '<comma>'), tmp)
-                tmp = re.sub(hyphened_target, lambda match: match.group().replace(':', '<colon>'), tmp)
-                number = tmp.split(':')[0]
-                target_str = tmp.replace(number + ':', '').replace('{', '').replace('}', '').replace('"', '')
-                target = target_str.split(',')
-                number = number.replace('"', '')
-                target = [[number + item.split(':')[0].replace('_', ' '), item.split(':')[1]] for item in target]
-                region_status_list = region_status_list + target
-        tiled_diffusion_status = tiled_diffusion_status.replace('Tiled Diffusion: {', 'Tiled diffusion: True, ')
-        tiled_diffusion_status = tiled_diffusion_status.replace('Tile tile', 'Tile')
-        tiled_diffusion_status = tiled_diffusion_status.replace('"', '').replace('}', '')
-        result = [item.split(':') for item in tiled_diffusion_status.split(',')]
-        if region_status_list:
-            result = result + region_status_list
-        result = [[d2.replace('<comma>', ',').strip() for d2 in d1] for d1 in result]
-        result = [[d2.replace('<colon>', ':').strip() for d2 in d1] for d1 in result]
-        result = [d1 for d1 in result if any(d1)]
-        target_data.data_refresh(match.group(), result)
-    return target_data
+            if 'Region' in tiled_diffusion_status:
+                region_status = re.findall(self.region_regex, tiled_diffusion_status)
+                tiled_diffusion_status = re.sub(self.region_control_regex, 'True', tiled_diffusion_status)
 
+                for tmp in region_status:
+                    tmp = re.sub(self.hyphened_target, lambda match_part: match_part.group().replace(',', '<comma>'), tmp)
+                    tmp = re.sub(self.hyphened_target, lambda match_part: match_part.group().replace(':', '<colon>'), tmp)
+                    number = tmp.split(':')[0]
+                    target_str = tmp.replace(number + ':', '').replace('{', '').replace('}', '').replace('"', '')
+                    target = target_str.split(',')
+                    number = number.replace('"', '')
+                    target = [[number + item.split(':')[0].replace('_', ' '), item.split(':')[1]] for item in target]
+                    region_status_list += target
 
-def control_net_parse(target_data):
-    control_net_regex = r'(ControlNet.*"[^"]*",)'
-    match = re.search(control_net_regex, target_data.data)
-    if match:
-        result = []
-        target = match.group()
-        controlnet_result = re.finditer(r'(ControlNet[^:]*: "[^"]*")', target)
-        for tmp in controlnet_result:
-            number = tmp.group().split(':')[0]
-            hyphened = re.sub(r'(\([^)]*\))', lambda match: match.group(0).replace(', ', '<comma>'), tmp.group(0))
-            detail_param = re.sub(r'(["|,][^:]*: )', lambda match: match.group(0).replace(',', ', ' + number), hyphened)
-            detail_param = detail_param.replace(number + ':', number + ': True,' + number)
-            detail_param = detail_param.replace('"', '')
-            result = [[value.split(':')[0], value.split(':')[1]] for value in detail_param.split(',')]
-            result = [[value.replace('<comma>', ',') for value in d1] for d1 in result]
-        target_data.data_refresh(target, result)
-    return target_data
+                region_status_list.append(['Region control number', str(len(region_status))])
 
+            tiled_diffusion_status = tiled_diffusion_status.replace('Tiled Diffusion: {', 'Tiled diffusion: True, ')
+            tiled_diffusion_status = tiled_diffusion_status.replace('Tile tile', 'Tile')
+            tiled_diffusion_status = tiled_diffusion_status.replace('"', '').replace('}', '')
+            result = [item.split(':') for item in tiled_diffusion_status.split(',')]
 
-def cfg_scheduler_parse(target_data):
-    cfg_regex = r' CFG Scheduler Info: ".*",'
-    match = re.search(cfg_regex, target_data.data)
-    if match:
-        target = match.group()
-        cfg_match = re.search(r'"[^"]*"', target)
-        if cfg_match:
-            cfg_result = cfg_match.group()
-            cfg_result = cfg_result.replace('terget denoising', '\\n target denoising')
-            cfg_result = cfg_result.replace('\\n"', '').replace('"', '')
-            result = [[value.split(':')[0], str(value.split(':', 1)[1])] for value in cfg_result.split('\\n')]
-            target_data.data_refresh(target, result)
-            target_data.params['CFG scheduler'] = 'True'
-    return target_data
+            if region_status_list:
+                result += region_status_list
 
+            result = [[d2.replace('<comma>', ',').strip() for d2 in d1] for d1 in result]
+            result = [[d2.replace('<colon>', ':').strip() for d2 in d1] for d1 in result]
+            result = [[d2.replace('NoiseInv', 'Noise inversion') for d2 in d1] for d1 in result]
+            result = [d1 for d1 in result if any(d1)]
+            self.data_refresh(match.group(), result)
+
+    def control_net_parse(self):
+        match = re.search(self.control_net_regex, self.data)
+        if match:
+            cnt = 0
+            result = []
+            target = match.group()
+            controlnet_result = re.finditer(r'(ControlNet[^:]*: "[^"]*")', target)
+            for tmp in controlnet_result:
+                number = tmp.group().split(':')[0]
+                hyphened = re.sub(r'(\([^)]*\))', lambda match_part: match_part.group(0).replace(', ', '<comma>'), tmp.group(0))
+                detail_param = re.sub(r'(["|,][^:]*: )', lambda match_part: match_part.group(0).replace(',', ', ' + number), hyphened)
+                detail_param = detail_param.replace(number + ':', number + ': True,' + number)
+                detail_param = detail_param.replace('"', '')
+                result = [[value.split(':')[0], value.split(':')[1]] for value in detail_param.split(',')]
+                result = [[value.replace('<comma>', ',') for value in d1] for d1 in result]
+                cnt += 1
+            result.append(['ControlNet', str(cnt)])
+            self.data_refresh(target, result)
+
+    def cfg_scheduler_parse(self):
+        match = re.search(self.cfg_regex, self.data)
+        if match:
+            target = match.group()
+            cfg_match = re.search(self.hyphened_target, target)
+            if cfg_match:
+                cfg_result = cfg_match.group()
+                cfg_result = cfg_result.replace('terget denoising', '\\n target denoising')
+                cfg_result = cfg_result.replace('\\n"', '').replace('"', '')
+                result = [[value.split(':')[0], str(value.split(':', 1)[1])] for value in cfg_result.split('\\n')]
+                result.append(['CFG scheduler', 'True'])
+                self.data_refresh(target, result)
+
+    def main_status_parse(self):
+        if self.data == 'This file has no embedded data':
+            return
+
+        if self.data:
+            target_str = re.sub(self.hyphened_target, lambda match: match.group().replace(',', '<comma>'), self.data)
+            noise_match = re.search(r'\nTemplate:[\s\S]*$', self.data)
+            if noise_match:
+                target_str = target_str.replace(noise_match.group(), '')
+            result = [[value.split(':')[0], value.split(':')[1]] for value in target_str.split(',')]
+            result = [[d2.replace('<comma>', ',').replace('"', '').strip() for d2 in d1] for d1 in result]
+            self.data_refresh(target_str, result)

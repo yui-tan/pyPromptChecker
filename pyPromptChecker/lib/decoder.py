@@ -41,9 +41,17 @@ def chunk_text_extractor(target, method, index=1):
             chunks = reader.chunks()
             chunk_list = list(chunks)
 
+            for chunk_type, chunk_data in chunk_list:
+                if chunk_type == b'IHDR':
+                    width = int.from_bytes(chunk_data[0:4], byteorder='big')
+                    height = int.from_bytes(chunk_data[4:8], byteorder='big')
+                    break
+
+            original_size = str(width) + 'x' + str(height)
+
             if index >= len(chunk_list):
                 print('{} has no embedded data!'.format(target))
-                return None
+                return None, None
 
             text = ''
             for i in range(index, index + 4):
@@ -58,14 +66,14 @@ def chunk_text_extractor(target, method, index=1):
                         text = text + str_data.replace('extras', 'parameters')
 
             if text.startswith('parameters'):
-                return text
+                return text, original_size
             else:
                 print('{} has not valid parameters'.format(target))
-                return None
+                return None, original_size
 
         except Exception as e:
             print('An error occurred while decoding: {}\n{}'.format(target, str(e)))
-            return None
+            return None, None
 
     elif method == 1 or method == 2:
         try:
@@ -73,18 +81,17 @@ def chunk_text_extractor(target, method, index=1):
             exif = img._getexif()
             binary = exif.get(37510, b'')
             text = binary.decode('utf-8', errors='ignore').replace("\x00", "")
+            width, height = img.size
 
             if text.startswith('UNICODE'):
                 text = text.replace('UNICODE', 'parameters', 1)
-                return text
+                original_size = str(width) + 'x' + str(height)
+                return text, original_size
             else:
+                original_size = str(width) + 'x' + str(height)
                 print('{} has not valid parameters'.format(target))
-                return None
+                return None, original_size
 
         except Exception as e:
             print('An error occurred while decoding: {}\n{}'.format(target, str(e)))
-            return None
-
-    else:
-        print("couldn't extract parameter from {}\nBecause this feature is not yet implemented.".format(target))
-        return None
+            return None, None

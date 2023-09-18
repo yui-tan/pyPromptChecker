@@ -2,7 +2,6 @@
 
 from PyQt6.QtWidgets import QApplication, QMenu
 from PyQt6.QtGui import QAction
-import qdarktheme
 
 
 def quit_triggered():
@@ -84,3 +83,11 @@ class TabMenu(QMenu):
         self.tab_link.setCheckable(True)
 
         self.tab_link.triggered.connect(self.main.tab_link)
+
+
+class ThumbnailMenu(QMenu):
+    pass
+
+
+class ListviewMenu(QMenu):
+    pass

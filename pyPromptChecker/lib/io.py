@@ -71,17 +71,18 @@ def is_directory_empty(directory_path):
     return len(file_list) == 0
 
 
-def model_hash_maker(file_list, progress):
+def model_hash_maker(file_list, progress, method):
     model_hash_data = []
     for tmp in file_list:
         model_name = os.path.basename(tmp)
         filename, extension = os.path.splitext(model_name)
         extension = extension.replace('.', '')
-        with open(tmp, 'rb') as file:
-            data = file.read()
-            data_hash = hashlib.sha256(data).hexdigest()
-            model_hash = data_hash[:10]
-            model_hash_data.append([filename, model_hash, data_hash, filename, extension])
+        if method == 0:
+            data_hash = extract_model_hash(tmp)
+        else:
+            data_hash = extract_lora_hash(tmp)
+        model_hash = data_hash[:12]
+        model_hash_data.append([filename, model_hash, data_hash, filename, extension])
         progress.update_value()
         QApplication.processEvents()
     progress.setLabelText('Writing collected data......')
@@ -91,3 +92,31 @@ def model_hash_maker(file_list, progress):
         writer.writerows(model_hash_data)
     progress.update_value()
     progress.close()
+
+
+def extract_lora_hash(filename):
+    lora_hash = hashlib.sha256()
+    block = 1024 * 1024
+
+    with open(filename, 'rb') as f:
+        f.seek(0)
+        header = f.read(8)
+        n = int.from_bytes(header, "little")
+        offset = n + 8
+        f.seek(offset)
+
+        for chunk in iter(lambda: f.read(block), b''):
+            lora_hash.update(chunk)
+
+    return lora_hash.hexdigest()
+
+
+def extract_model_hash(filename):
+    model_hash = hashlib.sha256()
+    block = 1024 * 1024
+
+    with open(filename, 'rb') as f:
+        for chunk in iter(lambda: f.read(block), b''):
+            model_hash.update(chunk)
+
+    return model_hash.hexdigest()
