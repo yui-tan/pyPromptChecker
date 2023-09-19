@@ -114,7 +114,19 @@ def make_tab_bar(target, parent):
     widget_layout = QVBoxLayout()
     widget_layout.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
 
-    for index, filepath in enumerate(target):
+    make_thumbs_for_tab_bar(target, parent, widget_layout)
+
+    scroll_contents = QWidget()
+    scroll_contents.setObjectName('tab_bar_contents')
+    scroll_contents.setContentsMargins(0, 0, 0, 0)
+    scroll_contents.setLayout(widget_layout)
+    tab_bar_scroll.setWidget(scroll_contents)
+    tab_bar_scroll.setContentsMargins(0, 0, 0, 0)
+    return tab_bar_scroll
+
+
+def make_thumbs_for_tab_bar(filepaths, parent, layout, add=False):
+    for index, filepath in enumerate(filepaths):
         filename = os.path.basename(filepath)
         pixmap_label = PixmapLabel()
         pixmap_label.setObjectName('tab_index_' + str(index))
@@ -126,14 +138,11 @@ def make_tab_bar(target, parent):
         pixmap_label.setFixedSize(100, 100)
         pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
         pixmap_label.setStyleSheet('border: 1px solid palette(midlight)')
-        widget_layout.addWidget(pixmap_label)
-
-    scroll_contents = QWidget()
-    scroll_contents.setContentsMargins(0, 0, 0, 0)
-    scroll_contents.setLayout(widget_layout)
-    tab_bar_scroll.setWidget(scroll_contents)
-    tab_bar_scroll.setContentsMargins(0, 0, 0, 0)
-    return tab_bar_scroll
+        if not add:
+            layout.addWidget(pixmap_label)
+        else:
+            return pixmap_label
+    return layout
 
 
 def make_main_section(target):
@@ -895,6 +904,8 @@ def make_keybindings(parent=None):
 
 @lru_cache(maxsize=1000)
 def portrait_generator(filepath, size):
+    if not os.path.exists(filepath):
+        return QPixmap(size, size)
     image_reader = QImageReader(filepath)
     pixmap = QPixmap.fromImageReader(image_reader)
     pixmap = pixmap.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)

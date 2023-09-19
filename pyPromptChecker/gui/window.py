@@ -2,11 +2,11 @@
 
 import sys
 import qdarktheme
-from pyPromptChecker.lib import *
 
 # sys.path.append('../')
 # from lib import *
 
+from pyPromptChecker.lib import *
 from . import config
 from .search import SearchWindow
 from .dialog import *
@@ -67,16 +67,14 @@ class ResultWindow(QMainWindow):
         self.root_tab = QTabWidget()
         root_layout = QGridLayout()
         central_widget = QWidget()
-        row = 0
-        t_row = 0
+        row = 1
+        t_row = 1
 
         footer_layout = make_footer_area(self)
         self.make_root_tab()
 
         if tab_navigation_enable and self.root_tab.count() > tab_minimums:
-            root_layout.addLayout(tab_navigation(self), row, 0, 1, 2)
-            t_row += 1
-            row += 1
+            root_layout.addLayout(tab_navigation(self), 0, 0, 1, 2)
 
         root_layout.addWidget(self.root_tab, row, 0)
         row += 1
@@ -164,6 +162,7 @@ class ResultWindow(QMainWindow):
             self.make_root_tab()
 
     def make_root_tab(self):
+        hide_tab_bar = config.get('HideNormalTabBar', False)
         shown_tab = self.root_tab.count()
         total = len(self.params)
         image_count = 0
@@ -283,6 +282,9 @@ class ResultWindow(QMainWindow):
             self.root_tab.setTabToolTip(shown_tab + image_count, tmp.params.get('Filename', '---'))
             image_count += 1
 
+        if hide_tab_bar:
+            self.root_tab.tabBar().hide()
+
         if total != image_count and self.centralWidget():
             self.post_add_tab()
 
@@ -311,11 +313,23 @@ class ResultWindow(QMainWindow):
 
         if tab_navigation_enable and tab_minimums < total and not tab_navigation_box:
             root_layout = self.centralWidget().layout()
-            root_layout.insertLayout(0, tab_navigation(self))
+            root_layout.addLayout(tab_navigation(self), 0, 0, 1, 2)
         elif tab_navigation_enable and tab_minimums < total and tab_navigation_box:
             filelist = [value.params.get('Filename') for value in self.params]
             tab_navigation_box.clear()
             tab_navigation_box.addItems(filelist)
+
+        if self.tab_bar:
+            tab_bar_contents = self.tab_bar.findChild(QWidget, 'tab_bar_contents')
+            tab_bar_layout = tab_bar_contents.layout()
+            before_add = tab_bar_layout.count()
+            if before_add != total:
+                for i in range(1, total - before_add):
+                    new_num = i + before_add
+                    filepath = self.params[new_num - 1].params.get('Filepath')
+                    thumb = make_thumbs_for_tab_bar([filepath], self, tab_bar_layout, True)
+                    thumb.setObjectName('tab_index_' + str(new_num))
+                    tab_bar_layout.addWidget(thumb)
 
     def change_window(self, expand=False):
         for index in range(self.root_tab.count()):
