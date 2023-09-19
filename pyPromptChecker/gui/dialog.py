@@ -8,6 +8,7 @@ from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 
 class PixmapLabel(QLabel):
     clicked = pyqtSignal()
+    rightClicked = pyqtSignal()
 
     def __init__(self, parent=None):
         super(PixmapLabel, self).__init__(parent)
@@ -16,6 +17,8 @@ class PixmapLabel(QLabel):
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
+        elif event.button() == Qt.MouseButton.RightButton:
+            self.rightClicked.emit()
         return QLabel.mousePressEvent(self, event)
 
 

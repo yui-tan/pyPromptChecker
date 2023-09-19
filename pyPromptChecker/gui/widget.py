@@ -103,6 +103,39 @@ def tab_navigation(parent):
     return header_layout
 
 
+def make_tab_bar(target, parent):
+    tab_bar_scroll = QScrollArea()
+    tab_bar_scroll.setWidgetResizable(True)
+    tab_bar_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+    tab_bar_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+    tab_bar_scroll.setStyleSheet('border: none; padding: 0px')
+    tab_bar_scroll.setFixedWidth(140)
+    tab_bar_scroll.setMinimumHeight(10)
+    widget_layout = QVBoxLayout()
+    widget_layout.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
+
+    for index, filepath in enumerate(target):
+        filename = os.path.basename(filepath)
+        pixmap_label = PixmapLabel()
+        pixmap_label.setObjectName('tab_index_' + str(index))
+        pixmap_label.setToolTip(filename)
+        pixmap = portrait_generator(filepath, 100)
+        pixmap_label.clicked.connect(parent.tab_bar_clicked)
+        pixmap_label.rightClicked.connect(parent.tab_bar_right_clicked)
+        pixmap_label.setPixmap(pixmap)
+        pixmap_label.setFixedSize(100, 100)
+        pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
+        pixmap_label.setStyleSheet('border: 1px solid palette(midlight)')
+        widget_layout.addWidget(pixmap_label)
+
+    scroll_contents = QWidget()
+    scroll_contents.setContentsMargins(0, 0, 0, 0)
+    scroll_contents.setLayout(widget_layout)
+    tab_bar_scroll.setWidget(scroll_contents)
+    tab_bar_scroll.setContentsMargins(0, 0, 0, 0)
+    return tab_bar_scroll
+
+
 def make_main_section(target):
     status = [['File count', 'Number'],
               'Extensions',
@@ -866,3 +899,19 @@ def portrait_generator(filepath, size):
     pixmap = QPixmap.fromImageReader(image_reader)
     pixmap = pixmap.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
     return pixmap
+
+
+def style_sheet_check(widget, status):
+    style_sheet = widget.styleSheet()
+    result = ''
+
+    if style_sheet:
+        for sentence in style_sheet.split(';'):
+            parts = sentence.split(':')
+            if len(parts) == 2:
+                key = parts[0].strip()
+                value = parts[1].strip()
+                if key == status:
+                    result = value
+        return result
+    return None
