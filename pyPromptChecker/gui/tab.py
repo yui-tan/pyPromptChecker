@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import os
-from PyQt6.QtWidgets import QWidget, QScrollArea, QVBoxLayout, QHBoxLayout
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QPushButton
+from PyQt6.QtCore import Qt, QTimer
 from .dialog import PixmapLabel
 from .widget import portrait_generator
 
@@ -42,6 +42,7 @@ class TabBar(QWidget):
 
         self.scroll_contents.setLayout(layout)
         scroll.setWidget(self.scroll_contents)
+
         root_layout.addWidget(scroll)
         self.setLayout(root_layout)
 
@@ -52,6 +53,16 @@ class TabBar(QWidget):
         self.tab_bar_thumbnails(add_items, len(self.filepaths))
         self.filepaths.extend(add_items)
         pass
+
+    def toggle_tab(self):
+        if self.isHidden():
+            self.show()
+        else:
+            parent = self.parent().parent()
+            self.hide()
+            timer = QTimer(self)
+            timer.timeout.connect(lambda: parent.adjustSize())
+            timer.start(10)
 
     def tab_bar_thumbnails(self, filepaths: list, starts=0):
         layout = self.scroll_contents.layout()

@@ -83,6 +83,11 @@ class ResultWindow(QMainWindow):
             filepaths = [value.params.get('Filepath') for value in self.params]
             self.tab_bar = TabBar(filepaths, tab_bar_orientation, self)
             root_layout.addWidget(self.tab_bar, 1, tab_bar_position)
+            toggle_button = QPushButton('>')
+            toggle_button.setObjectName('>')
+            toggle_button.setFixedSize(25, 25)
+            toggle_button.clicked.connect(self.button_clicked)
+            footer_layout.addWidget(toggle_button)
 
         root_layout.addWidget(self.root_tab, row_position, 0)
         root_layout.addLayout(footer_layout, row_position + 1, 0, 1, length)
@@ -428,6 +433,9 @@ class ResultWindow(QMainWindow):
             y = self.sender().mapToGlobal(self.sender().rect().topLeft()).y() - self.main_menu.sizeHint().height()
             adjusted_pos = QPoint(x, y)
             self.main_menu.exec(adjusted_pos)
+
+        elif where_from == '>':
+            self.tab_bar.toggle_tab()
 
     def managing_button_clicked(self):
         is_move = not config.get('UseCopyInsteadOfMove')
