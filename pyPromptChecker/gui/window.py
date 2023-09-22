@@ -15,6 +15,7 @@ from .menu import *
 from .viewer import *
 from .thumbnail import *
 from .listview import *
+from .tab import TabBar
 from PyQt6.QtWidgets import QApplication, QLabel, QTabWidget, QHBoxLayout, QGridLayout, QPushButton, QComboBox, QTextEdit
 from PyQt6.QtGui import QKeySequence, QPalette, QIcon
 from PyQt6.QtCore import Qt, QPoint, QTimer
@@ -62,29 +63,29 @@ class ResultWindow(QMainWindow):
         tab_navigation_enable = config.get('TabNavigation', True)
         tab_minimums = config.get('TabNavigationMinimumTabs', True)
         thumbnail_tab_bar = config.get('ThumbnailTabBar', False)
-        hide_normal_tab_bar = config.get('HideNormalTabBar', False)
+        tab_bar_orientation = config.get('ThumbnailTabBarVertical', True)
+
+        length = 2 if tab_bar_orientation else 1
+        tab_bar_position = 1 if tab_bar_orientation else 0
+        row_position = 1 if tab_bar_orientation else 2
 
         self.root_tab = QTabWidget()
         root_layout = QGridLayout()
         central_widget = QWidget()
-        row = 1
-        t_row = 1
 
         footer_layout = make_footer_area(self)
         self.make_root_tab()
 
         if tab_navigation_enable and self.root_tab.count() > tab_minimums:
-            root_layout.addLayout(tab_navigation(self), 0, 0, 1, 2)
-
-        root_layout.addWidget(self.root_tab, row, 0)
-        row += 1
+            root_layout.addLayout(tab_navigation(self), 0, 0, 1, length)
 
         if thumbnail_tab_bar and self.root_tab.count() > 1:
             filepaths = [value.params.get('Filepath') for value in self.params]
-            self.tab_bar = make_tab_bar(filepaths, self)
-            root_layout.addWidget(self.tab_bar, t_row, 1)
+            self.tab_bar = TabBar(filepaths, tab_bar_orientation, self)
+            root_layout.addWidget(self.tab_bar, 1, tab_bar_position)
 
-        root_layout.addLayout(footer_layout, row, 0, 1, 2)
+        root_layout.addWidget(self.root_tab, row_position, 0)
+        root_layout.addLayout(footer_layout, row_position + 1, 0, 1, length)
 
         central_widget.setLayout(root_layout)
 
@@ -93,13 +94,9 @@ class ResultWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
         self.root_tab.currentChanged.connect(self.tab_changed)
-        self.root_tab.setTabBarAutoHide(True)
 
         self.toast_window = Toast(self)
         self.dialog = FileDialog(self)
-
-        if thumbnail_tab_bar and hide_normal_tab_bar:
-            self.root_tab.tabBar().hide()
 
     def extract_data(self, targets):
         png_index = config.get('TargetChunkIndex', 1)
@@ -162,7 +159,6 @@ class ResultWindow(QMainWindow):
             self.make_root_tab()
 
     def make_root_tab(self):
-        hide_tab_bar = config.get('HideNormalTabBar', False)
         shown_tab = self.root_tab.count()
         total = len(self.params)
         image_count = 0
@@ -279,17 +275,20 @@ class ResultWindow(QMainWindow):
                 self.root_tab.addTab(tab_page, str(image_count + 1))
             else:
                 self.root_tab.addTab(tab_page, tmp.params.get('Filename', '---'))
+
             self.root_tab.setTabToolTip(shown_tab + image_count, tmp.params.get('Filename', '---'))
             image_count += 1
-
-        if hide_tab_bar:
-            self.root_tab.tabBar().hide()
 
         if total != image_count and self.centralWidget():
             self.post_add_tab()
 
         if self.progress_bar:
             self.progress_bar.close()
+
+        hide_normal_tab_bar = config.get('HideNormalTabBar', False)
+        thumbnail_tab_bar = config.get('ThumbnailTabBar', False)
+        if all([thumbnail_tab_bar, hide_normal_tab_bar]) or len(self.params) == 1:
+            self.root_tab.tabBar().hide()
 
         model_list = [value.params.get('Model') for value in self.params if value.params.get('Model') is not None]
         model_list = list(set(model_list))
@@ -320,16 +319,8 @@ class ResultWindow(QMainWindow):
             tab_navigation_box.addItems(filelist)
 
         if self.tab_bar:
-            tab_bar_contents = self.tab_bar.findChild(QWidget, 'tab_bar_contents')
-            tab_bar_layout = tab_bar_contents.layout()
-            before_add = tab_bar_layout.count()
-            if before_add != total:
-                for i in range(1, total - before_add):
-                    new_num = i + before_add
-                    filepath = self.params[new_num - 1].params.get('Filepath')
-                    thumb = make_thumbs_for_tab_bar([filepath], self, tab_bar_layout, True)
-                    thumb.setObjectName('tab_index_' + str(new_num))
-                    tab_bar_layout.addWidget(thumb)
+            filelist = [value.params.get('Filepath') for value in self.params]
+            self.tab_bar.add_tab(filelist)
 
     def change_window(self, expand=False):
         for index in range(self.root_tab.count()):
@@ -353,9 +344,14 @@ class ResultWindow(QMainWindow):
 
         if combobox:
             combobox.setCurrentIndex(current_index)
+
+        if self.tab_bar:
+            self.tab_bar.current_change(current_index)
+
         if self.image_window.isVisible():
             self.image_window.filepath = self.params[current_index].params.get('Filepath')
             self.image_window.init_image_window()
+
         if self.tab_linker_enable[0]:
             tab_name = self.tab_linker_enable[1]
             for index in range(extension_tab.count()):
@@ -367,17 +363,6 @@ class ResultWindow(QMainWindow):
         current_index = self.sender().currentIndex()
         tab_name = self.sender().tabText(current_index)
         self.tab_linker_enable[1] = tab_name
-
-    def tab_bar_clicked(self):
-        where_from = self.sender().objectName().split('_')
-        if isinstance(where_from, list):
-            self.root_tab.setCurrentIndex(int(where_from[2]))
-
-    def tab_bar_right_clicked(self):
-        where_from = self.sender().objectName().split('_')
-        if isinstance(where_from, list):
-            self.root_tab.setCurrentIndex(int(where_from[2]))
-            self.pixmap_clicked()
 
     def header_button_clicked(self):
         where_from = self.sender().objectName()
@@ -474,9 +459,7 @@ class ResultWindow(QMainWindow):
                     filepath_label.setText(destination)
                     filepath_label.setToolTip(destination)
                     if self.tab_bar:
-                        label = self.tab_bar.findChild(PixmapLabel, 'tab_index_' + str(current_index))
-                        if label:
-                            label.setStyleSheet('border: 2px solid blue')
+                        self.tab_bar.image_moved([current_index])
                     self.params[current_index].params['Filepath'] = os.path.join(destination, filename)
                     self.toast_window.init_toast('Added!', 1000)
                 else:
@@ -494,9 +477,7 @@ class ResultWindow(QMainWindow):
                     filepath_label.setText(destination)
                     filepath_label.setToolTip(destination)
                     if self.tab_bar:
-                        label = self.tab_bar.findChild(PixmapLabel, 'tab_index_' + str(current_index))
-                        if label:
-                            label.setStyleSheet('border: 2px solid blue')
+                        self.tab_bar.image_moved([current_index])
                     self.params[current_index].params['Filepath'] = os.path.join(destination, filename)
                     self.toast_window.init_toast('Moved!', 1000)
                 else:
@@ -516,9 +497,7 @@ class ResultWindow(QMainWindow):
                 filepath_label.setText(destination)
                 filepath_label.setToolTip(destination)
                 if self.tab_bar:
-                    label = self.tab_bar.findChild(PixmapLabel, 'tab_index_' + str(current_index))
-                    if label:
-                        label.setStyleSheet('border: 2px solid red')
+                    self.tab_bar.image_deleted([current_index])
                 self.root_tab.tabBar().setTabTextColor(current_index, Qt.GlobalColor.red)
                 self.params[current_index].params['Filepath'] = os.path.join(destination, filename)
                 self.toast_window.init_toast('Deleted!', 1000)
@@ -568,9 +547,8 @@ class ResultWindow(QMainWindow):
                 else:
                     self.root_tab.tabBar().setTabTextColor(tab_index, Qt.GlobalColor.green)
                     if self.tab_bar:
-                        label = self.tab_bar.findChild(PixmapLabel, 'tab_index_' + str(tab_index))
-                        if label:
-                            label.setStyleSheet('border: 2px solid ; border-color: green ;')
+                        self.tab_bar.image_matched(indexes)
+
         else:
             palette = self.root_tab.palette()
             text_color = palette.color(QPalette.ColorRole.Text)
@@ -584,10 +562,7 @@ class ResultWindow(QMainWindow):
                 self.retracted = []
                 restore.setDisabled(True)
             if self.tab_bar:
-                for index in range(self.root_tab.count()):
-                    widget = self.tab_bar.findChild(PixmapLabel, 'tab_index_' + str(index))
-                    if style_sheet_check(widget, 'border-color') == 'green':
-                        widget.setStyleSheet('border: 1px solid palette(midlight)')
+                self.tab_bar.image_default()
 
     def open_thumbnail(self, indexes=None):
         if self.thumbnail.isVisible():
