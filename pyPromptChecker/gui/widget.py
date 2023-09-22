@@ -122,6 +122,7 @@ def make_main_section(target):
               ['Variation seed strength', 'Var. strength'],
               ['Seed resize from', 'Resize from'],
               ['Denoising strength', 'Denoising'],
+              'Mask blur',
               'Clip skip',
               ['Lora', 'Lora in prompt'],
               'Textual inversion',
