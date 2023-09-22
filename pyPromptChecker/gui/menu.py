@@ -14,6 +14,15 @@ class MainMenu(QMenu):
 
         self.main = parent
 
+        self.lora_wizard = QAction('LoRa wizard', self)
+        self.interrogate_menu = QMenu('Interrogate', self)
+        self.interrogate_wd14 = QMenu('WD 1.4 Tagger', self)
+        self.interrogate_defaults = QMenu('Default threshold', self)
+        self.interrogate_specify = QMenu('Specify threshold', self)
+        self.interrogate_all = QAction('All images', self)
+        self.interrogate_selected = QAction('Select images', self)
+        self.interrogate_this = QAction('This image', self)
+
         self.reselect_menu = QMenu('Reselect', self)
         self.reselect_add = QAction('Append tabs', self.reselect_menu)
         self.reselect_renewal = QAction('Repalece all tabs', self.reselect_menu)
@@ -36,6 +45,20 @@ class MainMenu(QMenu):
             self.dark_mode.setChecked(True)
 
         self.addAction(self.model_hash_extractor)
+
+        self.addSeparator()
+
+        self.addAction(self.lora_wizard)
+        self.interrogate_defaults.addActions([self.interrogate_all, self.interrogate_selected, self.interrogate_this])
+        self.interrogate_specify.addActions([self.interrogate_all, self.interrogate_selected, self.interrogate_this])
+        self.interrogate_wd14.addMenu(self.interrogate_defaults)
+        self.interrogate_wd14.addMenu(self.interrogate_specify)
+        self.interrogate_menu.addMenu(self.interrogate_wd14)
+        self.addMenu(self.interrogate_menu)
+        self.lora_wizard.setDisabled(True)
+        self.interrogate_menu.setDisabled(True)
+
+        self.addSeparator()
 
         self.reselect_menu.addAction(self.reselect_add)
         self.reselect_menu.addAction(self.reselect_renewal)

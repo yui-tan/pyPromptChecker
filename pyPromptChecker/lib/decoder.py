@@ -54,7 +54,8 @@ def chunk_text_extractor(target, method, index=1):
                 return None, None
 
             text = ''
-            for i in range(index, index + 4):
+            ends = min(index + 4, len(chunk_list) - 1)
+            for i in range(index, ends):
                 chunk_data = chunk_list[i][1]
                 str_data = chunk_data.decode('utf-8', errors='ignore').replace("\x00", "")
                 if str_data.startswith('parameters'):

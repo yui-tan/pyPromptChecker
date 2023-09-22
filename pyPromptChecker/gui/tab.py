@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-from PyQt6.QtWidgets import QWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QPushButton
+from PyQt6.QtWidgets import QWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QTabWidget
 from PyQt6.QtCore import Qt, QTimer
 from .dialog import PixmapLabel
 from .widget import portrait_generator
@@ -141,3 +141,7 @@ class TabBar(QWidget):
             target.setStyleSheet(stylesheet)
 
         self.current = index
+
+
+class InnerTab(QTabWidget):
+    pass
