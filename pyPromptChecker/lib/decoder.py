@@ -79,8 +79,11 @@ def chunk_text_extractor(target, method, index=1):
         try:
             img = Image.open(target)
             exif = img._getexif()
-            binary = exif.get(37510, b'')
-            text = binary.decode('utf-8', errors='ignore').replace("\x00", "")
+            if exif:
+                binary = exif.get(37510, b'')
+                text = binary.decode('utf-8', errors='ignore').replace("\x00", "")
+            else:
+                text = 'no embedded data'
             width, height = img.size
 
             if text.startswith('UNICODE'):
