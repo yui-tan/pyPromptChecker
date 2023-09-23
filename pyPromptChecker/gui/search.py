@@ -143,6 +143,7 @@ class SearchWindow(QDialog):
 
     def show_dialog(self):
         self.show()
+        self.search_box.setFocus()
 
     def result_change(self):
         self.result = self.sender().currentText()

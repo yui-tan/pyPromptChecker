@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-from PyQt6.QtWidgets import QWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QTabWidget, QPushButton
+from PyQt6.QtWidgets import QWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QTabWidget, QPushButton, QGridLayout
 from PyQt6.QtCore import Qt, QTimer
 from .viewer import DiffWindow
 from .dialog import PixmapLabel
@@ -15,16 +15,17 @@ class TabBar(QWidget):
         self.diff_button = QPushButton()
         self.scroll_contents.setContentsMargins(0, 0, 0, 0)
         self.filepaths = filepaths
-        self.current = -1
-        self.moved = []
-        self.deleted = []
-        self.matched = []
-        self.selected = []
+        self.current = 0
+        self.moved = set()
+        self.deleted = set()
+        self.matched = set()
+        self.selected = set()
         self.init_bar(vertical)
-        self.current_change(0)
+        self.image_current(0)
 
     def init_bar(self, vertical: bool):
         root_layout = QVBoxLayout() if vertical else QHBoxLayout()
+
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
@@ -35,15 +36,10 @@ class TabBar(QWidget):
         if not vertical:
             scroll.setFixedHeight(140)
             scroll.setMinimumWidth(10)
-            self.diff_button.setFixedSize(25, 140)
-            self.diff_button.setText('D\ni\nf\nf')
+
         else:
             scroll.setFixedWidth(140)
             scroll.setMinimumHeight(10)
-            self.diff_button.setFixedSize(140, 25)
-            self.diff_button.setText('Diff')
-
-        self.diff_button.clicked.connect(self.diff_button_clicked)
 
         layout = QVBoxLayout() if vertical else QHBoxLayout()
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
@@ -51,18 +47,29 @@ class TabBar(QWidget):
         self.scroll_contents.setLayout(layout)
         scroll.setWidget(self.scroll_contents)
 
-        root_layout.addWidget(self.diff_button)
+        root_layout.addLayout(self.button_area())
         root_layout.addWidget(scroll)
         self.setLayout(root_layout)
 
         self.tab_bar_thumbnails(self.filepaths)
+
+    def button_area(self):
+        button_area_layout = QHBoxLayout()
+        for text in [['S', 'Search'], ['R', 'Restore'], ['D', 'Diffview'], ['L', 'Listview'], ['T', 'Thumbnails']]:
+            button = QPushButton(text[0])
+            button.setObjectName(text[0])
+            button.setToolTip(text[1])
+            button.setFixedSize(25, 25)
+            button.clicked.connect(self._button_clicked)
+            button_area_layout.addWidget(button)
+        return button_area_layout
 
     def add_tab(self, filepaths: list):
         add_items = [value for value in filepaths if value not in self.filepaths]
         self.tab_bar_thumbnails(add_items, len(self.filepaths))
         self.filepaths.extend(add_items)
 
-    def toggle_tab(self, where_from):
+    def toggle_tab_bar(self, where_from):
         if self.isHidden():
             self.show()
             where_from.setText('<')
@@ -101,11 +108,11 @@ class TabBar(QWidget):
         number = int(tmp.split('_')[1])
 
         if self.selected:
-            for num in reversed(self.selected):
+            target = list(self.selected)
+            for num in target:
                 if num != number:
-                    self.clear_selected(num)
-                else:
-                    self.selected.remove(num)
+                    self._border_clear(num)
+                self.selected.remove(num)
 
         if number != self.current:
             parent.root_tab.setCurrentIndex(number)
@@ -120,13 +127,14 @@ class TabBar(QWidget):
         number = int(tmp.split('_')[1])
 
         if not self.selected:
-            self.selected.append(self.current)
+            self.selected.add(self.current)
 
         if number in self.selected:
-            self.clear_selected(number)
+            self._border_clear(number)
+            self.selected.discard(number)
 
         else:
-            self.selected.append(number)
+            self.selected.add(number)
             self.sender().setStyleSheet('border: 2px solid rgba(19, 122, 127, 0.5)')
 
     def pixmap_shift_clicked(self):
@@ -139,86 +147,85 @@ class TabBar(QWidget):
                 label = self.scroll_contents.findChild(PixmapLabel, 'index_' + str(i))
                 label.setStyleSheet('border: 2px solid rgba(19, 122, 127, 0.5)')
                 if i not in self.selected:
-                    self.selected.append(i)
+                    self.selected.add(i)
 
-    def diff_button_clicked(self):
-        print(self.selected)
-        if len(self.selected) == 2:
-            params = []
-            parent = self.parent().parent()
-            for i in self.selected:
-                params.append(parent.params[i].params)
-            diff = DiffWindow(params, parent)
-            diff.show()
-            diff.move_centre()
+    def _button_clicked(self):
+        where_from = self.sender().objectName()
+        parent = self.parent().parent()
+        if where_from == 'S':
+            parent.tab_search_window()
+        elif where_from == 'R':
+            self.result_clear()
+        elif where_from == 'D':
+            if len(self.selected) == 2:
+                params = []
+                parent = self.parent().parent()
+                for i in self.selected:
+                    params.append(parent.params[i].params)
+                diff = DiffWindow(params, parent)
+                diff.show()
+                diff.move_centre()
+        elif where_from == 'L':
+            parent.open_listview()
+        elif where_from == 'T':
+            parent.open_thumbnail()
+
+    def pixmap_hide(self):
+        for index in range(len(self.scroll_contents.findChildren(PixmapLabel))):
+            if index not in self.matched:
+                target = self.scroll_contents.findChild(PixmapLabel, 'index_' + str(index))
+                target.hide()
 
     def image_moved(self, indexes: list):
         stylesheet = 'border: 2px solid rgba(0, 0, 255, 0.5)'
-        self.border_change(indexes, stylesheet)
-        self.moved.extend(indexes)
+        self._border_change(indexes, stylesheet)
+        self.moved.update(indexes)
 
     def image_deleted(self, indexes: list):
         stylesheet = 'border: 2px solid rgba(255, 0, 0, 0.5)'
-        self.border_change(indexes, stylesheet)
-        self.deleted.extend(indexes)
+        self._border_change(indexes, stylesheet)
+        self.deleted.update(indexes)
 
     def image_matched(self, indexes: list):
         stylesheet = 'border: 2px solid rgba(0, 255, 0, 0.5)'
-        self.border_change(indexes, stylesheet)
-        self.matched.extend(indexes)
+        self._border_change(indexes, stylesheet)
+        self.matched.update(indexes)
 
-    def image_default(self):
+    def image_current(self, index: int):
+        stylesheet = 'border: 2px solid rgba(19, 122, 127, 0.5)'
+        self._border_clear(self.current)
+        self._border_change([index], stylesheet)
+        self.current = index
+
+    def image_default(self, index: int):
         stylesheet = 'border: 1px solid palette(midlight)'
-        self.border_change(self.matched, stylesheet)
-        self.matched = []
+        self._border_change([index], stylesheet)
 
-    def border_change(self, indexes: list, stylesheet):
+    def result_clear(self):
+        self.matched.clear()
+        widgets = self.scroll_contents.findChildren(PixmapLabel)
+        for widget in widgets:
+            if widget.isHidden:
+                widget.show()
+            tmp = widget.objectName()
+            index = int(tmp.split('_')[1])
+            self._border_clear(index)
+        self.image_current(self.current)
+
+    def _border_change(self, indexes: list, stylesheet: str):
         for index in indexes:
             target = self.scroll_contents.findChild(PixmapLabel, 'index_' + str(index))
             target.setStyleSheet(stylesheet)
 
-    def current_change(self, index: int):
-        stylesheet = 'border: 1px solid palette(midlight)'
-
-        if self.deleted:
-            if self.current in self.deleted:
-                stylesheet = 'border: 2px solid rgba(255, 0, 0, 0.5)'
-
-        if self.moved:
-            if self.current in self.moved:
-                stylesheet = 'border: 2px solid rgba(0, 0, 255, 0.5)'
-
-        if self.matched:
-            if self.current in self.matched:
-                stylesheet = 'border: 2px solid rgba(0, 255, 0, 0.5)'
-
-        target = self.scroll_contents.findChild(PixmapLabel, 'index_' + str(index))
-        target.setStyleSheet('border: 2px solid rgba(19, 122, 127, 0.5)')
-
-        if self.current > -1:
-            target = self.scroll_contents.findChild(PixmapLabel, 'index_' + str(self.current))
-            target.setStyleSheet(stylesheet)
-
-        self.current = index
-
-    def clear_selected(self, number):
-        stylesheet = 'border: 1px solid palette(midlight)'
-
-        if self.deleted:
-            if number in self.deleted:
-                stylesheet = 'border: 2px solid rgba(255, 0, 0, 0.5)'
-
-        if self.moved:
-            if number in self.moved:
-                stylesheet = 'border: 2px solid rgba(0, 0, 255, 0.5)'
-
-        if self.matched:
-            if number in self.matched:
-                stylesheet = 'border: 2px solid rgba(0, 255, 0, 0.5)'
-
-        target = self.scroll_contents.findChild(PixmapLabel, 'index_' + str(number))
-        target.setStyleSheet(stylesheet)
-        self.selected.remove(number)
+    def _border_clear(self, index: int):
+        if self.moved and index in self.moved:
+            self.image_moved([index])
+        elif self.deleted and index in self.deleted:
+            self.image_deleted([index])
+        elif self.matched and index in self.matched:
+            self.image_matched([index])
+        else:
+            self.image_default(index)
 
 
 class InnerTab(QTabWidget):

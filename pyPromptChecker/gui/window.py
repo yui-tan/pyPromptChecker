@@ -352,7 +352,7 @@ class ResultWindow(QMainWindow):
             combobox.setCurrentIndex(current_index)
 
         if self.tab_bar:
-            self.tab_bar.current_change(current_index)
+            self.tab_bar.image_current(current_index)
 
         if self.image_window.isVisible():
             self.image_window.filepath = self.params[current_index].params.get('Filepath')
@@ -436,7 +436,7 @@ class ResultWindow(QMainWindow):
             self.main_menu.exec(adjusted_pos)
 
         elif where_from == 'bar_toggle':
-            self.tab_bar.toggle_tab(self.sender())
+            self.tab_bar.toggle_tab_bar(self.sender())
 
     def managing_button_clicked(self):
         is_move = not config.get('UseCopyInsteadOfMove')
@@ -557,6 +557,8 @@ class ResultWindow(QMainWindow):
                     self.root_tab.tabBar().setTabTextColor(tab_index, Qt.GlobalColor.green)
                     if self.tab_bar:
                         self.tab_bar.image_matched(indexes)
+                        if hide:
+                            self.tab_bar.pixmap_hide()
 
         else:
             palette = self.root_tab.palette()
@@ -571,7 +573,7 @@ class ResultWindow(QMainWindow):
                 self.retracted = []
                 restore.setDisabled(True)
             if self.tab_bar:
-                self.tab_bar.image_default()
+                self.tab_bar.result_clear()
 
     def open_thumbnail(self, indexes=None):
         if self.thumbnail.isVisible():

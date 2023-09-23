@@ -15,6 +15,7 @@ class PixmapLabel(QLabel):
     def __init__(self, parent=None):
         super(PixmapLabel, self).__init__(parent)
         self.setStyleSheet("border: none;")
+#        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton and event.modifiers() == Qt.KeyboardModifier.ControlModifier:
