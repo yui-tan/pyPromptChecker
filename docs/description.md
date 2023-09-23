@@ -65,9 +65,9 @@ Set the pixmap size of Listview mode.
 The default value is **200**.
 - ### [Features] section
   - **"SubDirectoryDepth" option** (Integer)  
-Sets how many levels of subdirectories are searched when a directory path is passed to the script.  
+Sets how many levels of subdirectories are searched when a directory path is passed.  
 The default value is **0**, meaning it will only search for files inside the specified directory.  
-If large number is specified, the script may not function properly due to the large number of files.  
+If set to large value, the script may not function properly due to the large number of files.  
 The author has confirmed that it can manage up to 10,000 files somehow.
   - **"UsesNumberAsTabName" option** (Boolean)  
 If set to True, the number is used instead of the filename as tab title.  
@@ -79,7 +79,7 @@ Default value is **False**.
   - **"ModelListSearchApplyTi" option** (Boolean)  
 If this is set to True,  
 the same process performed on 'Model Hash' will also be applied to LoRa and textual inversion.  
-In other words, you can freely set the display names for LoRa and textual inversion using 'Model_list.csv'.  
+In other words, you can freely set the display names for LoRa and textual inversion.  
 Default value is **False**.
 
 - ### [Tab] section
@@ -112,14 +112,16 @@ Default value is **False**.
   | Display name | Model hash | Entire SHA256 hash | Filename | Model type |
   |:------------:|:----------:|:------------------:|:--------:|:----------:|
 
-  - The display name in the first column is the same as the filename if freshly output from the script.
+  - The display name is the same as the filename if freshly output from the script.
   - But there is no issue to  edit it according to your preference.
-  - Each of value must be comma-separated and the values must not be enclosed in quotation marks.  
+  - Each of value must be comma-separated.   
+  - And the values must not be enclosed in quotation marks.  
   - The script uses the first and second columns for searching.  
   - Therefore, you can delete columns from the third onward or add something in columns from the sixth onward without any issues.  
 
 - ### Model hash extractor  
-  The feature that extract model hash from your own model files and create 'model_list.csv' file or append data to it.  
+  The feature that extract model hash from your own model files.  
+  And create 'model_list.csv' file or append data to it.  
 Now it can be find in menu > model hash extractor.  
 Depends on number of files, it requires huge mount of time and memories[^2].
 
@@ -127,7 +129,7 @@ Depends on number of files, it requires huge mount of time and memories[^2].
 - ### Related values in 'config.ini'
   - ### [Location] section ###
     - **"ModelList" option** (Directory path)  
-       If this parameter is unset, the program will search in the same directory as 'config.ini' file by default.  
+       If this value is unset, the program will search in the same directory as 'config.ini' file by default.  
        If you relocate 'model_list.csv', **you must** declare the new path by setting this parameter.
 
 ## JSON import and export
@@ -144,14 +146,16 @@ Depends on number of files, it requires huge mount of time and memories[^2].
     
 - ### Related values in 'config.ini'
   - ### [Features] section ###
-    - **"JsonExport" option** (Boolean)  
+    - **"JsonExport" option** (Boolean)  *Deprecated*
       This option now only mean toggle shown/not shown "Export Json" buttons.  
       Default value is **False**.
-    - **"JsonSingle" option** (Strings)  
-      This option is setting for exported JSONs (single file) default Name. Setting whatever you want.  
+    - **"JsonSingle" option** (Strings) 
+      This option is setting for exported JSONs (single file) default Name.  
+      Setting whatever you want.  
       If 'JsonSingle=filename' is set, the image file name will be set as default.
     - **"JsonMultiple" option** (Strings)  
-      This option is setting for exported JSONs (all file) default Name. Setting whatever you want.  
+      This option is setting for exported JSONs (all file) default Name. 
+      Setting whatever you want.  
       If 'JsonMultiple=directory' is set, the first image's directory name will be set as default.
     - **"JsonSelected" option** (Strings)  
       This option is setting for exported JSONs (selected) default Name. Setting whatever you want.  
@@ -276,7 +280,8 @@ If set to False, only change the tab title colour to green.
 ![compare](https://user-images.githubusercontent.com/121333129/263465633-7bda6efe-f70a-445a-b1ae-2436b41a7e15.png)
 - ### Overview ###
   If left click on bottom tab (e.g. Prompt, Tiled Diffusion, etc) appears menu with checkbox.  
-  Check the checkbox to maintain the selected tab in the bottom, even when you switch tabs in the top.
+  Check the checkbox to maintain the selected tab in the bottom, 
+  even when you switch tabs in the top.
 # Screenshots
 - ### Main screen
 ![main_screen](https://user-images.githubusercontent.com/121333129/261905025-69283ba2-ac9d-4b92-944e-bd187ce2abc2.png)
