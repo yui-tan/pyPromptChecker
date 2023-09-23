@@ -790,9 +790,11 @@ class ResultWindow(QMainWindow):
         if self.dark:
             qdarktheme.setup_theme('light')
             self.dark = False
+            self.main_menu.theme_check()
         else:
             qdarktheme.setup_theme(additional_qss=add_stylesheet())
             self.dark = True
+            self.main_menu.theme_check()
 
     def closeEvent(self, event):
         trash_bin = os.path.join(os.path.abspath(''), '.trash')

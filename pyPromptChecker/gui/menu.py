@@ -41,8 +41,7 @@ class MainMenu(QMenu):
         self.dark_mode = QAction('Dark mode', self)
         self.dark_mode.setCheckable(True)
 
-        if self.main.dark:
-            self.dark_mode.setChecked(True)
+        self.theme_check()
 
         self.addAction(self.model_hash_extractor)
 
@@ -93,6 +92,12 @@ class MainMenu(QMenu):
         self.json_export_single.triggered.connect(self.main.export_json_single)
         self.json_export_all.triggered.connect(self.main.export_json_all)
         self.json_export_selected.triggered.connect(self.main.open_thumbnail)
+
+    def theme_check(self):
+        if self.main.dark:
+            self.dark_mode.setChecked(True)
+        else:
+            self.dark_mode.setChecked(False)
 
 
 class TabMenu(QMenu):
