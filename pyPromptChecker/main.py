@@ -4,9 +4,9 @@ import os
 import sys
 import argparse
 
-from pyPromptChecker.lib import decoder
-from pyPromptChecker.gui import window
-from pyPromptChecker.gui import config
+from lib import decoder
+from gui import window
+from gui import config
 
 
 def find_target(root, depth):
