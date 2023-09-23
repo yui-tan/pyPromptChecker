@@ -847,6 +847,7 @@ def label_maker(status,
 
 def make_keybindings(parent=None):
     toggle_theme_shortcut = QShortcut(QKeySequence('Ctrl+D'), parent)
+    toggle_tab_bar_shortcut = QShortcut(QKeySequence('Ctrl+B'), parent)
     add_tab_shortcut = QShortcut(QKeySequence('Ctrl+O'), parent)
     replace_tab_shortcut = QShortcut(QKeySequence('Ctrl+N'), parent)
     quit_shortcut = QShortcut(QKeySequence('Ctrl+Q'), parent)
@@ -855,6 +856,7 @@ def make_keybindings(parent=None):
     if parent.parent() is not None:
         tab = parent.parent()
 
+    toggle_tab_bar_shortcut.activated.connect(tab.bar_toggle)
     toggle_theme_shortcut.activated.connect(tab.change_themes)
     add_tab_shortcut.activated.connect(tab.reselect_files_append)
     replace_tab_shortcut.activated.connect(tab.reselect_files)

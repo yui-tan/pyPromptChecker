@@ -536,6 +536,11 @@ class ResultWindow(QMainWindow):
         frame_geometry.moveCenter(screen_center)
         self.move(frame_geometry.topLeft())
 
+    def bar_toggle(self):
+        if self.tab_bar:
+            button = self.centralWidget().findChild(QPushButton, 'bar_toggle')
+            self.tab_bar.toggle_tab_bar(button)
+
     def tab_search_window(self):
         if self.search.isVisible():
             self.search.activateWindow()
