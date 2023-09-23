@@ -56,7 +56,8 @@ class ResultWindow(QMainWindow):
         make_keybindings(self)
 
         self.show()
-        self.resize(window_width, window_height)
+#        self.resize(window_width, window_height)
+        self.adjustSize()
         self.move_centre_main()
 
     def init_ui(self):
@@ -83,8 +84,8 @@ class ResultWindow(QMainWindow):
             filepaths = [value.params.get('Filepath') for value in self.params]
             self.tab_bar = TabBar(filepaths, tab_bar_orientation, self)
             root_layout.addWidget(self.tab_bar, 1, tab_bar_position)
-            toggle_button = QPushButton('>')
-            toggle_button.setObjectName('>')
+            toggle_button = QPushButton('<')
+            toggle_button.setObjectName('bar_toggle')
             toggle_button.setFixedSize(25, 25)
             toggle_button.clicked.connect(self.button_clicked)
             footer_layout.addWidget(toggle_button)
@@ -434,8 +435,8 @@ class ResultWindow(QMainWindow):
             adjusted_pos = QPoint(x, y)
             self.main_menu.exec(adjusted_pos)
 
-        elif where_from == '>':
-            self.tab_bar.toggle_tab()
+        elif where_from == 'bar_toggle':
+            self.tab_bar.toggle_tab(self.sender())
 
     def managing_button_clicked(self):
         is_move = not config.get('UseCopyInsteadOfMove')

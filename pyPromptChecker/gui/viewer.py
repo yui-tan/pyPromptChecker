@@ -182,8 +182,8 @@ class DiffWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
     def make_textbox(self, html_tag, key):
-        source_words = self.params[0].get(key, None)
-        target_words = self.params[1].get(key, None)
+        source_words = self.params[0].get(key, 'None')
+        target_words = self.params[1].get(key, 'None')
         source_words_list = source_words.split()
         target_words_list = target_words.split()
 

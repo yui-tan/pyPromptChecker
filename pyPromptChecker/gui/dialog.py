@@ -9,13 +9,19 @@ from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 class PixmapLabel(QLabel):
     clicked = pyqtSignal()
     rightClicked = pyqtSignal()
+    ctrl_clicked = pyqtSignal()
+    shift_clicked = pyqtSignal()
 
     def __init__(self, parent=None):
         super(PixmapLabel, self).__init__(parent)
         self.setStyleSheet("border: none;")
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton and event.modifiers() == Qt.KeyboardModifier.ControlModifier:
+            self.ctrl_clicked.emit()
+        elif event.button() == Qt.MouseButton.LeftButton and event.modifiers() == Qt.KeyboardModifier.ShiftModifier:
+            self.shift_clicked.emit()
+        elif event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
         elif event.button() == Qt.MouseButton.RightButton:
             self.rightClicked.emit()
