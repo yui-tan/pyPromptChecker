@@ -205,6 +205,8 @@ class Listview(QMainWindow):
             creation = 'I2I'
         if self.param_list[index].get('Positive') == 'This file has no embedded data':
             creation = '---'
+        if 'Mask blur' in self.param_list[index]:
+            creation = 'inpaint'
 
         extension_label_layout = QGridLayout()
 
@@ -252,10 +254,13 @@ class Listview(QMainWindow):
                               "border: 2px solid @@@ ;" \
                               "background-color: @@@ ;" \
                               "color: white ;"
-                if title == 'I2I':
+                if title == 'I2I' or title == 'inpaint':
                     style_sheet = style_sheet.replace('@@@', 'red')
                     extension_label.setStyleSheet(style_sheet)
-                    extension_label.setText('img2img')
+                    if title == 'inpaint':
+                        extension_label.setText('inpaint')
+                    else:
+                        extension_label.setText('img2img')
                 elif title == 'T2I':
                     style_sheet = style_sheet.replace('@@@', 'palette(highlight)')
                     extension_label.setStyleSheet(style_sheet)

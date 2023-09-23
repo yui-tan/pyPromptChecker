@@ -122,6 +122,7 @@ def make_main_section(target):
               ['Variation seed strength', 'Var. strength'],
               ['Seed resize from', 'Resize from'],
               ['Denoising strength', 'Denoising'],
+              'Mask blur',
               'Clip skip',
               ['Lora', 'Lora in prompt'],
               'Textual inversion',
@@ -862,6 +863,8 @@ def make_keybindings(parent=None):
 
 @lru_cache(maxsize=1000)
 def portrait_generator(filepath, size):
+    if not os.path.exists(filepath):
+        return QPixmap(size, size)
     image_reader = QImageReader(filepath)
     pixmap = QPixmap.fromImageReader(image_reader)
     pixmap = pixmap.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
