@@ -7,7 +7,7 @@ All of these features are accessible even without AUTOMATIC/stable-diffusion-web
 
 
 # Screenshots
-![Main](https://github.com/yui-tan/pyPromptChecker/assets/121333129/a0c86d10-563f-44a2-bf9f-cfc207fd262f)
+![Main](https://user-images.githubusercontent.com/121333129/270104343-eebf6863-d429-4233-ac82-24ff9d041aab.png)
 
 More screenshots [here.](description.md#screenshots)
 
