@@ -216,6 +216,25 @@ Default value is **True**.
 Setting appear tab navigation when how many files are opens.   
 This setting is meaningless unless both of the above settings are enabled.  
 Default value is **2**
+## Thumbnail tab bar
+- ### Overview  
+Replace the bland tab bar that only shows numbers or filenames by thumbnails.  
+Keep in mind that this may significantly change the width or height of the window.  
+- ### Key bindings
+    - **Ctrl + B :** Show / hide thumbnail tab bar
+- ### Related values in 'config.ini'
+  - ### [Features] section
+    - **"ThumbnailTabBar" option** (Boolean)  
+Toggle to enable or to disable thumbnail tab bar.  
+Default value is **False**.
+    - **"ThumbnailTabBarVertical" option** (Boolean)  
+The thumbnail tab bar is shown vertically on the right side of the window.
+But if set to False, it is displayed horizontally at the top of the window.  
+However, this feature is experimental in v2.1.0.  
+Default value is **True**.
+    - **"HideNormalTabBar" option** (Boolean)  
+If set to True, hide the normal tab bar and replace altogether.  
+Default value is **False**.
 ## Tab search
 ![tab_search](https://user-images.githubusercontent.com/121333129/266839621-7dd517b9-4a41-426b-ac42-d1e83e2045f9.png)
 - ### Overview ###
