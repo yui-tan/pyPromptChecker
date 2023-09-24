@@ -7,6 +7,7 @@ import qdarktheme
 # from lib import *
 
 from pyPromptChecker.lib import *
+from pyPromptChecker.lora import *
 from . import config
 from .search import SearchWindow
 from .dialog import *
@@ -16,6 +17,7 @@ from .viewer import *
 from .thumbnail import *
 from .listview import *
 from .tab import TabBar
+from .tab import InterrogateTab
 from PyQt6.QtWidgets import QApplication, QLabel, QTabWidget, QHBoxLayout, QGridLayout, QPushButton, QComboBox, QTextEdit
 from PyQt6.QtGui import QKeySequence, QPalette, QIcon
 from PyQt6.QtCore import Qt, QPoint, QTimer
@@ -26,6 +28,7 @@ class ResultWindow(QMainWindow):
         super().__init__()
         self.dark = config.get('AlwaysStartWithDarkMode')
         self.hide_tab = config.get('OpenWithShortenedWindow', False)
+        self.navi = None
         self.root_tab = None
         self.tab_bar = None
         self.dialog = None
@@ -59,12 +62,14 @@ class ResultWindow(QMainWindow):
 #        self.resize(window_width, window_height)
         self.adjustSize()
         self.move_centre_main()
+        print(sys.argv[0])
 
     def init_ui(self):
         tab_navigation_enable = config.get('TabNavigation', True)
         tab_minimums = config.get('TabNavigationMinimumTabs', True)
         thumbnail_tab_bar = config.get('ThumbnailTabBar', False)
         tab_bar_orientation = config.get('ThumbnailTabBarVertical', True)
+        filepaths = [value.params.get('Filepath') for value in self.params]
 
         length = 2 if tab_bar_orientation else 1
         tab_bar_position = 1 if tab_bar_orientation else 0
@@ -81,7 +86,6 @@ class ResultWindow(QMainWindow):
             root_layout.addLayout(tab_navigation(self), 0, 0, 1, length)
 
         if thumbnail_tab_bar and self.root_tab.count() > 1:
-            filepaths = [value.params.get('Filepath') for value in self.params]
             self.tab_bar = TabBar(filepaths, tab_bar_orientation, self)
             root_layout.addWidget(self.tab_bar, 1, tab_bar_position)
             toggle_button = QPushButton('<')
@@ -535,6 +539,15 @@ class ResultWindow(QMainWindow):
         frame_geometry = self.frameGeometry()
         frame_geometry.moveCenter(screen_center)
         self.move(frame_geometry.topLeft())
+
+    def add_interrogate_tab(self):
+        current_index = self.root_tab.currentIndex()
+        filepath = self.params[current_index].params.get('Filepath')
+        current_tab_page = self.root_tab.widget(current_index)
+        extension_tab = current_tab_page.findChild(QTabWidget, 'extension_tab')
+        interrogate_result = interrogate('vit', filepath, 0.35, 0.7)
+        interrogate_tab = InterrogateTab(interrogate_result, extension_tab)
+        extension_tab.addTab(interrogate_tab, 'Interrogate')
 
     def bar_toggle(self):
         if self.tab_bar:

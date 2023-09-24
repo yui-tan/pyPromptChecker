@@ -2,8 +2,19 @@
 
 import os
 from PyQt6.QtWidgets import QFileDialog, QProgressDialog, QMessageBox, QLabel, QWidget, QVBoxLayout, QApplication
-from PyQt6.QtWidgets import QDialog, QRadioButton, QPushButton, QHBoxLayout
+from PyQt6.QtWidgets import QDialog, QRadioButton, QPushButton, QHBoxLayout, QGroupBox
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+
+
+class ClickableGroup(QGroupBox):
+    clicked = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super(ClickableGroup, self).__init__(parent)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
 
 
 class PixmapLabel(QLabel):

@@ -55,7 +55,6 @@ class MainMenu(QMenu):
         self.interrogate_menu.addMenu(self.interrogate_wd14)
         self.addMenu(self.interrogate_menu)
         self.lora_wizard.setDisabled(True)
-        self.interrogate_menu.setDisabled(True)
 
         self.addSeparator()
 
@@ -92,6 +91,7 @@ class MainMenu(QMenu):
         self.json_export_single.triggered.connect(self.main.export_json_single)
         self.json_export_all.triggered.connect(self.main.export_json_all)
         self.json_export_selected.triggered.connect(self.main.open_thumbnail)
+        self.interrogate_this.triggered.connect(self.main.add_interrogate_tab)
 
     def theme_check(self):
         if self.main.dark:

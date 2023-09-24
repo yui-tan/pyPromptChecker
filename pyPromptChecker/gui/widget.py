@@ -2,6 +2,7 @@
 
 import os
 import sys
+import importlib
 from . import config
 from .dialog import PixmapLabel
 from functools import lru_cache
@@ -871,3 +872,11 @@ def portrait_generator(filepath, size):
     pixmap = QPixmap.fromImageReader(image_reader)
     pixmap = pixmap.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
     return pixmap
+
+
+def module_checker(module_name):
+    try:
+        importlib.import_module(module_name)
+        return True
+    except ImportError:
+        return False

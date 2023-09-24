@@ -2,6 +2,7 @@
 
 from . import config
 from .dialog import PixmapLabel
+from .dialog import ClickableGroup
 from .dialog import ProgressDialog
 from .viewer import DiffWindow
 from .widget import portrait_generator
@@ -163,8 +164,9 @@ class Listview(QMainWindow):
         return pixmap_label
 
     def groups(self, index):
-        group = QGroupBox()
-        group.setObjectName(str(index))
+        group = ClickableGroup()
+        group.setObjectName('group_' + str(index))
+        group.clicked.connect(self.group_clicked)
         group_layout = QHBoxLayout()
         status_label_layout = QGridLayout()
         pixmap_label = self.pixmap_label(index)
@@ -328,3 +330,6 @@ class Listview(QMainWindow):
         frame_geometry = self.frameGeometry()
         frame_geometry.moveCenter(screen_center)
         self.move(frame_geometry.topLeft())
+
+    def group_clicked(self):
+        pass
