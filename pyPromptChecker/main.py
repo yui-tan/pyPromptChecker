@@ -28,7 +28,6 @@ def find_target(root, depth):
             filepaths.append(path)
         else:
             _directory_search(path, 0)
-
     return filepaths
 
 
@@ -59,7 +58,6 @@ def check_files(target_list):
             continue
 
         result = decoder.image_format_identifier(filepath)
-
         if not result:
             this_file_is_not_image_file_list.append(filepath)
         else:
@@ -81,18 +79,12 @@ def main():
     parser = argparse.ArgumentParser(description=description_text, formatter_class=argparse.RawTextHelpFormatter)
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-a', '--ask', action='store_true', help='Open directory choose dialog.')
-    group.add_argument('-f', '--filepath', nargs='*', type=str, help='Send path to the file.')
-    group.add_argument('-d', '--directory', type=str, help='Send path to the directory.')
     parser.add_argument('filepaths', metavar='Filepath', type=str, nargs='*', help='Send path to files and directories.')
     args = parser.parse_args()
     filepaths = []
 
-    if args.filepath:
-        parameters = args.filepath
-    elif args.filepaths:
+    if args.filepaths:
         parameters = args.filepaths
-    elif args.directory:
-        parameters = [args.directory]
     elif args.ask:
         parameters = window.from_main('directory')
     else:

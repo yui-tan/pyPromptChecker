@@ -2,7 +2,7 @@
 
 import os
 from PyQt6.QtWidgets import QFileDialog, QProgressDialog, QMessageBox, QLabel, QWidget, QVBoxLayout, QApplication
-from PyQt6.QtWidgets import QDialog, QRadioButton, QPushButton, QHBoxLayout, QGroupBox
+from PyQt6.QtWidgets import QDialog, QRadioButton, QPushButton, QHBoxLayout, QGroupBox, QComboBox, QSlider, QGridLayout
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 
 
@@ -77,6 +77,72 @@ class SelectDialog(QDialog):
             self.selected = 0
         elif self.lora.isChecked():
             self.selected = 1
+
+
+class InterrogateSelectDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle('Interrogate Settings')
+        self.selected_model = 'moat'
+        self.tag_threshold = 0.35
+        self.tag_label = QLabel()
+        self.chara_threshold = 0.85
+        self.chara_label = QLabel()
+
+        self._init_interrogate_dialog()
+
+    def _init_interrogate_dialog(self):
+        root_layout = QGridLayout()
+
+        for index, name in enumerate(('Model', 'Tag threshold', 'Character threshold')):
+            label = QLabel(name + ' :')
+            label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            root_layout.addWidget(label, index, 0)
+
+            if index == 0:
+                value = QComboBox()
+                value.addItems(('MOAT', 'Swin', 'ConvNext', 'ConvNextV2', 'ViT'))
+                value.currentIndexChanged.connect(self._model_change)
+                root_layout.addWidget(value, index, 1, 1, 2)
+
+            else:
+                value = self.tag_threshold if index == 1 else self.chara_threshold
+                int_value = self.tag_label if index == 1 else self.chara_label
+                int_value.setText(str(value))
+                int_value.setFixedSize(40, 25)
+                root_layout.addWidget(int_value, index, 1)
+
+                slider = QSlider()
+                slider.setObjectName(name)
+                slider.setRange(0, 100)
+                slider.setMinimumWidth(200)
+                slider.setValue(int(value * 100))
+                slider.setOrientation(Qt.Orientation.Horizontal)
+                slider.valueChanged.connect(self._threshold_change)
+                root_layout.addWidget(slider, index, 2)
+
+        button_layout = QHBoxLayout()
+        ok_button = QPushButton('OK')
+        ok_button.clicked.connect(self.accept)
+        cancel_button = QPushButton('Cancel')
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(ok_button)
+        button_layout.addWidget(cancel_button)
+        root_layout.addLayout(button_layout, 3, 0, 1, 3)
+
+        self.setLayout(root_layout)
+
+    def _model_change(self):
+        self.selected_model = self.sender().currentText()
+
+    def _threshold_change(self):
+        value = float(self.sender().value() / 100)
+        if self.sender().objectName() == 'Tag threshold':
+            self.tag_threshold = value
+            self.tag_label.setText(str(value))
+        else:
+            self.chara_threshold = value
+            self.chara_label.setText(str(value))
 
 
 class FileDialog(QFileDialog):

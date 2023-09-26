@@ -28,7 +28,6 @@ class ResultWindow(QMainWindow):
         super().__init__()
         self.dark = config.get('AlwaysStartWithDarkMode')
         self.hide_tab = config.get('OpenWithShortenedWindow', False)
-        self.navi = None
         self.root_tab = None
         self.tab_bar = None
         self.dialog = None
@@ -47,22 +46,11 @@ class ResultWindow(QMainWindow):
 
         self.setWindowTitle('PNG Prompt Data')
 
-        size_hint_width = self.sizeHint().width()
-        size_hint_height = self.sizeHint().height()
-
-        max_width = config.get('MaxWindowWidth', 700)
-        max_height = config.get('MaxWindowHeight', 950)
-
-        window_width = size_hint_width if max_width > size_hint_width else max_width
-        window_height = size_hint_height if max_height > size_hint_height else max_height
-
         make_keybindings(self)
 
         self.show()
-#        self.resize(window_width, window_height)
         self.adjustSize()
         self.move_centre_main()
-        print(sys.argv[0])
 
     def init_ui(self):
         tab_navigation_enable = config.get('TabNavigation', True)
@@ -540,14 +528,47 @@ class ResultWindow(QMainWindow):
         frame_geometry.moveCenter(screen_center)
         self.move(frame_geometry.topLeft())
 
-    def add_interrogate_tab(self):
-        current_index = self.root_tab.currentIndex()
-        filepath = self.params[current_index].params.get('Filepath')
-        current_tab_page = self.root_tab.widget(current_index)
-        extension_tab = current_tab_page.findChild(QTabWidget, 'extension_tab')
-        interrogate_result = interrogate('vit', filepath, 0.35, 0.7)
-        interrogate_tab = InterrogateTab(interrogate_result, extension_tab)
-        extension_tab.addTab(interrogate_tab, 'Interrogate')
+    def add_interrogate_tab(self, select: int = 0, indexes: tuple = None):
+        progress = None
+        dialog = InterrogateSelectDialog(self)
+        result = dialog.exec()
+
+        if result == QDialog.DialogCode.Accepted:
+            model = dialog.selected_model
+            tag = dialog.tag_threshold
+            chara = dialog.chara_threshold
+
+            if select == 0:
+                indexes = [self.root_tab.currentIndex()]
+            elif select == 1:
+                indexes = tuple(range(self.root_tab.count()))
+
+            if len(indexes) > 1:
+                progress = ProgressDialog(self)
+                progress.setRange(0, len(indexes))
+                progress.setLabelText('Interrogating......')
+
+            for index in indexes:
+                filepath = self.params[index].params.get('Filepath')
+                current_tab_page = self.root_tab.widget(index)
+                extension_tab = current_tab_page.findChild(QTabWidget, 'extension_tab')
+
+                for tab_index in range(extension_tab.count()):
+                    if extension_tab.tabText(tab_index) == 'Interrogate':
+                        extension_tab.removeTab(tab_index)
+                        break
+
+                interrogate_result = interrogate(model, filepath, tag, chara)
+                interrogate_tab = InterrogateTab(interrogate_result, extension_tab)
+                extension_tab.addTab(interrogate_tab, 'Interrogate')
+                new_index = extension_tab.indexOf(interrogate_tab)
+                extension_tab.setCurrentIndex(new_index)
+
+                if progress:
+                    progress.update_value()
+
+            if progress:
+                progress.close()
 
     def bar_toggle(self):
         if self.tab_bar:

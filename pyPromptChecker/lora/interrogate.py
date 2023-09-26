@@ -132,6 +132,7 @@ def predict(image,
 
 
 def interrogate(model_param: str, filepath: str, tag_threshold: float, chara_threshold: float):
+    model_param = model_param.lower()
     model_filename = 'model.onnx'
     label_filename = "selected_tags.csv"
     models = [['MOAT', 'SmilingWolf/wd-v1-4-moat-tagger-v2'],
@@ -161,6 +162,6 @@ def interrogate(model_param: str, filepath: str, tag_threshold: float, chara_thr
 
     image_file = Image.open(filepath)
     prompt, original, rating, character, confidence = func(image_file, model_param, tag_threshold, chara_threshold)
-    result = [prompt, original, rating, character, confidence, model_param, tag_threshold, chara_threshold]
+    result = [filepath, model_param, tag_threshold, chara_threshold, prompt, original, rating, character, confidence]
 
     return result

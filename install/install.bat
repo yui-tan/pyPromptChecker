@@ -49,18 +49,8 @@ echo @if not "%%~0"=="%%~dp0.\%%~nx0" start /min cmd /c,"%%~dp0.\%%~nx0" %%* ^& 
 echo cd ..>>bat/select_directory.bat
 echo call ./venv/Scripts/activate ^&^& mikkumiku --ask>> bat/select_directory.bat
 
-echo @echo off>>bat/drop_files.bat
-echo @if not "%%~0"=="%%~dp0.\%%~nx0" start /min cmd /c,"%%~dp0.\%%~nx0" %%* ^& goto :eof>>bat/drop_files.bat
-echo cd ..>>bat/drop_files.bat
-echo call ./venv/Scripts/activate ^&^& mikkumiku -f %%*>> bat/drop_files.bat
-
-echo @echo off>>bat/drop_directories.bat
-echo @if not "%%~0"=="%%~dp0.\%%~nx0" start /min cmd /c,"%%~dp0.\%%~nx0" %%* ^& goto :eof>>bat/drop_directories.bat
-echo cd ..>>bat/drop_directories.bat
-echo call ./venv/Scripts/activate ^&^& mikkumiku -d %%1>> bat/drop_directories.bat
-
 echo Now Installation is finished.
-echo In a new directory "PyPromptChecker/bat", four files have been created.
+echo In a new directory "PyPromptChecker/bat", two files have been created.
 echo The following are the four files:
 echo.
 echo start.bat:
@@ -72,16 +62,6 @@ echo select_directory.bat:
 echo When you run this file, a directory selection dialog will appear,
 echo and once a directory is selected, processing will begin.
 echo This is same as running command 'mikkumiku --ask'
-echo.
-echo drop_files.bat:
-echo By creating a shortcut to this batch file,
-echo you can start the processing by dragging and dropping a file onto the shortcut.
-echo This is same as running command 'mikkumiku --filepath ...'
-echo.
-echo drop_directories.bat:
-echo By creating a shortcut to this batch file,
-echo you can start the processing by dragging and dropping a directory onto the shortcut.
-echo This is same as running command 'mikkumiku --directory ...'
 echo.
 echo If you are unsure of what these batch files do by looking at their contents, please refrain from moving or editing them.
 echo Finally, The command is neither "pyPromptChecker" nor "mikumiku". It's "mikkumiku"

@@ -21,6 +21,7 @@ def image_format_identifier(filepath):
         webp_head_signature = b'\x52\x49\x46\x46'
         webp_foot_signature = b'\x57\x45\x42\x50'
         file_header = f.read(12)
+
         if file_header.startswith(png_signature):
             return [filepath, 0]
         elif file_header.startswith(jpeg_signature):
@@ -34,8 +35,12 @@ def image_format_identifier(filepath):
 
 
 def chunk_text_extractor(target, method, index=1):
+    width = '--'
+    height = '--'
+
     if method == 0:
         index = max(index, 1)
+
         try:
             reader = png.Reader(filename=target)
             chunks = reader.chunks()
@@ -47,7 +52,7 @@ def chunk_text_extractor(target, method, index=1):
                     height = int.from_bytes(chunk_data[4:8], byteorder='big')
                     break
 
-            original_size = str(width) + 'x' + str(height)
+            original_size = f'{width}x{height}'
 
             if index >= len(chunk_list):
                 print('{} has no embedded data!'.format(target))
@@ -77,22 +82,25 @@ def chunk_text_extractor(target, method, index=1):
             return None, None
 
     elif method == 1 or method == 2:
+        exif_id = 37510
+
         try:
             img = Image.open(target)
             exif = img._getexif()
             if exif:
-                binary = exif.get(37510, b'')
+                binary = exif.get(exif_id, b'')
                 text = binary.decode('utf-8', errors='ignore').replace("\x00", "")
             else:
                 text = 'no embedded data'
+
             width, height = img.size
 
             if text.startswith('UNICODE'):
                 text = text.replace('UNICODE', 'parameters', 1)
-                original_size = str(width) + 'x' + str(height)
+                original_size = f'{width}x{height}'
                 return text, original_size
             else:
-                original_size = str(width) + 'x' + str(height)
+                original_size = f'{width}x{height}'
                 print('{} has not valid parameters'.format(target))
                 return None, original_size
 

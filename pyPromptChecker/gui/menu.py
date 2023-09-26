@@ -17,8 +17,6 @@ class MainMenu(QMenu):
         self.lora_wizard = QAction('LoRa wizard', self)
         self.interrogate_menu = QMenu('Interrogate', self)
         self.interrogate_wd14 = QMenu('WD 1.4 Tagger', self)
-        self.interrogate_defaults = QMenu('Default threshold', self)
-        self.interrogate_specify = QMenu('Specify threshold', self)
         self.interrogate_all = QAction('All images', self)
         self.interrogate_selected = QAction('Select images', self)
         self.interrogate_this = QAction('This image', self)
@@ -48,10 +46,7 @@ class MainMenu(QMenu):
         self.addSeparator()
 
         self.addAction(self.lora_wizard)
-        self.interrogate_defaults.addActions([self.interrogate_all, self.interrogate_selected, self.interrogate_this])
-        self.interrogate_specify.addActions([self.interrogate_all, self.interrogate_selected, self.interrogate_this])
-        self.interrogate_wd14.addMenu(self.interrogate_defaults)
-        self.interrogate_wd14.addMenu(self.interrogate_specify)
+        self.interrogate_wd14.addActions([self.interrogate_all, self.interrogate_selected, self.interrogate_this])
         self.interrogate_menu.addMenu(self.interrogate_wd14)
         self.addMenu(self.interrogate_menu)
         self.lora_wizard.setDisabled(True)
@@ -84,14 +79,19 @@ class MainMenu(QMenu):
         self.quit.triggered.connect(quit_triggered)
         self.dark_mode.triggered.connect(self.main.change_themes)
         self.model_hash_extractor.triggered.connect(self.main.model_hash_extractor)
+
         self.reselect_add.triggered.connect(self.main.reselect_files_append)
         self.reselect_renewal.triggered.connect(self.main.reselect_files)
+
         self.json_import_files.triggered.connect(self.main.import_json_from_files)
         self.json_import_directory.triggered.connect(self.main.import_json_from_directory)
+
         self.json_export_single.triggered.connect(self.main.export_json_single)
         self.json_export_all.triggered.connect(self.main.export_json_all)
         self.json_export_selected.triggered.connect(self.main.open_thumbnail)
+
         self.interrogate_this.triggered.connect(self.main.add_interrogate_tab)
+        self.interrogate_all.triggered.connect(lambda: self.main.add_interrogate_tab(1))
 
     def theme_check(self):
         if self.main.dark:
