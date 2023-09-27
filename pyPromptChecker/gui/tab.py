@@ -4,9 +4,10 @@ import os
 from PyQt6.QtWidgets import QWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QPushButton, QStackedWidget, QSplitter
 from PyQt6.QtWidgets import QGridLayout, QTextEdit, QLineEdit, QComboBox, QSlider, QLabel, QGroupBox
 from PyQt6.QtCore import Qt, QTimer
+
 from . import config
 from .viewer import DiffWindow
-from .dialog import PixmapLabel
+from .widget import PixmapLabel
 from .widget import portrait_generator
 
 

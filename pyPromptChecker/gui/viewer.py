@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import difflib
-from .dialog import PixmapLabel
+from .widget import PixmapLabel
 from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QGridLayout
 from PyQt6.QtWidgets import QScrollArea, QLabel, QTextEdit, QSplitter, QPushButton
 from PyQt6.QtGui import QPixmap

@@ -2,42 +2,8 @@
 
 import os
 from PyQt6.QtWidgets import QFileDialog, QProgressDialog, QMessageBox, QLabel, QWidget, QVBoxLayout, QApplication
-from PyQt6.QtWidgets import QDialog, QRadioButton, QPushButton, QHBoxLayout, QGroupBox, QComboBox, QSlider, QGridLayout
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-
-
-class ClickableGroup(QGroupBox):
-    clicked = pyqtSignal()
-
-    def __init__(self, parent=None):
-        super(ClickableGroup, self).__init__(parent)
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.clicked.emit()
-
-
-class PixmapLabel(QLabel):
-    clicked = pyqtSignal()
-    rightClicked = pyqtSignal()
-    ctrl_clicked = pyqtSignal()
-    shift_clicked = pyqtSignal()
-
-    def __init__(self, parent=None):
-        super(PixmapLabel, self).__init__(parent)
-        self.setStyleSheet("border: none;")
-#        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton and event.modifiers() == Qt.KeyboardModifier.ControlModifier:
-            self.ctrl_clicked.emit()
-        elif event.button() == Qt.MouseButton.LeftButton and event.modifiers() == Qt.KeyboardModifier.ShiftModifier:
-            self.shift_clicked.emit()
-        elif event.button() == Qt.MouseButton.LeftButton:
-            self.clicked.emit()
-        elif event.button() == Qt.MouseButton.RightButton:
-            self.rightClicked.emit()
-        return QLabel.mousePressEvent(self, event)
+from PyQt6.QtWidgets import QDialog, QRadioButton, QPushButton, QHBoxLayout, QComboBox, QSlider, QGridLayout
+from PyQt6.QtCore import Qt, QTimer
 
 
 class SelectDialog(QDialog):
