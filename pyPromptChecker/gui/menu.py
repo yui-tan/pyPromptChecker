@@ -114,8 +114,23 @@ class TabMenu(QMenu):
 
 
 class ThumbnailMenu(QMenu):
-    pass
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.main = parent
 
+        self.delete_menu = QMenu('Delete', self)
+        self.delete = QAction('Confirm', self.delete_menu)
+        self.move_to = QAction('Move to', self)
+        self.add_favourite = QAction('Add favourite', self)
 
-class ListviewMenu(QMenu):
-    pass
+        self.addMenu(self.delete_menu)
+        self.delete_menu.addAction(self.delete)
+
+        self.addSeparator()
+
+        self.addAction(self.move_to)
+        self.addAction(self.add_favourite)
+
+        self.delete.triggered.connect(lambda: self.main.management_image('delete'))
+        self.move_to.triggered.connect(lambda: self.main.management_image('move'))
+        self.add_favourite.triggered.connect(lambda: self.main.management_image('favourite'))
