@@ -585,6 +585,7 @@ class ResultWindow(QMainWindow):
 
     def manage_image_files(self, indexes: list, where_from, kind='favourite'):
         results = []
+        ask_if = config.get('AskIfDelete', True)
         is_move = not config.get('UseCopyInsteadOfMove')
 
         if kind == 'favourite':
@@ -608,6 +609,10 @@ class ResultWindow(QMainWindow):
             return None, None
 
         elif destination:
+            if ask_if and kind == 'delete':
+                result = MessageBox('Really?', 'Confirm', 'okcancel', 'question', where_from)
+                if not result.success:
+                    return None, None
             for index in indexes:
                 source = self.params[index].params.get('Filepath')
                 result, e = io.image_copy_to(source, destination, is_move)
