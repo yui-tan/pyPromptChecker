@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+import os.path
 import sys
 import qdarktheme
 
@@ -8,19 +8,20 @@ import qdarktheme
 
 from pyPromptChecker.lib import *
 from pyPromptChecker.lora import *
-from . import config
 from .search import SearchWindow
+from PyQt6.QtWidgets import QApplication, QLabel, QTabWidget, QHBoxLayout, QGridLayout, QPushButton, QComboBox, QTextEdit
+from PyQt6.QtGui import QKeySequence, QPalette, QIcon
+from PyQt6.QtCore import Qt, QPoint, QTimer
+
+from . import config
 from .dialog import *
 from .widget import *
 from .menu import *
 from .viewer import *
 from .thumbnail import *
 from .listview import *
-from .tab import TabBar
-from .tab import InterrogateTab
-from PyQt6.QtWidgets import QApplication, QLabel, QTabWidget, QHBoxLayout, QGridLayout, QPushButton, QComboBox, QTextEdit
-from PyQt6.QtGui import QKeySequence, QPalette, QIcon
-from PyQt6.QtCore import Qt, QPoint, QTimer
+from .tab import *
+from .custom import *
 
 
 class ResultWindow(QMainWindow):
@@ -431,79 +432,27 @@ class ResultWindow(QMainWindow):
             self.tab_bar.toggle_tab_bar(self.sender())
 
     def managing_button_clicked(self):
-        is_move = not config.get('UseCopyInsteadOfMove')
-
+        str_result = 'Added!'
         where_from = self.sender().objectName()
-        current_page = self.root_tab.currentWidget()
         current_index = self.root_tab.currentIndex()
-        source = self.params[current_index].params.get('Filepath')
-        filename = self.params[current_index].params.get('Filename')
+        result = None
+        error = None
 
-        if not os.path.exists(source):
-            text = "Couldn't find this image file."
-            MessageBox(text, 'Error', 'ok', 'critical', self)
-
-        elif where_from == 'Favourite':
-            destination = config.get('Favourites')
-            if not destination:
-                text = "Couldn't find setting of destination directory.\nPlease Check setting in 'config.ini' file."
-                MessageBox(text, 'Error', 'ok', 'critical', self)
-            elif not os.path.isdir(destination):
-                text = "Couldn't find destination directory.\nPlease Check setting in 'config.ini' file."
-                MessageBox(text, 'Error', 'ok', 'critical', self)
-            else:
-                result, e = io.image_copy_to(source, destination, is_move)
-                if not e:
-                    self.root_tab.tabBar().setTabTextColor(current_index, Qt.GlobalColor.blue)
-                    filepath_label = current_page.findChild(QLabel, 'Filepath_value')
-                    filepath_label.setStyleSheet("color: blue;")
-                    filepath_label.setText(destination)
-                    filepath_label.setToolTip(destination)
-                    if self.tab_bar:
-                        self.tab_bar.image_moved([current_index])
-                    self.params[current_index].params['Filepath'] = os.path.join(destination, filename)
-                    self.toast_window.init_toast('Added!', 1000)
-                else:
-                    MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
-
+        if where_from == 'Favourite':
+            result, error = self.manage_image_files([current_index], self)
+            self.sender().setDisabled(True)
         elif where_from == 'Move to':
-            self.dialog.init_dialog('choose-directory', 'Select Directory')
-            destination = self.dialog.result[0] if self.dialog.result else None
-            if destination:
-                result, e = io.image_copy_to(source, destination, is_move)
-                if not e:
-                    self.root_tab.tabBar().setTabTextColor(current_index, Qt.GlobalColor.blue)
-                    filepath_label = current_page.findChild(QLabel, 'Filepath_value')
-                    filepath_label.setStyleSheet("color: blue;")
-                    filepath_label.setText(destination)
-                    filepath_label.setToolTip(destination)
-                    if self.tab_bar:
-                        self.tab_bar.image_moved([current_index])
-                    self.params[current_index].params['Filepath'] = os.path.join(destination, filename)
-                    self.toast_window.init_toast('Moved!', 1000)
-                else:
-                    MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
-
+            result, error = self.manage_image_files([current_index], self, 'move')
+            str_result = 'Moved!'
         elif where_from == 'Delete':
-            destination = os.path.join(os.path.abspath(''), '.trash')
-            os.makedirs(destination, exist_ok=True)
-            if config.get('AskIfDelete'):
-                result = MessageBox('Really?', 'Confirm', 'okcancel', 'question', self)
-                if not result.success:
-                    return
-            result, e = io.image_copy_to(source, destination, True)
-            if not e:
-                filepath_label = current_page.findChild(QLabel, 'Filepath_value')
-                filepath_label.setStyleSheet("color: red;")
-                filepath_label.setText(destination)
-                filepath_label.setToolTip(destination)
-                if self.tab_bar:
-                    self.tab_bar.image_deleted([current_index])
-                self.root_tab.tabBar().setTabTextColor(current_index, Qt.GlobalColor.red)
-                self.params[current_index].params['Filepath'] = os.path.join(destination, filename)
-                self.toast_window.init_toast('Deleted!', 1000)
-            else:
-                MessageBox(result.replace('moving/copying', 'deleting') + '\n' + str(e), 'Error', 'ok', 'critical', self)
+            result, error = self.manage_image_files([current_index], self, 'delete')
+            str_result = 'Deleted!'
+            self.sender().setDisabled(True)
+
+        if result and not error:
+            self.toast_window.init_toast(str_result, 1000)
+        elif not result and error:
+            MessageBox(error[0], 'Error', 'ok', 'critical', self)
 
     def pixmap_clicked(self):
         if not self.image_window.isVisible():
@@ -633,6 +582,70 @@ class ResultWindow(QMainWindow):
             else:
                 dictionary_list = [value.params for value in self.params]
             self.listview.init_listview(dictionary_list)
+
+    def manage_image_files(self, indexes: list, where_from, kind='favourite'):
+        results = []
+        is_move = not config.get('UseCopyInsteadOfMove')
+
+        if kind == 'favourite':
+            destination = config.get('Favourites')
+        elif kind == 'delete':
+            destination = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.trash')
+            os.makedirs(destination, exist_ok=True)
+            is_move = True
+        else:
+            self.dialog.init_dialog('choose-directory', 'Select Directory')
+            destination = self.dialog.result[0] if self.dialog.result else None
+
+        if kind == 'favourite' and not destination:
+            text = "Couldn't find setting of destination directory.\nPlease check setting in 'config.ini' file."
+            MessageBox(text, 'Error', 'ok', 'critical', where_from)
+            return None, None
+
+        elif kind == 'favourite' and not os.path.isdir(destination):
+            text = "Couldn't find destination directory.\nPlease check setting in 'config.ini' file."
+            MessageBox(text, 'Error', 'ok', 'critical', where_from)
+            return None, None
+
+        elif destination:
+            for index in indexes:
+                source = self.params[index].params.get('Filepath')
+                result, e = io.image_copy_to(source, destination, is_move)
+                results.append([e, result, source, index])
+            return self.post_manage(results, kind)
+        return None, None
+
+    def post_manage(self, results: list, kind):
+        stylesheet = 'color: ' + custom_color('deleted') + ';' if kind == 'delete' else 'color: ' + custom_color('moved') + ';'
+        text_color = custom_color('Q_deleted') if kind == 'delete' else custom_color('Q_moved')
+        errors = []
+        succeeds = []
+
+        for result in results:
+            error, filepath, source, index = result
+            if not error:
+                destination = os.path.dirname(filepath)
+                filename = os.path.basename(filepath)
+                target_page = self.root_tab.widget(index)
+                self.root_tab.tabBar().setTabTextColor(index, text_color)
+                self.root_tab.tabBar().setTabText(index,filename)
+                filepath_label = target_page.findChild(QLabel, 'Filepath_value')
+                filepath_label.setStyleSheet(stylesheet)
+                filepath_label.setText(destination)
+                filepath_label.setToolTip(destination)
+                main_section = target_page.findChild(QGroupBox, 'main_section')
+                main_section.setTitle(filename)
+                move_delete_section = target_page.findChild(QWidget, 'move_delete')
+                move_delete_section.refresh_filepath(filepath)
+                if self.tab_bar and kind != 'delete':
+                    self.tab_bar.image_moved([index])
+                elif self.tab_bar and kind == 'delete':
+                    self.tab_bar.image_deleted([index])
+                self.params[index].params['Filepath'] = filepath
+                succeeds.append([index, filepath])
+            else:
+                errors.append(f'{source}\n{filepath}\n{error}')
+        return succeeds, errors
 
     def import_json_from_files(self):
         self.dialog.init_dialog('choose-files', 'Select JSONs', None, 'JSON')
@@ -831,7 +844,7 @@ class ResultWindow(QMainWindow):
             self.main_menu.theme_check()
 
     def closeEvent(self, event):
-        trash_bin = os.path.join(os.path.abspath(''), '.trash')
+        trash_bin = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.trash')
         if os.path.exists(trash_bin):
             ask = config.get('AskIfClearTrashBin')
             if not io.is_directory_empty(trash_bin):

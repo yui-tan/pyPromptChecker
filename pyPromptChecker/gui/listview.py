@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from . import config
-from .dialog import PixmapLabel
-from .dialog import ClickableGroup
 from .dialog import ProgressDialog
 from .viewer import DiffWindow
+from .widget import PixmapLabel
+from .widget import ClickableGroup
 from .widget import portrait_generator
 from .widget import make_keybindings
 from PyQt6.QtWidgets import QApplication, QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QGroupBox, QScrollArea

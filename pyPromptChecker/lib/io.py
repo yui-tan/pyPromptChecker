@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 
+import uuid
 import csv
 import json
 import os
 import shutil
 import hashlib
-
-from PyQt6.QtWidgets import QApplication
 
 
 def export_json(target_json, filepath):
@@ -46,18 +45,23 @@ def import_model_list(filepath):
 def image_copy_to(source, destination, is_move=False):
     destination_path = os.path.join(destination, os.path.basename(source))
 
-    if not os.path.exists(destination_path):
+    if os.path.exists(destination_path):
+        base, ext = os.path.splitext(destination_path)
+        unique_suffix = str(uuid.uuid4())[:8]
+        destination_path = os.path.join(destination, f"{base}-{unique_suffix}{ext}")
+
+    if os.path.exists(source):
         try:
-            shutil.copy(source, destination)
-            if os.path.exists(destination) and is_move:
+            shutil.copy(source, destination_path)
+            if os.path.exists(destination_path) and is_move:
                 os.remove(source)
-                return True, None
-            return True, None
+                return destination_path, None
+            return destination_path, None
 
         except Exception as e:
             return 'Error occurred moving/copying files.', e
     else:
-        return 'The same files already exists in destination.', 'AlreadyExistsError'
+        return "The source file doesn't exists.", 'FileNotFoundError'
 
 
 def clear_trash_bin(directory_path):

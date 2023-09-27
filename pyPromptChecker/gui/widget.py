@@ -3,13 +3,131 @@
 import os
 import sys
 import importlib
-from . import config
-from .dialog import PixmapLabel
 from functools import lru_cache
 from PyQt6.QtWidgets import QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QComboBox, QTextEdit, QSizePolicy
 from PyQt6.QtWidgets import QGroupBox, QTabWidget, QScrollArea, QSplitter, QGridLayout, QWidget
 from PyQt6.QtGui import QPixmap, QPainter, QColor, QKeySequence, QShortcut, QImageReader
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
+
+from .custom import *
+from . import config
+
+
+class PixmapLabel(QLabel):
+    clicked = pyqtSignal()
+    rightClicked = pyqtSignal()
+    ctrl_clicked = pyqtSignal()
+    shift_clicked = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setStyleSheet("border: none;")
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and event.modifiers() == Qt.KeyboardModifier.ControlModifier:
+            self.ctrl_clicked.emit()
+        elif event.button() == Qt.MouseButton.LeftButton and event.modifiers() == Qt.KeyboardModifier.ShiftModifier:
+            self.shift_clicked.emit()
+        elif event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        elif event.button() == Qt.MouseButton.RightButton:
+            self.rightClicked.emit()
+        return QLabel.mousePressEvent(self, event)
+
+
+class ClickableGroup(QGroupBox):
+    clicked = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        return QGroupBox.mousePressEvent(self, event)
+
+
+class ButtonWithMenu(QPushButton):
+    clicked = pyqtSignal()
+    rightClicked = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        elif event.button() == Qt.MouseButton.RightButton:
+            self.rightClicked.emit()
+
+
+class HoverLabel(QLabel):
+    def __init__(self):
+        super().__init__()
+        self.setStyleSheet(custom_stylesheet('label', 'leave'))
+
+    def enterEvent(self, event):
+        self.setStyleSheet(custom_stylesheet('label', 'hover'))
+
+    def leaveEvent(self, event):
+        self.setStyleSheet(custom_stylesheet('label', 'leave'))
+
+
+class MoveDelete(QWidget):
+    def __init__(self, filepath):
+        super().__init__()
+        self.filepath = filepath
+        self.favourite = QPushButton()
+        self.move_to = QPushButton()
+        self.delete = QPushButton()
+
+        self.setObjectName('move_delete')
+        self._init_class()
+
+    def _init_class(self):
+        root_layout = QHBoxLayout()
+        root_layout.setContentsMargins(5, 0, 5, 0)
+
+        self.favourite.setText('&Favourite')
+        self.favourite.setObjectName('Favourite')
+        root_layout.addWidget(self.favourite)
+
+        self.move_to.setText('&Move to')
+        self.move_to.setObjectName('Move to')
+        root_layout.addWidget(self.move_to)
+
+        self.delete.setText('Delete')
+        self.delete.setObjectName('Delete')
+        self.delete.setShortcut(QKeySequence('Delete'))
+        root_layout.addWidget(self.delete)
+
+        self.setLayout(root_layout)
+        self._check_filepath()
+
+    def _check_filepath(self):
+        fav = config.get('Favourites')
+        directory = os.path.dirname(self.filepath)
+        trash_bin = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.trash')
+        self.toggle_button('d', False)
+        self.toggle_button('f', False)
+
+        if directory == trash_bin:
+            self.toggle_button('d', True)
+
+        if fav and directory == fav:
+            self.toggle_button('f', True)
+
+    def toggle_button(self, which, disable=True):
+        if which == 'f':
+            self.favourite.setDisabled(disable)
+        elif which == 'm':
+            self.move_to.setDisabled(disable)
+        elif which == 'd':
+            self.delete.setDisabled(disable)
+
+    def refresh_filepath(self, filepath):
+        self.filepath = filepath
+        self._check_filepath()
 
 
 def make_footer_area(parent):
@@ -156,7 +274,6 @@ def make_main_section(target):
     scroll_area.setStyleSheet('border: 0px; padding 0px; ')
 
     scroll_contents = QWidget()
-    scroll_contents.setContentsMargins(0, 0, 0, 0)
     scroll_contents.setLayout(label_layout)
     scroll_area.setWidget(scroll_contents)
 
@@ -172,11 +289,9 @@ def make_pixmap_label(filepath):
     move_delete_enable = config.get('MoveDelete', True)
     pixmap_section = QWidget()
     pixmap_layout = QVBoxLayout()
-    button_layout = QHBoxLayout()
 
     if os.path.exists(filepath):
-        pixmap = QPixmap(filepath)
-        pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
+        pixmap = portrait_generator(filepath, scale)
         pixmap_label = PixmapLabel()
         pixmap_label.setPixmap(pixmap)
     else:
@@ -184,26 +299,12 @@ def make_pixmap_label(filepath):
 
     pixmap_label.setObjectName('Pixmap')
     pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    pixmap_label.setMinimumSize(scale, scale)
-    pixmap_label.setMaximumSize(scale, scale)
-    pixmap_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+    pixmap_label.setFixedSize(scale, scale)
     pixmap_layout.addWidget(pixmap_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
     if move_delete_enable:
-        for tmp in ['Favourite', 'Move to', 'Delete']:
-            button = QPushButton()
-            button.setObjectName(tmp)
-            button.setMinimumSize(int(scale / 3), 25)
-            button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-            button_layout.addWidget(button)
-            if tmp == 'Favourite':
-                button.setText('&Favourite')
-            elif tmp == 'Move to':
-                button.setText('&Move to')
-            elif tmp == 'Delete':
-                button.setText('Delete')
-                button.setShortcut(QKeySequence('Delete'))
-        pixmap_layout.addLayout(button_layout)
+        move_delete = MoveDelete(filepath)
+        pixmap_layout.addWidget(move_delete)
 
     pixmap_section.setLayout(pixmap_layout)
     pixmap_layout.setContentsMargins(0, 5, 0, 0)
