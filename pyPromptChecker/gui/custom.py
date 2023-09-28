@@ -8,6 +8,9 @@ def custom_stylesheet(category: str, purpose: str):
     if category == 'groupbox':
         style = 'QGroupBox {border: 2px solid @@@ ; padding : 1px 0 0 0; }'
         return style.replace('@@@', custom_color(purpose))
+    elif category == 'colour':
+        style = 'color: @@@;'
+        return style.replace('@@@', custom_color(purpose))
     elif category == 'border':
         style = 'border: 2px solid @@@'
         return style.replace('@@@', custom_color(purpose))

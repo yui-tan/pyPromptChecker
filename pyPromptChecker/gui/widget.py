@@ -5,7 +5,7 @@ import sys
 import importlib
 from functools import lru_cache
 from PyQt6.QtWidgets import QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QComboBox, QTextEdit, QSizePolicy
-from PyQt6.QtWidgets import QGroupBox, QTabWidget, QScrollArea, QSplitter, QGridLayout, QWidget
+from PyQt6.QtWidgets import QApplication, QGroupBox, QTabWidget, QScrollArea, QSplitter, QGridLayout, QWidget
 from PyQt6.QtGui import QPixmap, QPainter, QColor, QKeySequence, QShortcut, QImageReader
 from PyQt6.QtCore import Qt, pyqtSignal
 
@@ -67,10 +67,23 @@ class HoverLabel(QLabel):
         self.setStyleSheet(custom_stylesheet('label', 'leave'))
 
     def enterEvent(self, event):
-        self.setStyleSheet(custom_stylesheet('label', 'hover'))
+        stylesheet = custom_stylesheet('label', 'hover')
+        current_style = self.styleSheet()
+
+        if current_style:
+            current_style += ';' + stylesheet
+
+        self.setStyleSheet(current_style)
 
     def leaveEvent(self, event):
-        self.setStyleSheet(custom_stylesheet('label', 'leave'))
+        stylesheet = custom_stylesheet('label', 'leave')
+        target_part = custom_stylesheet('label', 'hover')
+        current_style = self.styleSheet()
+
+        if current_style:
+            current_style = current_style.replace(target_part, stylesheet)
+
+        self.setStyleSheet(current_style)
 
 
 class MoveDelete(QWidget):
@@ -973,6 +986,17 @@ def portrait_generator(filepath, size):
     pixmap = QPixmap.fromImageReader(image_reader)
     pixmap = pixmap.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
     return pixmap
+
+
+def move_centre(target=None):
+    if not target.parent() or not target.parent().isVisible():
+        screen_center = QApplication.primaryScreen().geometry().center()
+    else:
+        screen_center = target.parent().geometry().center()
+
+    frame_geometry = target.frameGeometry()
+    frame_geometry.moveCenter(screen_center)
+    target.move(frame_geometry.topLeft())
 
 
 def module_checker(module_name):

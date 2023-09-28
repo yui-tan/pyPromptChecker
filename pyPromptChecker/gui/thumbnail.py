@@ -9,46 +9,47 @@ from . import config
 
 import os
 from PyQt6.QtCore import Qt, QPoint
-from PyQt6.QtWidgets import QApplication, QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QScrollArea
+from PyQt6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QScrollArea
 from PyQt6.QtWidgets import QWidget, QPushButton
 
 
 class ThumbnailView(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.size = config.get('ThumbnailPixmapSize', 150)
         self.setWindowTitle('Thumbnail View')
-        self.params = []
-        self.selected = set()
-        self.total_images = 0
+        self.borders = []
         self.menu = ThumbnailMenu(self)
         make_keybindings(self)
 
-    def init_thumbnail(self, param_list: dict):
-        self.setCentralWidget(None)
-        self.params = param_list
-        self.total_images = len(param_list)
-        portrait_border = 0
-
+    def init_thumbnail(self, param_list: list, moved: set = None, deleted: set = None):
         progress = ProgressDialog()
         progress.setLabelText('Loading...')
-        progress.setRange(0, self.total_images)
+        progress.setRange(0, len(param_list))
 
-        thumbnails_layout = QGridLayout()
+        self.setCentralWidget(None)
+
         row = 0
         col = 0
         width = 0
         real_row = 0
 
+        size = config.get('ThumbnailPixmapSize', 150)
+        thumbnails_layout = QGridLayout()
+
         for index, param in enumerate(param_list):
             real_row = row
-            filepath = param.get('Filepath')
-            portrait_border = ThumbnailBorder(index, filepath, self.size)
-            portrait_border.clicked.connect(self._group_clicked)
+            portrait_border = ThumbnailBorder(index, param, size)
             portrait_border.pixmap_label.rightClicked.connect(self._pixmap_clicked)
+            self.borders.append(portrait_border)
             thumbnails_layout.addWidget(portrait_border, row, col)
 
-            width += (self.size + 40)
+            if moved and index in moved:
+                portrait_border.set_moved()
+
+            if deleted and index in deleted:
+                portrait_border.set_deleted()
+
+            width += (size + 40)
             col += 1
 
             if width > 900:
@@ -86,11 +87,11 @@ class ThumbnailView(QMainWindow):
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setWidgetResizable(True)
 
-        progress.close()
-
         self.show()
         self.resize(900, estimated_height)
-        self._move_centre()
+        move_centre(self)
+
+        progress.close()
 
     def _footer_buttons(self):
         management = config.get('MoveDelete', False)
@@ -114,20 +115,25 @@ class ThumbnailView(QMainWindow):
 
     def _footer_button_clicked(self):
         where_from = self.sender().objectName()
-        selected_number = len(self.selected)
-        if selected_number > 0:
+        selected_index = set()
+
+        for border in self.borders:
+            if border.selected:
+                selected_index.add(border.index)
+
+        if len(selected_index) > 0:
             if where_from == 'Add favourite':
                 self.management_image('favourite')
 
             elif where_from == 'Export JSON':
-                self.parent().export_json_selected(list(self.selected))
+                self.parent().export_json_selected(list(selected_index))
 
             elif where_from == 'Interrogate':
-                self.parent().add_interrogate_tab(2, self.selected)
+                self.parent().add_interrogate_tab(2, selected_index)
 
             elif where_from == 'Diff':
-                if selected_number == 2:
-                    result = [self.params[i] for i in self.selected]
+                if len(selected_index) == 2:
+                    result = [self.borders[i].params for i in selected_index]
                     diff = DiffWindow(result, self)
                     diff.show()
                     diff.move_centre()
@@ -136,10 +142,12 @@ class ThumbnailView(QMainWindow):
             self.close()
 
         elif where_from == 'Select all':
-            if selected_number == self.total_images:
-                self._select_all(True)
+            if len(selected_index) == len(self.borders):
+                for border in self.borders:
+                    border.set_deselected()
             else:
-                self._select_all(False)
+                for border in self.borders:
+                    border.set_selected()
 
     def _footer_submenu(self):
         x = self.sender().mapToGlobal(self.sender().rect().topLeft()).x()
@@ -147,57 +155,34 @@ class ThumbnailView(QMainWindow):
         adjusted_pos = QPoint(x, y)
         self.menu.exec(adjusted_pos)
 
-    def _select_all(self, clear: bool):
-        for widget in self.centralWidget().findChildren(ThumbnailBorder):
-            if clear and widget.selected:
-                widget.self_clicked()
-                self.selected.discard(widget.index)
-            elif not clear and not widget.selected:
-                widget.self_clicked()
-                self.selected.add(widget.index)
-
-    def _group_clicked(self):
-        group = self.sender().objectName()
-        str_number = group.split('_')[1]
-        number = int(str_number)
-
-        if self.sender().selected:
-            self.selected.add(number)
-        else:
-            self.selected.discard(number)
-
     def _pixmap_clicked(self):
-        pixmap = self.sender().objectName()
-        str_number = pixmap.split('_')[1]
-        number = int(str_number)
+        number = self.sender().parent().index
         self.parent().root_tab.setCurrentIndex(number)
         self.parent().pixmap_clicked()
 
-    def _move_centre(self):
-        if not self.parent() or not self.parent().isVisible():
-            screen_center = QApplication.primaryScreen().geometry().center()
-        else:
-            screen_center = self.parent().geometry().center()
-
-        frame_geometry = self.frameGeometry()
-        frame_geometry.moveCenter(screen_center)
-        self.move(frame_geometry.topLeft())
-
     def management_image(self, kind: str):
-        border_str = 'deleted' if kind == 'delete' else 'moved'
-        success, error = self.parent().manage_image_files(list(self.selected), self, kind)
+        selected = set()
+
+        for border in self.borders:
+            if border.selected:
+                selected.add(border.index)
+
+        success, error = self.parent().manage_image_files(selected, self, kind)
 
         if not success and not error:
             return
 
         if success:
-            target = [[value[0], value[1]] for value in success if value[0] in self.selected]
-            for index, filepath in target:
-                widget = self.centralWidget().findChild(ThumbnailBorder, f'group_{index}')
-                widget.self_clicked()
-                widget.label_border(border_str)
+            deselect_target = [[value[0], value[1]] for value in success if value[0] in selected]
+            for index, filepath in deselect_target:
+                widget = self.borders[index]
+                widget.set_deselected()
                 widget.label_change(filepath)
-            self.selected.clear()
+
+                if kind == 'delete':
+                    widget.set_deleted()
+                else:
+                    widget.set_moved()
 
         if error:
             text = '\n'.join(error)
@@ -205,66 +190,84 @@ class ThumbnailView(QMainWindow):
 
 
 class ThumbnailBorder(ClickableGroup):
-    def __init__(self, index, filepath, size=150, parent=None):
+    def __init__(self, index: int, params: dict, size: int = 150, parent=None):
         super().__init__(parent)
         self.size = size
         self.index = index
         self.label = None
         self.pixmap_label = None
-        self.filepath = filepath
-        self.filename = os.path.basename(filepath)
+        self.params = params
         self.selected = False
+        self.moved = False
+        self.deleted = False
         self._init_class()
 
         self.setObjectName(f'group_{self.index}')
-        self.clicked.connect(self.self_clicked)
+        self.clicked.connect(self._toggle_selected)
 
     def _init_class(self):
-        self.layout = QVBoxLayout()
+        layout = QVBoxLayout()
         self.setFixedSize(self.size + 60, self.size + 60)
 
-        label = self._filename_label()
-        pixmap = self._pixmap_label()
-        self.label = label
-        self.pixmap_label = pixmap
+        self._pixmap_label()
+        self._filename_label()
 
-        self.layout.addWidget(pixmap, alignment=Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
-        self.layout.addWidget(label, alignment=Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignBottom)
-        self.setLayout(self.layout)
+        filename = self.params.get('Filename')
+        self.pixmap_label.setToolTip(filename)
+        self.label.setText(filename)
+
+        layout.addWidget(self.pixmap_label, alignment=Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
+        layout.addWidget(self.label, alignment=Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignBottom)
+        self.setLayout(layout)
 
     def _pixmap_label(self):
-        pixmap = portrait_generator(self.filepath, self.size)
+        filepath = self.params.get('Filepath')
+        pixmap = portrait_generator(filepath, self.size)
         pixmap_label = PixmapLabel()
         pixmap_label.setFixedSize(self.size, self.size)
         pixmap_label.setPixmap(pixmap)
         pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
-        pixmap_label.setToolTip(self.filename)
         pixmap_label.setObjectName(f'pixmap_{self.index}')
-        return pixmap_label
+        self.pixmap_label = pixmap_label
+
+    def _tooltip(self):
+        pass
 
     def _filename_label(self):
         label = HoverLabel()
-        label.setText(self.filename)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
         label.setFixedHeight(30)
-        return label
+        self.label = label
 
-    def self_clicked(self):
+    def _toggle_selected(self):
         if self.selected:
-            self.selected = False
-            self.setStyleSheet('')
+            self.set_deselected()
         else:
-            self.selected = True
-            self.setStyleSheet(custom_stylesheet('groupbox', 'current'))
+            self.set_selected()
 
-    def label_border(self, what_happen: str):
-        if what_happen == 'moved':
-            self.pixmap_label.setStyleSheet(custom_stylesheet('border', what_happen))
-        elif what_happen == 'deleted':
-            self.pixmap_label.setStyleSheet(custom_stylesheet('border', what_happen))
+    def set_selected(self):
+        self.selected = True
+        self.setStyleSheet(custom_stylesheet('groupbox', 'current'))
+
+    def set_deselected(self):
+        self.selected = False
+        self.setStyleSheet('')
+
+    def set_moved(self):
+        self.label.setStyleSheet(custom_stylesheet('colour', 'moved'))
+        self.moved = True
+        self.deleted = False
+
+    def set_deleted(self):
+        self.label.setStyleSheet(custom_stylesheet('colour', 'deleted'))
+        self.moved = False
+        self.deleted = True
 
     def label_change(self, filepath):
-        self.filepath = filepath
-        self.filename = os.path.basename(filepath)
-        self.label.setText(self.filename)
-        self.pixmap_label.setToolTip(self.filename)
+        current_filepath = self.params.get('Filepath')
+        if filepath != current_filepath:
+            filename = os.path.basename(filepath)
+            self.params['Filepath'] = filepath
+            self.params['Filename'] = filename
+            self.label.setText(filename)
+            self.pixmap_label.setToolTip(filename)

@@ -29,19 +29,27 @@ class ResultWindow(QMainWindow):
         super().__init__()
         self.dark = config.get('AlwaysStartWithDarkMode')
         self.hide_tab = config.get('OpenWithShortenedWindow', False)
+
         self.root_tab = None
         self.tab_bar = None
         self.dialog = None
         self.search = None
         self.toast_window = None
         self.progress_bar = None
+
         self.params = []
         self.retracted = []
+
+        self.moved = set()
+        self.deleted = set()
+
         self.extract_data(targets)
+
         self.image_window = ImageWindow(self)
         self.thumbnail = ThumbnailView(self)
         self.listview = Listview(self)
         self.main_menu = MainMenu(self)
+
         self.tab_linker = TabMenu(self)
         self.tab_linker_enable = [False, 'Prompt']
 
@@ -59,6 +67,9 @@ class ResultWindow(QMainWindow):
         thumbnail_tab_bar = config.get('ThumbnailTabBar', False)
         tab_bar_orientation = config.get('ThumbnailTabBarVertical', True)
         filepaths = [value.params.get('Filepath') for value in self.params]
+
+        self.moved.clear()
+        self.deleted.clear()
 
         length = 2 if tab_bar_orientation else 1
         tab_bar_position = 1 if tab_bar_orientation else 0
@@ -440,14 +451,12 @@ class ResultWindow(QMainWindow):
 
         if where_from == 'Favourite':
             result, error = self.manage_image_files([current_index], self)
-            self.sender().setDisabled(True)
         elif where_from == 'Move to':
             result, error = self.manage_image_files([current_index], self, 'move')
             str_result = 'Moved!'
         elif where_from == 'Delete':
             result, error = self.manage_image_files([current_index], self, 'delete')
             str_result = 'Deleted!'
-            self.sender().setDisabled(True)
 
         if result and not error:
             self.toast_window.init_toast(str_result, 1000)
@@ -571,7 +580,7 @@ class ResultWindow(QMainWindow):
                 dictionary_list = [self.params[i].params for i in indexes]
             else:
                 dictionary_list = [value.params for value in self.params]
-            self.thumbnail.init_thumbnail(dictionary_list)
+            self.thumbnail.init_thumbnail(dictionary_list, self.moved, self.deleted)
 
     def open_listview(self, indexes=None):
         if self.listview.isVisible():
@@ -595,8 +604,9 @@ class ResultWindow(QMainWindow):
             os.makedirs(destination, exist_ok=True)
             is_move = True
         else:
-            self.dialog.init_dialog('choose-directory', 'Select Directory')
-            destination = self.dialog.result[0] if self.dialog.result else None
+            dialog = FileDialog(where_from)
+            dialog.init_dialog('choose-directory', 'Select Directory')
+            destination = dialog.result[0] if dialog.result else None
 
         if kind == 'favourite' and not destination:
             text = "Couldn't find setting of destination directory.\nPlease check setting in 'config.ini' file."
@@ -646,7 +656,12 @@ class ResultWindow(QMainWindow):
                     self.tab_bar.image_moved([index])
                 elif self.tab_bar and kind == 'delete':
                     self.tab_bar.image_deleted([index])
+                if kind == 'delete':
+                    self.deleted.add(index)
+                else:
+                    self.moved.add(index)
                 self.params[index].params['Filepath'] = filepath
+                self.params[index].params['Filename'] = filename
                 succeeds.append([index, filepath])
             else:
                 errors.append(f'{source}\n{filepath}\n{error}')
