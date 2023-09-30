@@ -590,7 +590,7 @@ class ResultWindow(QMainWindow):
                 dictionary_list = [self.params[i].params for i in indexes]
             else:
                 dictionary_list = [value.params for value in self.params]
-            self.listview.init_listview(dictionary_list)
+            self.listview.init_listview(dictionary_list, self.moved, self.deleted)
 
     def manage_image_files(self, indexes: list, where_from, kind='favourite'):
         results = []
@@ -855,7 +855,7 @@ class ResultWindow(QMainWindow):
 
     def change_themes(self):
         if self.dark:
-            qdarktheme.setup_theme('light')
+            qdarktheme.setup_theme('light', additional_qss=custom_stylesheet('theme', 'light'))
             self.dark = False
             self.main_menu.theme_check()
         else:
@@ -902,7 +902,7 @@ def from_main(purpose, target_data=None):
         if theme:
             qdarktheme.setup_theme(additional_qss=add_stylesheet())
         else:
-            qdarktheme.setup_theme('light')
+            qdarktheme.setup_theme('light', additional_qss=custom_stylesheet('theme', 'light'))
         open_directory = FileDialog()
         open_directory.init_dialog('choose-directory', 'Select directory')
         result = open_directory.result
@@ -912,7 +912,7 @@ def from_main(purpose, target_data=None):
         if theme:
             qdarktheme.setup_theme(additional_qss=add_stylesheet())
         else:
-            qdarktheme.setup_theme('light')
+            qdarktheme.setup_theme('light', additional_qss=custom_stylesheet('theme', 'light'))
         open_files = FileDialog()
         open_files.init_dialog('choose-files', 'Select files', None, 'PNG')
         result = open_files.result
@@ -926,7 +926,7 @@ def from_main(purpose, target_data=None):
             if theme:
                 qdarktheme.setup_theme(additional_qss=add_stylesheet())
             else:
-                qdarktheme.setup_theme('light')
+                qdarktheme.setup_theme('light', additional_qss=custom_stylesheet('theme', 'light'))
         progress = ProgressDialog()
         return app, progress
     elif purpose == 'result':
@@ -938,7 +938,7 @@ def from_main(purpose, target_data=None):
             if theme:
                 qdarktheme.setup_theme(additional_qss=add_stylesheet())
             else:
-                qdarktheme.setup_theme('light')
+                qdarktheme.setup_theme('light', additional_qss=custom_stylesheet('theme', 'light'))
         result_window = ResultWindow(target_data)
         result_window.show()
         sys.exit(app.exec())

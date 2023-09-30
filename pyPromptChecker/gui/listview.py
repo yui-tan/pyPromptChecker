@@ -1,56 +1,62 @@
 # -*- coding: utf-8 -*-
 
-from . import config
-from .dialog import ProgressDialog
+from .widget import *
+from .dialog import *
+from .custom import *
+from .menu import ThumbnailMenu
 from .viewer import DiffWindow
-from .widget import PixmapLabel
-from .widget import ClickableGroup
-from .widget import portrait_generator
-from .widget import make_keybindings
-from PyQt6.QtWidgets import QApplication, QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QGroupBox, QScrollArea
-from PyQt6.QtWidgets import QWidget, QComboBox, QLabel, QPushButton, QSpacerItem
-from PyQt6.QtCore import Qt, QTimer
+from . import config
+
+import os
+from PyQt6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QScrollArea
+from PyQt6.QtWidgets import QWidget, QComboBox, QLabel, QPushButton
+from PyQt6.QtCore import Qt, QTimer, QPoint
 
 
 class Listview(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.size = config.get('ListViewPixmapSize', 200)
         self.setWindowTitle('Listview')
-        self.param_list = []
-        self.status = ['Timestamp', 'Seed', 'Sampler', 'Steps', 'CFG scale', 'Model', 'VAE', 'Version']
-        self.selected = set()
-        self.changed = 0
+        self.borders = []
+        self.menu = ThumbnailMenu(self)
         make_keybindings(self)
 
-    def init_listview(self, param_list):
-        self.setCentralWidget(None)
-        self.param_list = param_list
-        file_counts = len(param_list)
-
+    def init_listview(self, param_list: list, moved: set = None, deleted: set = None):
         progress = ProgressDialog()
         progress.setLabelText('Loading...')
-        progress.setRange(0, file_counts)
+        progress.setRange(0, len(param_list))
+
+        self.setCentralWidget(None)
+
+        estimated_height = 0
+        size = config.get('ListViewPixmapSize', 200)
 
         root_widget = QWidget()
         root_layout = QVBoxLayout()
 
         central_widget = QWidget()
         central_widget_layout = QVBoxLayout()
-        scroll_area = QScrollArea()
-        group_box = None
 
-        for file_count in range(file_counts):
-            group_box = self._groups(file_count)
-            root_layout.addWidget(group_box)
+        scroll_area = QScrollArea()
+
+        for index, param in enumerate(param_list):
+            listview_border = ListviewBorder(index, param, size, self)
+            estimated_height += (listview_border.sizeHint().height() + 50)
+            root_layout.addWidget(listview_border)
+            self.borders.append(listview_border)
+
+            if moved and index in moved:
+                listview_border.set_moved()
+
+            if deleted and index in deleted:
+                listview_border.set_deleted()
+
             progress.update_value()
 
         root_widget.setLayout(root_layout)
 
-        groupbox_count = 4 if file_counts > 4 else file_counts
         estimated_width = root_widget.sizeHint().width() + 50
-        estimated_height = group_box.sizeHint().height() * groupbox_count + 50
-        estimated_height = 750 if estimated_height > 750 else estimated_height
+        estimated_height = 800 if estimated_height > 800 else estimated_height
 
         scroll_area.setWidget(root_widget)
         scroll_area.setMinimumWidth(estimated_width)
@@ -67,150 +73,8 @@ class Listview(QMainWindow):
         self.setCentralWidget(central_widget)
 
         self.show()
-        self.move_centre()
-
-    def _groups(self, index):
-        group = ClickableGroup()
-        group.setObjectName(f'group_{index}')
-        group.clicked.connect(self._listview_clicked)
-        group_layout = QHBoxLayout()
-
-        status_label_layout = QGridLayout()
-        pixmap_label = self._pixmap_label(index)
-
-        for i, key in enumerate(self.status):
-            item = self.param_list[index].get(key, 'None')
-
-            title_label = QLabel(key)
-            title_label.setObjectName(f'{i}_title')
-            status_label = QLabel(item)
-            status_label.setObjectName(f'{i}_value')
-            spacer_1 = QSpacerItem(20, 20)
-            spacer_2 = QSpacerItem(20, 20)
-
-            size_policy_title = title_label.sizePolicy()
-            size_policy_value = status_label.sizePolicy()
-            size_policy_title.setHorizontalStretch(1)
-            size_policy_value.setHorizontalStretch(5)
-            title_label.setSizePolicy(size_policy_title)
-            status_label.setSizePolicy(size_policy_value)
-
-            title_label.setFixedSize(100, 20)
-            status_label.setFixedHeight(20)
-            status_label.setMinimumWidth(200)
-
-            status_label_layout.addItem(spacer_1, i, 0)
-            status_label_layout.addWidget(title_label, i, 1)
-            status_label_layout.addItem(spacer_2, i, 2)
-            status_label_layout.addWidget(status_label, i, 3)
-
-        j = 0
-        k = 0
-        creation = 'T2I'
-        addnet = any(key in v for v in self.param_list[index] for key in ['Lora', 'Textual inversion', 'Add network'])
-        cfg = any(key in v for v in self.param_list[index] for key in
-                  ['Dynamic thresholding enabled', 'CFG auto', 'CFG scheduler'])
-
-        if any(key in v for v in self.param_list[index] for key in ['Upscaler', 'Extras']):
-            creation = 'I2I'
-        if self.param_list[index].get('Positive') == 'This file has no embedded data':
-            creation = '---'
-        if 'Mask blur' in self.param_list[index]:
-            creation = 'inpaint'
-
-        extension_label_layout = QGridLayout()
-
-        for condition_list in [
-            [self.param_list[index].get('Extensions', '---'), 'Extension'],
-            [creation, 'Creation'],
-            ['Extras', 'Extras' in self.param_list[index]],
-            ['Variation', 'Variation seed' in self.param_list[index]],
-            ['Hires.fix', 'Hires upscaler' in self.param_list[index]],
-            ['Lora/AddNet', addnet],
-            ['CFG', cfg],
-            ['Tiled Diffusion', 'Tiled diffusion' in self.param_list[index]],
-            ['ControlNet', 'ControlNet' in self.param_list[index]],
-            ['Regional', 'RP Active' in self.param_list[index]]
-        ]:
-
-            title, status = condition_list
-
-            extension_label = QLabel(title)
-            extension_label.setMaximumWidth(100)
-            extension_label.setMinimumWidth(100)
-            extension_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-            if not status:
-                extension_label.setDisabled(True)
-                extension_label.setStyleSheet(style_sheet('extension_label_disabled'))
-
-            elif status == 'Extension':
-                style = style_sheet('extension_label')
-                if title == 'PNG':
-                    style = style.replace('@@@', 'green')
-                    extension_label.setStyleSheet(style)
-                elif title == 'JPEG':
-                    style = style.replace('@@@', 'blue')
-                    extension_label.setStyleSheet(style)
-                elif title == 'WEBP':
-                    style = style.replace('@@@', 'red')
-                    extension_label.setStyleSheet(style)
-                else:
-                    extension_label.setDisabled(True)
-                    extension_label.setStyleSheet(style_sheet('extension_label_disabled'))
-
-            elif status == 'Creation':
-                style = style_sheet('extension_label')
-                if title == 'I2I' or title == 'inpaint':
-                    style = style.replace('@@@', 'red')
-                    extension_label.setStyleSheet(style)
-                    if title == 'inpaint':
-                        extension_label.setText('inpaint')
-                    else:
-                        extension_label.setText('img2img')
-
-                elif title == 'T2I':
-                    style = style.replace('@@@', 'palette(highlight)')
-                    extension_label.setStyleSheet(style)
-                    extension_label.setText('txt2img')
-
-                else:
-                    extension_label.setDisabled(True)
-                    extension_label.setStyleSheet(style_sheet('extension_label_disabled'))
-            else:
-                extension_label.setStyleSheet(style_sheet('extension_label_available'))
-
-            extension_label_layout.addWidget(extension_label, j, k)
-
-            if j == 4:
-                k += 1
-                j = 0
-            else:
-                j += 1
-
-        group_layout.addWidget(pixmap_label)
-        group_layout.addLayout(status_label_layout)
-        group_layout.addLayout(extension_label_layout)
-
-        group.setLayout(group_layout)
-        group.setTitle(self.param_list[index].get('Filepath', 'None'))
-
-        return group
-
-    def _pixmap_label(self, index):
-        filepath = self.param_list[index].get('Filepath', None)
-        pixmap_label = PixmapLabel()
-        if filepath:
-            pixmap = portrait_generator(filepath, self.size)
-            pixmap_label.setPixmap(pixmap)
-            pixmap_label.clicked.connect(self._listview_clicked)
-            pixmap_label.setObjectName(f'pixmap_{index}')
-        else:
-            pixmap_label.setText("Couldn't load image.")
-        pixmap_label.setMinimumSize(self.size, self.size)
-        pixmap_label.setMaximumSize(self.size, self.size)
-        pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        return pixmap_label
+        self.resize(estimated_width, estimated_height)
+        move_centre(self)
 
     def _header_section(self):
         row = 1
@@ -239,7 +103,7 @@ class Listview(QMainWindow):
         header_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         header_layout.addWidget(header_label, 0, 0, 1, 4)
 
-        for index, status in enumerate(self.status):
+        for index, status in enumerate(('Timestamp', 'Seed', 'Sampler', 'Steps', 'CFG scale', 'Model', 'VAE', 'Version')):
             combo_box = QComboBox()
             combo_box.setObjectName(f'status_{index}')
             combo_box.currentIndexChanged.connect(self._status_changed)
@@ -254,17 +118,27 @@ class Listview(QMainWindow):
         return header_layout
 
     def _footer_section(self):
-        footer_layout = QHBoxLayout()
-        for tmp in ['Export selected JSON', 'Diff', 'Interrogate', 'Close']:
-            button = QPushButton(tmp)
-            button.setObjectName(tmp)
-            footer_layout.addWidget(button)
+        button_layout = QHBoxLayout()
+        management = config.get('MoveDelete', False)
+        buttons = ('Select all', 'Export JSON', 'Diff', 'Interrogate', 'Close')
+        if management:
+            buttons = ('Select all', 'Export JSON', 'Diff', 'Interrogate', 'Add favourite', 'Close')
+
+        for button_text in buttons:
+            button = QPushButton() if button_text != 'Add favourite' else ButtonWithMenu()
+            button.setText(button_text)
+            button.setObjectName(button_text)
+            button_layout.addWidget(button)
+
             button.clicked.connect(self._footer_button_clicked)
-        return footer_layout
+            if button_text == 'Add favourite':
+                button.rightClicked.connect(self._footer_submenu)
+
+        return button_layout
 
     def _status_changed(self):
         if self.centralWidget():
-            status_number = self.sender().objectName()
+            status_number = self.sender().objectName().split('_')[1]
             status_str = self.sender().currentText()
 
             if status_str == 'Var. seed':
@@ -278,32 +152,224 @@ class Listview(QMainWindow):
             else:
                 search_str = status_str
 
-            group_boxes = [widget for widget in self.centralWidget().findChildren(QGroupBox)]
-            for index, group_box in enumerate(group_boxes):
-                value = self.param_list[index].get(search_str, 'None')
-                title_label = group_box.findChild(QLabel, status_number + '_title')
-                value_label = group_box.findChild(QLabel, status_number + '_value')
+            for index, border in enumerate(self.borders):
+                value = border.params.get(search_str, 'None')
+                title_label = border.findChild(QLabel, status_number + '_title')
+                value_label = border.findChild(QLabel, status_number + '_value')
 
                 title_label.setText(status_str)
                 value_label.setText(value)
 
-    def _listview_clicked(self):
-        name = self.sender().objectName()
-        widget, number = name.split('_')
-        index = int(number)
+    def _footer_button_clicked(self):
+        where_from = self.sender().objectName()
+        selected_index = set()
+        window = self.parent()
 
-        if self.isActiveWindow():
-            if widget == 'pixmap' and self.changed == 0:
-                self.parent().root_tab.setCurrentIndex(index)
-                self.parent().activateWindow()
-                self.changed = 1
-            elif widget == 'group' and self.changed == 0:
-                if index in self.selected:
-                    self.sender().setStyleSheet('')
-                    self.selected.discard(index)
+        for border in self.borders:
+            if border.selected:
+                selected_index.add(border.index)
+
+        if len(selected_index) > 0:
+            if where_from == 'Add favourite':
+                self.management_image('favourite')
+
+            elif where_from == 'Export JSON':
+                if hasattr(window, 'export_json_selected'):
+                    self.parent().export_json_selected(selected_index)
+
+            elif where_from == 'Interrogate':
+                if hasattr(window, 'add_interrogate_tab'):
+                    self.parent().add_interrogate_tab(2, selected_index)
+
+            elif where_from == 'Diff':
+                if len(selected_index) == 2:
+                    result = [self.borders[i].params for i in selected_index]
+                    diff = DiffWindow(result, self)
+                    move_centre(diff)
+
+        if where_from == 'Close':
+            self.close()
+
+        elif where_from == 'Select all':
+            if len(selected_index) == len(self.borders):
+                for border in self.borders:
+                    border.set_deselected()
+            else:
+                for border in self.borders:
+                    border.set_selected()
+
+    def _footer_submenu(self):
+        x = self.sender().mapToGlobal(self.sender().rect().topLeft()).x()
+        y = self.sender().mapToGlobal(self.sender().rect().topLeft()).y() - self.menu.sizeHint().height()
+        adjusted_pos = QPoint(x, y)
+        self.menu.exec(adjusted_pos)
+
+    def management_image(self, kind: str):
+        selected = set()
+
+        for border in self.borders:
+            if border.selected:
+                selected.add(border.index)
+
+        if hasattr(self.parent(), 'manage_image_files'):
+            success, error = self.parent().manage_image_files(selected, self, kind)
+        else:
+            success, error = None, 'An unexpected error has occurred.'
+
+        if not success and not error:
+            return
+
+        if success:
+            deselect_target = [[value[0], value[1]] for value in success if value[0] in selected]
+            for index, filepath in deselect_target:
+                widget = self.borders[index]
+                widget.set_deselected()
+                widget.title_change(filepath)
+
+                if kind == 'delete':
+                    widget.set_deleted()
                 else:
-                    self.sender().setStyleSheet(style_sheet('group_selected'))
-                    self.selected.add(index)
+                    widget.set_moved()
+
+        if error:
+            text = '\n'.join(error)
+            MessageBox(text, 'Error', 'ok', 'critical', self)
+
+
+class ListviewBorder(ClickableGroup):
+    def __init__(self, index: int, params: dict, size: int = 200, parent=None):
+        super().__init__(parent)
+        self.parent_window = parent
+        self.size = size
+        self.index = index
+        self.params = params
+        self.pixmap_label = None
+        self.status_labels = []
+        self.selected = False
+        self.moved = False
+        self.deleted = False
+        self.changed = 0
+        self.status = ['Timestamp', 'Seed', 'Sampler', 'Steps', 'CFG scale', 'Model', 'VAE', 'Version']
+        self._init_class()
+
+        self.setObjectName(f'group_{index}')
+        self.clicked.connect(self._toggle_selected)
+
+    def _init_class(self):
+        layout = QHBoxLayout()
+
+        layout.addWidget(self._pixmap_label())
+        layout.addLayout(self._status_labels())
+        layout.addLayout(self._extension_labels())
+
+        self.setLayout(layout)
+        self.setTitle(self.params.get('Filepath', 'None'))
+
+    def _pixmap_label(self):
+        filepath = self.params.get('Filepath')
+        pixmap = portrait_generator(filepath, self.size)
+        pixmap_label = PixmapLabel()
+        pixmap_label.setPixmap(pixmap)
+        pixmap_label.setFixedSize(self.size, self.size)
+        pixmap_label.clicked.connect(self._toggle_selected)
+        pixmap_label.rightClicked.connect(self._toggle_selected)
+        pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        pixmap_label.setObjectName(f'pixmap_{self.index}')
+        return pixmap_label
+
+    def _status_labels(self):
+        status_layout = QGridLayout()
+        status_layout.setColumnMinimumWidth(0, 20)
+        status_layout.setColumnMinimumWidth(0, 20)
+
+        for index, key in enumerate(self.status):
+            item = self.params.get(key, 'None')
+
+            title_label = QLabel(key)
+            title_label.setObjectName(f'{index}_title')
+            status_label = QLabel(item)
+            status_label.setObjectName(f'{index}_value')
+
+            title_label.setFixedSize(100, 20)
+            status_label.setFixedHeight(20)
+            status_label.setMinimumWidth(200)
+
+            status_layout.addWidget(title_label, index, 1)
+            status_layout.addWidget(status_label, index, 3)
+
+        return status_layout
+
+    def _extension_labels(self):
+        j = 0
+        k = 0
+        extension_layout = QGridLayout()
+
+        creation = 'txt2img'
+        if any(key in v for v in self.params for key in ('Upscaler', 'Extras')):
+            creation = 'img2img'
+        if self.params.get('Positive') == 'This file has no embedded data':
+            creation = '---'
+        if 'Mask blur' in self.params:
+            creation = 'inpaint'
+
+        addnet = any(key in v for v in self.params for key in ('Lora', 'Textual inversion', 'Add network'))
+        cfg = any(key in v for v in self.params for key in ('Dynamic thresholding enabled', 'CFG auto', 'CFG scheduler'))
+
+        for condition_list in [
+            [self.params.get('Extensions', '---'), 'extension'],
+            [creation, 'creation'],
+            ['Extras', 'Extras' in self.params],
+            ['Variation', 'Variation seed' in self.params],
+            ['Hires.fix', 'Hires upscaler' in self.params],
+            ['Lora/AddNet', addnet],
+            ['CFG', cfg],
+            ['Tiled Diffusion', 'Tiled diffusion' in self.params],
+            ['ControlNet', 'ControlNet' in self.params],
+            ['Regional', 'RP Active' in self.params]
+        ]:
+
+            title, status = condition_list
+
+            extension_label = QLabel(title)
+            extension_label.setFixedWidth(100)
+            extension_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+            if not status or title == '---':
+                extension_label.setDisabled(True)
+                extension_label.setStyleSheet(custom_stylesheet('extension_label_disable', 'disabled'))
+
+            elif status == 'extension' and title != '---':
+                extension_label.setStyleSheet(custom_stylesheet('extension_label', title))
+
+            elif status == 'creation' and title != '---':
+                extension_label.setStyleSheet(custom_stylesheet('extension_label', title))
+
+            else:
+                extension_label.setStyleSheet(custom_stylesheet('extension_label', 'available'))
+
+            extension_layout.addWidget(extension_label, j, k)
+
+            if j == 4:
+                k += 1
+                j = 0
+            else:
+                j += 1
+
+        return extension_layout
+
+    def _toggle_selected(self):
+        if self.parent_window.isActiveWindow():
+            if 'group' in self.sender().objectName() and self.changed == 0:
+                if self.selected:
+                    self.set_deselected()
+                else:
+                    self.set_selected()
+                self.changed = 1
+
+            elif 'pixmap' in self.sender().objectName() and self.changed == 0:
+                if hasattr(self.parent_window.parent(), 'root_tab'):
+                    self.parent_window.parent().root_tab.setCurrentIndex(self.index)
+                    self.parent_window.parent().pixmap_clicked()
                 self.changed = 1
 
             self.timer = QTimer()
@@ -314,47 +380,38 @@ class Listview(QMainWindow):
         self.changed = 0
         self.timer.stop()
 
-    def _footer_button_clicked(self):
-        where_from = self.sender().objectName()
-        if where_from == 'Close':
-            self.close()
-        elif where_from == 'Export selected JSON':
-            self.parent().export_json_selected(self.selected)
-        elif where_from == 'Interrogate':
-            self.parent().add_interrogate_tab(2, self.selected)
-        elif where_from == 'Diff':
-            if len(self.selected) == 2:
-                params = [self.param_list[i] for i in self.selected]
-                diff = DiffWindow(params, self)
-                diff.show()
-                diff.move_centre()
+    def _pixmap_clicked(self):
+        if hasattr(self.parent_window.parent(), 'root_tab'):
+            self.parent_window.parent().root_tab.setCurrentIndex(self.index)
+            self.parent_window.parent().pixmap_clicked()
 
-    def move_centre(self):
-        if not self.parent() or not self.parent().isVisible():
-            screen_center = QApplication.primaryScreen().geometry().center()
-        else:
-            screen_center = self.parent().geometry().center()
-        frame_geometry = self.frameGeometry()
-        frame_geometry.moveCenter(screen_center)
-        self.move(frame_geometry.topLeft())
+    def set_selected(self):
+        current_stylesheet = self.styleSheet()
+        current_stylesheet = custom_stylesheet('groupbox', 'current') + current_stylesheet
+        self.setStyleSheet(current_stylesheet)
+        self.selected = True
 
+    def set_deselected(self):
+        current_stylesheet = self.styleSheet()
+        target = custom_stylesheet('groupbox', 'current')
+        current_stylesheet = current_stylesheet.replace(target, '')
+        self.selected = False
+        self.setStyleSheet(current_stylesheet)
 
-def style_sheet(purpose: str):
-    if purpose == 'extension_label':
-        return 'border-radius: 5px ; ' \
-               'border: 2px solid @@@ ; ' \
-               'background-color: @@@ ; ' \
-               'color: white ;'
+    def set_moved(self):
+        self.moved = True
+        self.deleted = False
+        self.setStyleSheet(custom_stylesheet('title', 'moved'))
 
-    elif purpose == 'extension_label_available':
-        return 'border-radius: 5px ; ' \
-               'border: 2px solid palette(highlight) ; ' \
-               'background-color: palette(highlight) ; ' \
-               'color: white ;'
+    def set_deleted(self):
+        self.moved = False
+        self.deleted = True
+        self.setStyleSheet(custom_stylesheet('title', 'deleted'))
 
-    elif purpose == 'extension_label_disabled':
-        return 'border-radius: 5px ; ' \
-               'border: 1px solid palette(shadow);'
-
-    elif purpose == 'group_selected':
-        return 'QGroupBox { border: 2px solid #86cecb; padding : 1px 0 0 0; }'
+    def title_change(self, filepath: str):
+        current_filepath = self.params.get('Filepath')
+        if filepath != current_filepath:
+            filename = os.path.basename(filepath)
+            self.params['Filepath'] = filepath
+            self.params['Filename'] = filename
+            self.setTitle(filepath)

@@ -127,7 +127,7 @@ class MoveDelete(QWidget):
         if directory == trash_bin:
             self.toggle_button('d', True)
 
-        if fav and directory == fav:
+        if not fav or (fav and directory == fav):
             self.toggle_button('f', True)
 
     def toggle_button(self, which, disable=True):
