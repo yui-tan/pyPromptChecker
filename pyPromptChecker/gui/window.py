@@ -739,6 +739,8 @@ class ResultWindow(QMainWindow):
                 MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
 
     def export_json_selected(self, selected_files):
+        if isinstance(selected_files, set):
+            selected_files = list(selected_files)
         filename = config.get('JsonSelected', 'selected')
         if filename == 'selected':
             filename = self.params[selected_files[0]].params.get('Filepath')
