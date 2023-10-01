@@ -19,7 +19,7 @@ class Listview(QMainWindow):
         self.setWindowTitle('Listview')
         self.borders = []
         self.menu = ThumbnailMenu(self)
-        make_keybindings(self)
+        custom_keybindings(self)
 
     def init_listview(self, param_list: list, moved: set = None, deleted: set = None):
         progress = ProgressDialog()

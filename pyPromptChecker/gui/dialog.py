@@ -113,17 +113,15 @@ class InterrogateSelectDialog(QDialog):
 
 class FileDialog(QFileDialog):
 
-    def __init__(self, parent=None):
+    def __init__(self, category: str, title: str, parent: object = None, file_filter: str = None, filename: str = None):
         super().__init__(parent)
         self.result = None
-        self.setDirectory(os.path.expanduser('~'))
-        self.file_filter = 'All files(*.*)'
-
-    def init_dialog(self, category, title, filename=None, file_filter=None):
-        self.result = None
+        self.file_filter = ''
         self.setWindowTitle(title)
         self.set_filter(file_filter)
-        self.set_category(category, filename)
+        self.setDirectory(os.path.expanduser('~'))
+        self.category = category
+        self.set_category(self.category, filename)
 
         if self.exec():
             self.result = self.selectedFiles()
@@ -136,13 +134,11 @@ class FileDialog(QFileDialog):
             self.setOption(QFileDialog.Option.ShowDirsOnly, False)
             self.selectFile(filename)
         elif category == 'choose-files':
-            self.selectFile('*')
             self.setFileMode(QFileDialog.FileMode.ExistingFiles)
             self.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
             self.setNameFilter(self.file_filter)
             self.setOption(QFileDialog.Option.ShowDirsOnly, False)
         elif category == 'choose-directory':
-            self.selectFile('*')
             self.setFileMode(QFileDialog.FileMode.Directory)
             self.setOption(QFileDialog.Option.ShowDirsOnly, True)
 
@@ -221,8 +217,7 @@ class Toast(QWidget):
         self.timer = None
         self.message_label = QLabel()
         self.setWindowTitle("Toast")
-        self.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowDoesNotAcceptFocus)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowDoesNotAcceptFocus)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setStyleSheet("background-color: rgba(50, 50, 50, 150); color: white; padding: 10px; border-radius: 5px;")
         self.hide()

@@ -55,7 +55,7 @@ class ResultWindow(QMainWindow):
 
         self.setWindowTitle('PNG Prompt Data')
 
-        make_keybindings(self)
+        custom_keybindings(self)
 
         self.show()
         self.adjustSize()
@@ -106,7 +106,6 @@ class ResultWindow(QMainWindow):
         self.root_tab.currentChanged.connect(self.tab_changed)
 
         self.toast_window = Toast(self)
-        self.dialog = FileDialog(self)
 
     def extract_data(self, targets):
         png_index = config.get('TargetChunkIndex', 1)
@@ -604,8 +603,7 @@ class ResultWindow(QMainWindow):
             os.makedirs(destination, exist_ok=True)
             is_move = True
         else:
-            dialog = FileDialog(where_from)
-            dialog.init_dialog('choose-directory', 'Select Directory')
+            dialog = FileDialog('choose-directory', 'Select Directory', parent=where_from)
             destination = dialog.result[0] if dialog.result else None
 
         if kind == 'favourite' and not destination:
@@ -668,13 +666,13 @@ class ResultWindow(QMainWindow):
         return succeeds, errors
 
     def import_json_from_files(self):
-        self.dialog.init_dialog('choose-files', 'Select JSONs', None, 'JSON')
-        filepaths = self.dialog.result
+        dialog = FileDialog('choose-files', 'Select JSONs', self, 'JSON')
+        filepaths = dialog.result
         self.import_json(filepaths)
 
     def import_json_from_directory(self):
-        self.dialog.init_dialog('choose-directory', 'Select directory')
-        directory = self.dialog.result
+        dialog = FileDialog('choose-directory', 'Select directory', self)
+        directory = dialog.result
         if directory:
             filepaths = [os.path.join(directory[0], value) for value in os.listdir(directory[0]) if '.json' in value]
             self.import_json(filepaths)
@@ -712,8 +710,8 @@ class ResultWindow(QMainWindow):
         if filename == 'filename':
             filename = self.params[current_index].params.get('Filepath')
             filename = os.path.splitext(os.path.basename(filename))[0] + '.json'
-        self.dialog.init_dialog('save-file', 'Save JSON', filename, 'JSON')
-        filepath = self.dialog.result[0] if self.dialog.result else None
+        dialog = FileDialog('save-file', 'Save JSON', self, 'JSON', filename)
+        filepath = dialog.result[0] if dialog.result else None
         if filepath:
             result, e = io.export_json(data, filepath)
             if not e:
@@ -726,8 +724,8 @@ class ResultWindow(QMainWindow):
         if filename == 'directory':
             filename = self.params[0].params.get('Filepath')
             filename = os.path.basename(os.path.dirname(filename)) + '.json'
-        self.dialog.init_dialog('save-file', 'Save JSON', filename, 'JSON')
-        filepath = self.dialog.result[0] if self.dialog.result else None
+        dialog = FileDialog('save-file', 'Save JSON', self, 'JSON', filename)
+        filepath = dialog.result[0] if dialog.result else None
         if filepath:
             dict_list = []
             for tmp in self.params:
@@ -745,8 +743,8 @@ class ResultWindow(QMainWindow):
         if filename == 'selected':
             filename = self.params[selected_files[0]].params.get('Filepath')
             filename = os.path.splitext(os.path.basename(filename))[0] + '_and_so_on.json'
-        self.dialog.init_dialog('save-file', 'Save JSON', filename, 'JSON')
-        destination = self.dialog.result[0] if self.dialog.result else None
+        dialog = FileDialog('save-file', 'Save JSON', self, 'JSON', filename)
+        destination = dialog.result[0] if dialog.result else None
         if destination:
             dict_list = []
             for index in selected_files:
@@ -778,8 +776,8 @@ class ResultWindow(QMainWindow):
         self.reselect_files(True)
 
     def reselect_files(self, add=False):
-        self.dialog.init_dialog('choose-files', 'Select files', None, 'PNG')
-        filepath = self.dialog.result
+        dialog = FileDialog('choose-files', 'Select files', self, 'PNG')
+        filepath = dialog.result
         result_list = []
         duplicate = 0
         flag = False
@@ -831,8 +829,8 @@ class ResultWindow(QMainWindow):
         mode = which_mode.selected
 
         if result == QDialog.DialogCode.Accepted:
-            self.dialog.init_dialog('choose-directory', 'Select Directory', None, '')
-            directory = self.dialog.result[0] if self.dialog.result else None
+            select_directory = FileDialog('choose-directory', 'Select directory', parent=self)
+            directory = select_directory.result[0] if select_directory.result else None
             if directory:
                 operation_progress = ProgressDialog(self)
                 file_list = os.listdir(directory)
@@ -857,11 +855,11 @@ class ResultWindow(QMainWindow):
 
     def change_themes(self):
         if self.dark:
-            qdarktheme.setup_theme('light', additional_qss=custom_stylesheet('theme', 'light'))
+            qdarktheme.setup_theme('light')
             self.dark = False
             self.main_menu.theme_check()
         else:
-            qdarktheme.setup_theme(additional_qss=add_stylesheet())
+            qdarktheme.setup_theme('dark', additional_qss=custom_stylesheet('theme', 'dark'))
             self.dark = True
             self.main_menu.theme_check()
 
@@ -880,43 +878,25 @@ class ResultWindow(QMainWindow):
         QApplication.quit()
 
 
-def add_stylesheet():
-    stylesheet = "QPushButton { color: #86cecb; }" \
-                 "QPushButton:hover { background:rgba(134, 206, 203, 0.110) }" \
-                 "QPushButton:default { background: #86cecb; }" \
-                 "QPushButton:default:hover {background: #86cecb; }" \
-                 "QPushButton:default:pressed,QPushButton:default:checked {background: #86cecb; }" \
-                 "QLabel { selection-background-color: #137a7f; }" \
-                 "QTextEdit:focus, QTextEdit:selected { selection-background-color: #137a7f; }" \
-                 "QTextEdit:focus { border-color: #86cecb; }" \
-                 "QSplitter:handle:hover { background-color: #86cecb; }" \
-                 "QTabBar:tab:selected:enabled { color: #86cecb; border-color: #86cecb; }" \
-                 "QProgressBar::chunk {background: #86cecb; }" \
-                 "QCheckBox:hover,QRadioButton:hover {border-bottom:2px solid #86cecb; }"
-    return stylesheet
-
-
 def from_main(purpose, target_data=None):
     theme = config.get('AlwaysStartWithDarkMode')
     icon_path = config.get('IconPath')
     if purpose == 'directory':
         app = QApplication(sys.argv)
         if theme:
-            qdarktheme.setup_theme(additional_qss=add_stylesheet())
+            qdarktheme.setup_theme('dark', additional_qss=custom_stylesheet('theme', 'dark'))
         else:
-            qdarktheme.setup_theme('light', additional_qss=custom_stylesheet('theme', 'light'))
-        open_directory = FileDialog()
-        open_directory.init_dialog('choose-directory', 'Select directory')
+            qdarktheme.setup_theme('light')
+        open_directory = FileDialog('choose-directory', 'Select directory')
         result = open_directory.result
         return result
     elif purpose == 'files':
         app = QApplication(sys.argv)
         if theme:
-            qdarktheme.setup_theme(additional_qss=add_stylesheet())
+            qdarktheme.setup_theme('dark', additional_qss=custom_stylesheet('theme', 'dark'))
         else:
-            qdarktheme.setup_theme('light', additional_qss=custom_stylesheet('theme', 'light'))
-        open_files = FileDialog()
-        open_files.init_dialog('choose-files', 'Select files', None, 'PNG')
+            qdarktheme.setup_theme('light')
+        open_files = FileDialog('choose-files', 'Select files', file_filter='PNG')
         result = open_files.result
         return result
     elif purpose == 'progress':
@@ -926,9 +906,9 @@ def from_main(purpose, target_data=None):
             if icon_path:
                 app.setWindowIcon(QIcon(icon_path))
             if theme:
-                qdarktheme.setup_theme(additional_qss=add_stylesheet())
+                qdarktheme.setup_theme('dark', additional_qss=custom_stylesheet('theme', 'dark'))
             else:
-                qdarktheme.setup_theme('light', additional_qss=custom_stylesheet('theme', 'light'))
+                qdarktheme.setup_theme('light')
         progress = ProgressDialog()
         return app, progress
     elif purpose == 'result':
@@ -938,9 +918,9 @@ def from_main(purpose, target_data=None):
             if icon_path:
                 app.setWindowIcon(QIcon(icon_path))
             if theme:
-                qdarktheme.setup_theme(additional_qss=add_stylesheet())
+                qdarktheme.setup_theme('dark', additional_qss=custom_stylesheet('theme', 'dark'))
             else:
-                qdarktheme.setup_theme('light', additional_qss=custom_stylesheet('theme', 'light'))
+                qdarktheme.setup_theme('light')
         result_window = ResultWindow(target_data)
         result_window.show()
         sys.exit(app.exec())

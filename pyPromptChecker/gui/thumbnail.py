@@ -19,7 +19,7 @@ class ThumbnailView(QMainWindow):
         self.setWindowTitle('Thumbnail View')
         self.borders = []
         self.menu = ThumbnailMenu(self)
-        make_keybindings(self)
+        custom_keybindings(self)
 
     def init_thumbnail(self, param_list: list, moved: set = None, deleted: set = None):
         progress = ProgressDialog()

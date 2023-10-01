@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from PyQt6.QtGui import QKeySequence, QColor
-from PyQt6.QtCore import Qt
+import sys
+from PyQt6.QtGui import QKeySequence, QShortcut, QColor
 
 
 def custom_stylesheet(category: str, purpose: str):
@@ -25,20 +25,26 @@ def custom_stylesheet(category: str, purpose: str):
     elif category == 'title':
         style = 'QGroupBox::title {color: @@@; }'
         return style.replace('@@@', custom_color(purpose))
+    elif category == 'slider':
+        return custom_color(purpose)
     elif category == 'theme':
         if purpose == 'dark':
-            return ("QPushButton { color: #86cecb; } "
+            return ("QPushButton { color: rgba(134, 206, 203, 1.0); } "
                     "QPushButton:hover { background:rgba(134, 206, 203, 0.110) } "
-                    "QPushButton:default { background: #86cecb; } "
-                    "QPushButton:default:hover {background: #86cecb; } "
-                    "QPushButton:default:pressed,QPushButton:default:checked {background: #86cecb; } "
-                    "QLabel { selection-background-color: #137a7f; } "
-                    "QTextEdit:focus, QTextEdit:selected { selection-background-color: #137a7f; } "
-                    "QTextEdit:focus { border-color: #86cecb; } "
-                    "QSplitter:handle:hover { background-color: #86cecb; } "
-                    "QTabBar:tab:selected:enabled { color: #86cecb; border-color: #86cecb; } "
-                    "QProgressBar::chunk {background: #86cecb; } "
-                    "QCheckBox:hover,QRadioButton:hover {border-bottom:2px solid #86cecb; }")
+                    "QPushButton:default { background: rgba(134, 206, 203, 1.0); } "
+                    "QPushButton:default:hover {background: rgba(134, 206, 203, 1.0); } "
+                    "QPushButton:default:pressed,QPushButton:default:checked {background: rgba(134, 206, 203, 1.0); } "
+                    "QLabel { selection-background-color: rgba(19, 122, 127, 1.0); } "
+                    "QTextEdit:focus, QTextEdit:selected, QLineEdit:focus, QLineEdit:selected { selection-background-color: rgba(19, 122, 127, 1.0); } "
+                    "QTextEdit:focus, QLineEdit:focus { border-color: rgba(134, 206, 203, 1.0); } "
+                    "QSplitter:handle:hover { background-color: rgba(134, 206, 203, 1.0); } "
+                    "QTabBar:tab:selected:enabled { color: #86cecb; border-color: rgba(134, 206, 203, 1.0); } "
+                    "QProgressBar::chunk {background: rgba(134, 206, 203, 1.0); } "
+                    "QCheckBox:hover,QRadioButton:hover {border-bottom:2px solid rgba(134, 206, 203, 1.0); }"
+                    "QSlider::sub-page:horizontal,QSlider::add-page:vertical,QSlider::handle {background: rgba(134, 206, 203, 1.0)}"
+                    "QComboBox::item:selected {background: rgba(134, 206, 203, 0.400);}"
+                    "QComboBox:focus, QComboBox:open {border-color: rgba(134, 206, 203, 1.0)}"
+                    "QComboBox::item:selected {border:none; background:rgba(134, 206, 203, 0.400); border-radius:4px}")
 
         if purpose == 'light':
             return ("QPushButton { color: rgba(19, 122, 127, 1.0); } "
@@ -52,7 +58,11 @@ def custom_stylesheet(category: str, purpose: str):
                     "QSplitter:handle:hover { background-color: rgba(19, 122, 127, 0.5); } "
                     "QTabBar:tab:selected:enabled { color: rgba(19, 122, 127, 1.0); border-color: rgba(19, 122, 127, 1.0); } "
                     "QProgressBar::chunk {background: rgba(19, 122, 127, 0.8); } "
-                    "QCheckBox:hover,QRadioButton:hover {border-bottom:2px solid rgba(19, 122, 127, 1.0); }")
+                    "QCheckBox:hover,QRadioButton:hover {border-bottom:2px solid rgba(19, 122, 127, 1.0); }"
+                    "QSlider::sub-page:horizontal,QSlider::add-page:vertical,QSlider::handle {background: rgba(19, 122, 127, 1.0)}"
+                    "QComboBox::item:selected {background: rgba(19, 122, 127, 0.400);}"
+                    "QComboBox:focus, QComboBox:open {border-color: rgba(19, 122, 127, 1.0)}"
+                    "QComboBox::item:selected {border:none; background:rgba(19, 122, 127, 0.400); border-radius:4px}")
 
 
 def custom_color(purpose):
@@ -82,13 +92,29 @@ def custom_color(purpose):
         return 'blue'
     elif purpose == 'WEBP' or purpose == 'img2img' or purpose == 'inpaint':
         return 'red'
+    elif purpose == 'confidence':
+        return 'QSlider::handle:horizontal {height: 0px; width: 0px; border-radius: 0px; }' \
+               'QSlider::sub-page {background: rgba(134, 206, 203, 0.8)}'
     else:
         return
 
 
+def custom_keybindings(parent):
+    if parent.parent() is not None:
+        parent = parent.parent()
+
+    toggle_theme_shortcut = QShortcut(QKeySequence('Ctrl+D'), parent)
+    toggle_tab_bar_shortcut = QShortcut(QKeySequence('Ctrl+B'), parent)
+    add_tab_shortcut = QShortcut(QKeySequence('Ctrl+O'), parent)
+    replace_tab_shortcut = QShortcut(QKeySequence('Ctrl+N'), parent)
+    quit_shortcut = QShortcut(QKeySequence('Ctrl+Q'), parent)
+
+    toggle_tab_bar_shortcut.activated.connect(parent.bar_toggle)
+    toggle_theme_shortcut.activated.connect(parent.change_themes)
+    add_tab_shortcut.activated.connect(parent.reselect_files_append)
+    replace_tab_shortcut.activated.connect(parent.reselect_files)
+    quit_shortcut.activated.connect(lambda: sys.exit())
+
+
 def custom_text(purpose):
-    pass
-
-
-def custom_keybindings(purpose):
     pass

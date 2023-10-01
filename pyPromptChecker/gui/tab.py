@@ -5,10 +5,11 @@ from PyQt6.QtWidgets import QWidget, QScrollArea, QVBoxLayout, QHBoxLayout, QPus
 from PyQt6.QtWidgets import QGridLayout, QTextEdit, QLineEdit, QComboBox, QSlider, QLabel, QGroupBox
 from PyQt6.QtCore import Qt, QTimer
 
-from . import config
 from .viewer import DiffWindow
 from .widget import PixmapLabel
 from .widget import portrait_generator
+from .custom import *
+from . import config
 
 
 class TabBar(QWidget):
@@ -16,7 +17,6 @@ class TabBar(QWidget):
         super().__init__(parent)
         self.scroll_contents = QWidget()
         self.diff_button = QPushButton()
-        self.scroll_contents.setContentsMargins(0, 0, 0, 0)
         self.filepaths = filepaths
         self.current = 0
         self.moved = set()
@@ -28,12 +28,12 @@ class TabBar(QWidget):
 
     def _init_bar(self, vertical: bool):
         root_layout = QVBoxLayout() if vertical else QHBoxLayout()
+        root_layout.setContentsMargins(0, 0, 0, 0)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        scroll.setContentsMargins(0, 0, 0, 0)
         scroll.setStyleSheet('border: none; padding: 0px')
 
         if not vertical:
@@ -46,6 +46,7 @@ class TabBar(QWidget):
 
         layout = QVBoxLayout() if vertical else QHBoxLayout()
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
+        layout.setContentsMargins(0, 0, 0, 0)
 
         self.scroll_contents.setLayout(layout)
         scroll.setWidget(self.scroll_contents)
@@ -331,7 +332,8 @@ class InterrogateTab(QStackedWidget):
                 main_group_layout.addWidget(slider, index, 2)
 
             else:
-                slider = main_slider('chara_confidence', text[1], 10000, style_sheet(0), True)
+                style = custom_stylesheet('slider', 'confidence')
+                slider = main_slider('chara_confidence', text[1], 10000, style, True)
                 main_group_layout.addWidget(title, index, 0)
                 main_group_layout.addWidget(slider, index, 1, 1, 2)
 
@@ -367,6 +369,7 @@ class InterrogateTab(QStackedWidget):
 
         splitter.addWidget(tag_confidence_group)
         splitter.addWidget(self.prompt_box_2)
+        splitter.setContentsMargins(0, 0, 0, 0)
 
         page2_layout.addWidget(splitter)
         page2_layout.addLayout(buttons)
@@ -402,7 +405,8 @@ class InterrogateTab(QStackedWidget):
             value = QLabel(f'{item * 100:.4f}%')
             value.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
             rating_section_layout.addWidget(value, i, 2)
-            confidence = main_slider(key, int(item * 1000000), 1000000, style_sheet(0), True)
+            style = custom_stylesheet('slider', 'confidence')
+            confidence = main_slider(key, int(item * 1000000), 1000000, style, True)
             rating_section_layout.addWidget(confidence, i + 1, 0, 1, 3)
             i += 2
 
@@ -426,16 +430,17 @@ class InterrogateTab(QStackedWidget):
         scroll_area_contents.setContentsMargins(0, 0, 0, 0)
 
         content_layout = QGridLayout()
-        content_layout.setSpacing(1)
-        content_layout.setColumnMinimumWidth(1, minimum_size + 100)
+        content_layout.setSpacing(0)
 
         i = 0
         for key, item in tags:
             title = QLabel(key)
             content_layout.addWidget(title, i, 0)
             value = QLabel(f'{item * 100:.4f}%')
-            content_layout.addWidget(value, i, 2)
-            confidence = main_slider(key, int(item * 1000000), 1000000, style_sheet(0), True)
+            content_layout.addWidget(value, i, 2, alignment=Qt.AlignmentFlag.AlignRight)
+            style = custom_stylesheet('slider', 'confidence')
+            confidence = main_slider(key, int(item * 1000000), 1000000, style, True)
+            confidence.setMinimumWidth(minimum_size + 275)
             content_layout.addWidget(confidence, i + 1, 0, 1, 3)
             i += 2
 
@@ -521,9 +526,3 @@ def main_slider(name: str, value: int, slider_range: int, style=None, disabled=F
         slider.setStyleSheet(style)
 
     return slider
-
-
-def style_sheet(number):
-    if number == 0:
-        return "QSlider::handle:horizontal {height: 0px; width: 0px; border-radius: 0px; }" \
-               "QSlider::sub-page {background: rgba(19, 122, 127, 0.5)}"
