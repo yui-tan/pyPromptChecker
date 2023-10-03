@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 
 import re
-from .dialog import MessageBox
 from PyQt6.QtWidgets import QDialog, QGridLayout, QGroupBox, QCheckBox, QSlider
 from PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QLineEdit, QComboBox
 from PyQt6.QtWidgets import QRadioButton
 from PyQt6.QtGui import QRegularExpressionValidator
 from PyQt6.QtCore import Qt, QRegularExpression
 
+from .dialog import MessageBox
+
 
 class SearchWindow(QDialog):
-    def __init__(self, model_list, parent=None):
+    def __init__(self, model_list: list, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Search")
         self.conditions = {}
@@ -24,15 +25,15 @@ class SearchWindow(QDialog):
         self.search_cfg_label = None
         self.search_button = None
         self.central_widget = None
-        self.init_search_window(model_list)
+        self._init_search_window(model_list)
 
-    def init_search_window(self, model_list):
+    def _init_search_window(self, model_list: list):
         layout = QGridLayout()
 
         result_label = QLabel('Result shows: ')
         result_box = QComboBox()
         result_box.addItems(['Tabs', 'Listview', 'Thumbnails'])
-        result_box.currentIndexChanged.connect(self.result_change)
+        result_box.currentIndexChanged.connect(self._result_change)
 
         prompt_group = QGroupBox()
         prompt_group.setTitle('Search Keywords')
@@ -88,7 +89,7 @@ class SearchWindow(QDialog):
         search_cfg.setOrientation(Qt.Orientation.Horizontal)
         search_cfg.setTickInterval(1)
         search_cfg.setRange(0, 40)
-        search_cfg.valueChanged.connect(self.value_change)
+        search_cfg.valueChanged.connect(self._value_change)
 
         for i, tmp in enumerate(['Less than', 'Equal to', 'Greater than']):
             radio_button = QRadioButton(tmp)
@@ -125,7 +126,7 @@ class SearchWindow(QDialog):
         self.extension = extension_group
 
         search_button = QPushButton("Search", self)
-        search_button.clicked.connect(self.search)
+        search_button.clicked.connect(self._do_search)
         close_button = QPushButton('Close', self)
         close_button.clicked.connect(self.window_close)
 
@@ -141,20 +142,13 @@ class SearchWindow(QDialog):
         central_widget.setLayout(layout)
         self.setLayout(layout)
 
-    def show_dialog(self):
-        self.show()
-        self.search_box.setFocus()
-
-    def result_change(self):
+    def _result_change(self):
         self.result = self.sender().currentText()
 
-    def value_change(self):
+    def _value_change(self):
         self.search_cfg_label.setText('CFG : ' + str(self.sender().value() * 0.5))
 
-    def window_close(self):
-        self.close()
-
-    def search(self):
+    def _do_search(self):
         self.conditions['Result'] = self.result
         if self.prompt.isChecked():
             self.conditions['Search'] = self.search_box.text()
@@ -185,7 +179,7 @@ class SearchWindow(QDialog):
                 self.conditions[tmp.objectName()] = tmp.isChecked()
         self.conditions['Extension'] = self.extension.isChecked()
 
-        if self.validation():
+        if self._validation():
             result = self.conditions.get('Result', 'Tabs')
             params = [value.params for value in self.parent().params]
 
@@ -208,7 +202,7 @@ class SearchWindow(QDialog):
             else:
                 MessageBox('There is no match to show.', 'Search result', 'ok', 'info', self)
 
-    def validation(self):
+    def _validation(self):
         words = self.conditions.get('Search', 'None')
         count = words.count('"')
 
@@ -223,6 +217,13 @@ class SearchWindow(QDialog):
             return False
 
         return True
+
+    def show_dialog(self):
+        self.show()
+        self.search_box.setFocus()
+
+    def window_close(self):
+        self.close()
 
 
 def cfg_checks(cfg_keywords, relation, targets):

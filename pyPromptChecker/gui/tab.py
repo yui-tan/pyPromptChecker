@@ -8,7 +8,9 @@ from PyQt6.QtCore import Qt, QTimer
 from .viewer import DiffWindow
 from .widget import PixmapLabel
 from .widget import portrait_generator
+from .widget import move_centre
 from .custom import *
+from .dialog import Toast
 from . import config
 
 
@@ -147,8 +149,7 @@ class TabBar(QWidget):
                 for i in self.selected:
                     params.append(parent.params[i].params)
                 diff = DiffWindow(params, parent)
-                diff.show()
-                diff.move_centre()
+                move_centre(diff)
         elif where_from == 'L':
             parent.open_listview()
         elif where_from == 'T':
@@ -233,8 +234,10 @@ class TabBar(QWidget):
 
 
 class InterrogateTab(QStackedWidget):
-    def __init__(self, result_list: list, parent=None):
+    def __init__(self, result_list: list, parent=None, link=None):
         super().__init__(parent)
+        self.root_tab = link
+        self.sync = False
         self.page0 = QWidget()
         self.page1 = None
         self.page2 = None
@@ -308,6 +311,8 @@ class InterrogateTab(QStackedWidget):
 
             elif text[0] == 'Estimated tags (editable)':
                 self.prompt_box_1.setText(self.prompt)
+                self.prompt_box_1.setObjectName('prompt_1')
+                self.prompt_box_1.textChanged.connect(self._text_box_1_changed)
                 page1_layout.addWidget(self.prompt_box_1, 1, 0, 1, 2)
 
             elif text[0] == 'Tag :' or text[0] == 'Character :':
@@ -366,6 +371,8 @@ class InterrogateTab(QStackedWidget):
         tag_confidence_group = self._tag_section()
         buttons = self._footer_button(2)
         self.prompt_box_2.setText(self.prompt)
+        self.prompt_box_2.setObjectName('prompt_2')
+        self.prompt_box_2.textChanged.connect(self._text_box_2_changed)
 
         splitter.addWidget(tag_confidence_group)
         splitter.addWidget(self.prompt_box_2)
@@ -462,6 +469,20 @@ class InterrogateTab(QStackedWidget):
             footer_button_layout.addWidget(button)
         return footer_button_layout
 
+    def _text_box_1_changed(self):
+        if not self.sync:
+            self.sync = True
+            text = self.prompt_box_1.toPlainText()
+            self.prompt_box_2.setPlainText(text)
+            self.sync = False
+
+    def _text_box_2_changed(self):
+        if not self.sync:
+            self.sync = True
+            text = self.prompt_box_2.toPlainText()
+            self.prompt_box_1.setPlainText(text)
+            self.sync = False
+
     def _model_change(self):
         self.model = self.sender().currentText().lower()
 
@@ -483,9 +504,9 @@ class InterrogateTab(QStackedWidget):
         where_from = self.sender().objectName()
 
         if where_from == 'Export text':
-            pass
+            self.export_text()
         elif where_from == 'Export all text':
-            pass
+            self.root_tab.export_all_text()
         elif where_from == 'Re-interrogate':
             self.re_interrogate()
         elif where_from == 'Tag confidence':
@@ -493,8 +514,17 @@ class InterrogateTab(QStackedWidget):
         elif where_from == 'Main status':
             self.setCurrentIndex(1)
 
-    def export_text(self):
-        pass
+    def export_text(self, external=False):
+        destination_dir = os.path.dirname(self.filepath)
+        destination_filename = os.path.splitext(os.path.basename(self.filepath))[0] + '.txt'
+        destination = os.path.join(destination_dir, destination_filename)
+        export_str = self.prompt_box_1.toPlainText()
+        with open(destination, 'w', encoding='utf-8') as f:
+            f.write(export_str)
+        if os.path.exists(destination):
+            if not external:
+                toast = Toast(self.root_tab)
+                toast.init_toast('Exported', 1000)
 
     def re_interrogate(self):
         from pyPromptChecker.lora import interrogate

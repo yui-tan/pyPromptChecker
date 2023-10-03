@@ -1,19 +1,13 @@
 # -*- coding: utf-8 -*-
+
 import os.path
 import sys
 import qdarktheme
 
-# sys.path.append('../')
-# from lib import *
-
-from pyPromptChecker.lib import *
-from pyPromptChecker.lora import *
-from .search import SearchWindow
 from PyQt6.QtWidgets import QApplication, QLabel, QTabWidget, QHBoxLayout, QGridLayout, QPushButton, QComboBox, QTextEdit
 from PyQt6.QtGui import QKeySequence, QPalette, QIcon
 from PyQt6.QtCore import Qt, QPoint, QTimer
 
-from . import config
 from .dialog import *
 from .widget import *
 from .menu import *
@@ -22,6 +16,15 @@ from .thumbnail import *
 from .listview import *
 from .tab import *
 from .custom import *
+from .search import SearchWindow
+from . import config
+
+from pyPromptChecker.lib import *
+from pyPromptChecker.lora import *
+
+# sys.path.append('../')
+# from lib import *
+# from lora import *
 
 
 class ResultWindow(QMainWindow):
@@ -516,7 +519,7 @@ class ResultWindow(QMainWindow):
                         break
 
                 interrogate_result = interrogate(model, filepath, tag, chara)
-                interrogate_tab = InterrogateTab(interrogate_result, extension_tab)
+                interrogate_tab = InterrogateTab(interrogate_result, extension_tab, self)
                 extension_tab.addTab(interrogate_tab, 'Interrogate')
                 new_index = extension_tab.indexOf(interrogate_tab)
                 extension_tab.setCurrentIndex(new_index)
@@ -702,6 +705,14 @@ class ResultWindow(QMainWindow):
                 self.progress_bar.setRange(0, len(self.params))
             self.init_ui()
             self.toast_window.init_toast('Imported!', 1000)
+
+    def export_all_text(self):
+        for i in range(self.root_tab.count()):
+            extension_tab = self.root_tab.widget(i).findChild(QTabWidget, 'extension_tab')
+            interrogate_tab = extension_tab.findChild(QStackedWidget, 'interrogate')
+            if interrogate_tab is not None:
+                interrogate_tab.export_text(True)
+        self.toast_window.init_toast('Exported!', 1000)
 
     def export_json_single(self):
         current_index = self.root_tab.currentIndex()

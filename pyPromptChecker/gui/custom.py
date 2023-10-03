@@ -65,7 +65,7 @@ def custom_stylesheet(category: str, purpose: str):
                     "QComboBox::item:selected {border:none; background:rgba(19, 122, 127, 0.400); border-radius:4px}")
 
 
-def custom_color(purpose):
+def custom_color(purpose: str):
     if purpose == 'Q_moved':
         return QColor(0, 112, 255, 255)
     elif purpose == 'Q_deleted':
@@ -99,7 +99,7 @@ def custom_color(purpose):
         return
 
 
-def custom_keybindings(parent):
+def custom_keybindings(parent: object):
     if parent.parent() is not None:
         parent = parent.parent()
 

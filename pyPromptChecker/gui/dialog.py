@@ -4,19 +4,20 @@ import os
 from PyQt6.QtWidgets import QFileDialog, QProgressDialog, QMessageBox, QLabel, QWidget, QVBoxLayout, QApplication
 from PyQt6.QtWidgets import QDialog, QRadioButton, QPushButton, QHBoxLayout, QComboBox, QSlider, QGridLayout
 from PyQt6.QtCore import Qt, QTimer
+from .widget import move_centre
 
 
 class SelectDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent: object = None):
         super().__init__(parent)
         self.setWindowTitle('Model hash extractor')
         self.selected = 0
         self.model = None
         self.lora = None
-        self.init_select_dialog()
+        self._init_select_dialog()
         self.resize(200, 80)
 
-    def init_select_dialog(self):
+    def _init_select_dialog(self):
         layout = QVBoxLayout()
         button_layout = QHBoxLayout()
 
@@ -29,16 +30,16 @@ class SelectDialog(QDialog):
 
         self.model = QRadioButton('Model / VAE hash')
         self.model.setChecked(True)
-        self.model.toggled.connect(self.toggle_radio_button)
+        self.model.toggled.connect(self._toggle_radio_button)
         self.lora = QRadioButton('LoRa / Textual inversion hash')
-        self.lora.toggled.connect(self.toggle_radio_button)
+        self.lora.toggled.connect(self._toggle_radio_button)
         layout.addWidget(self.model)
         layout.addWidget(self.lora)
         layout.addLayout(button_layout)
 
         self.setLayout(layout)
 
-    def toggle_radio_button(self):
+    def _toggle_radio_button(self):
         if self.model.isChecked():
             self.selected = 0
         elif self.lora.isChecked():
@@ -46,7 +47,7 @@ class SelectDialog(QDialog):
 
 
 class InterrogateSelectDialog(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent: object = None):
         super().__init__(parent)
         self.setWindowTitle('Interrogate Settings')
         self.selected_model = 'moat'
@@ -118,15 +119,15 @@ class FileDialog(QFileDialog):
         self.result = None
         self.file_filter = ''
         self.setWindowTitle(title)
-        self.set_filter(file_filter)
+        self._set_filter(file_filter)
         self.setDirectory(os.path.expanduser('~'))
         self.category = category
-        self.set_category(self.category, filename)
+        self._set_category(self.category, filename)
 
         if self.exec():
             self.result = self.selectedFiles()
 
-    def set_category(self, category, filename):
+    def _set_category(self, category: str, filename: str):
         if category == 'save-file':
             self.setFileMode(QFileDialog.FileMode.AnyFile)
             self.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
@@ -142,7 +143,7 @@ class FileDialog(QFileDialog):
             self.setFileMode(QFileDialog.FileMode.Directory)
             self.setOption(QFileDialog.Option.ShowDirsOnly, True)
 
-    def set_filter(self, str_filter):
+    def _set_filter(self, str_filter: str):
         if str_filter == 'JSON':
             self.file_filter = 'JSON Files(*.json)'
         elif str_filter == 'PNG':
@@ -151,7 +152,7 @@ class FileDialog(QFileDialog):
 
 class ProgressDialog(QProgressDialog):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: object = None):
         super().__init__(parent)
         self.setWindowTitle("Progress")
         self.setWindowModality(Qt.WindowModality.WindowModal)
@@ -159,38 +160,29 @@ class ProgressDialog(QProgressDialog):
         self.setMinimumDuration(0)
         self.setValue(0)
         self.now = 0
-        self.move_centre(parent)
+        move_centre(self)
 
     def update_value(self):
         now = self.now + 1
         self.setValue(now)
         self.now = now
 
-    def move_centre(self, parent=None):
-        if not parent or not parent.isVisible():
-            screen_center = QApplication.primaryScreen().geometry().center()
-        else:
-            screen_center = parent.geometry().center()
-        frame_geometry = self.frameGeometry()
-        frame_geometry.moveCenter(screen_center)
-        self.move(frame_geometry.topLeft())
-
 
 class MessageBox(QMessageBox):
-    def __init__(self, text, title='pyPromptChecker', style='ok', icon='info', parent=None):
+    def __init__(self, text: str, title: str = 'pyPromptChecker', style: str = 'ok', icon: str = 'info', parent=None):
         super().__init__(parent)
         self.success = False
         self.setText(text)
         self.setWindowTitle(title)
-        self.set_style(style)
-        self.add_icon(icon)
+        self._set_style(style)
+        self._add_icon(icon)
 
         self.result = self.exec()
 
         if self.result == QMessageBox.StandardButton.Ok:
             self.success = True
 
-    def set_style(self, style):
+    def _set_style(self, style: str):
         if 'ok' in style:
             self.addButton(QMessageBox.StandardButton.Ok)
         if 'no' in style:
@@ -198,7 +190,7 @@ class MessageBox(QMessageBox):
         if 'cancel' in style:
             self.addButton(QMessageBox.StandardButton.Cancel)
 
-    def add_icon(self, icon):
+    def _add_icon(self, icon: str):
         if icon == 'critical':
             self.setIcon(QMessageBox.Icon.Critical)
         elif icon == 'warning':
@@ -212,7 +204,7 @@ class MessageBox(QMessageBox):
 
 
 class Toast(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent: object = None):
         super().__init__(parent)
         self.timer = None
         self.message_label = QLabel()
@@ -226,7 +218,7 @@ class Toast(QWidget):
         toast_layout.addWidget(self.message_label)
         self.setLayout(toast_layout)
 
-    def init_toast(self, message, duration=2000):
+    def init_toast(self, message: str, duration: int = 2000):
         self.message_label.setText(message)
         self.show()
         self.adjustSize()
@@ -239,9 +231,9 @@ class Toast(QWidget):
         self.move(x - adjust_x, y - adjust_y)
 
         self.timer = QTimer()
-        self.timer.timeout.connect(self.close_toast)
+        self.timer.timeout.connect(self._close_toast)
         self.timer.start(duration)
 
-    def close_toast(self):
+    def _close_toast(self):
         self.timer.stop()
         self.close()

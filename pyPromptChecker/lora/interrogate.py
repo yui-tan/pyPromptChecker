@@ -5,11 +5,16 @@ import sys
 import PIL.Image
 import functools
 import os
-import cv2
 import huggingface_hub
+
 import numpy as np
-import onnxruntime
-import pandas
+from onnxruntime import InferenceSession
+from pandas import read_csv
+from cv2 import resize
+from cv2 import copyMakeBorder
+from cv2 import BORDER_CONSTANT
+from cv2 import INTER_AREA
+from cv2 import INTER_CUBIC
 
 HF_TOKEN = os.environ.get("HF_TOKEN", "cpu")
 
@@ -25,27 +30,25 @@ def make_square(img, target_size):
     left, right = delta_w // 2, delta_w - (delta_w // 2)
 
     color = [255, 255, 255]
-    new_im = cv2.copyMakeBorder(
-        img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color
+    new_im = copyMakeBorder(
+        img, top, bottom, left, right, BORDER_CONSTANT, value=color
     )
     return new_im
 
 
 def smart_resize(img, size):
     if img.shape[0] > size:
-        img = cv2.resize(img, (size, size), interpolation=cv2.INTER_AREA)
+        img = resize(img, (size, size), interpolation=INTER_AREA)
     elif img.shape[0] < size:
-        img = cv2.resize(img, (size, size), interpolation=cv2.INTER_CUBIC)
+        img = resize(img, (size, size), interpolation=INTER_CUBIC)
     return img
 
 
 def model_downloads(repository, filename, label_file, model_name):
     model_path = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.models/' + model_name)
     os.makedirs(model_path, exist_ok=True)
-    huggingface_hub.hf_hub_download(repository, filename, local_dir=model_path, local_dir_use_symlinks=False,
-                                    use_auth_token=HF_TOKEN)
-    huggingface_hub.hf_hub_download(repository, label_file, local_dir=model_path, local_dir_use_symlinks=False,
-                                    use_auth_token=HF_TOKEN)
+    huggingface_hub.hf_hub_download(repository, filename, local_dir=model_path, local_dir_use_symlinks=False, use_auth_token=HF_TOKEN)
+    huggingface_hub.hf_hub_download(repository, label_file, local_dir=model_path, local_dir_use_symlinks=False, use_auth_token=HF_TOKEN)
 
 
 def model_loads(model_name, filename):
@@ -56,7 +59,7 @@ def model_loads(model_name, filename):
         print('Error')
         return None
 
-    loaded_model = onnxruntime.InferenceSession(model_path)
+    loaded_model = InferenceSession(model_path, providers=['CPUExecutionProvider'])
     return loaded_model
 
 
@@ -68,7 +71,7 @@ def label_loads(model_name, filename):
         print('Error')
         return None
 
-    tags = pandas.read_csv(label)
+    tags = read_csv(label)
     t_names = tags['name'].tolist()
     r_indexes = list(np.where(tags["category"] == 9)[0])
     g_indexes = list(np.where(tags["category"] == 0)[0])
