@@ -114,9 +114,8 @@ def main():
         valid_filepath.sort()
         window.from_main('result', valid_filepath)
 #        app = QApplication(sys.argv)
-#        main_data = controller.MainData(valid_filepath)
+#        main_data = controller.ImageController(valid_filepath)
 #        sys.exit(app.exec())
-#        pass
     else:
         print('Cancelled!')
 

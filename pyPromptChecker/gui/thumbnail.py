@@ -39,8 +39,7 @@ class ThumbnailView(QMainWindow):
 
         for index, param in enumerate(param_list):
             real_row = row
-            portrait_border = ThumbnailBorder(index, param, size)
-            portrait_border.pixmap_label.rightClicked.connect(self._pixmap_clicked)
+            portrait_border = ThumbnailBorder(index, param, size, self)
             self.borders.append(portrait_border)
             estimated_height = portrait_border.sizeHint().height()
             thumbnails_layout.addWidget(portrait_border, row, col)
@@ -156,12 +155,6 @@ class ThumbnailView(QMainWindow):
         adjusted_pos = QPoint(x, y)
         self.menu.exec(adjusted_pos)
 
-    def _pixmap_clicked(self):
-        if hasattr(self.parent(), 'root_tab'):
-            number = self.sender().parent().index
-            self.parent().root_tab.setCurrentIndex(number)
-            self.parent().pixmap_clicked()
-
     def management_image(self, kind: str):
         selected = set()
 
@@ -194,6 +187,7 @@ class ThumbnailView(QMainWindow):
 class ThumbnailBorder(ClickableGroup):
     def __init__(self, index: int, params: dict, size: int = 150, parent=None):
         super().__init__(parent)
+        self.parent_window = parent
         self.size = size
         self.index = index
         self.params = params
@@ -230,6 +224,7 @@ class ThumbnailBorder(ClickableGroup):
         pixmap_label.setPixmap(pixmap)
         pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
         pixmap_label.setObjectName(f'pixmap_{self.index}')
+        pixmap_label.rightClicked.connect(self._pixmap_clicked)
         self.pixmap_label = pixmap_label
 
     def _tooltip(self):
@@ -245,6 +240,11 @@ class ThumbnailBorder(ClickableGroup):
         label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
         label.setFixedHeight(30)
         self.label = label
+
+    def _pixmap_clicked(self):
+        if hasattr(self.parent_window.parent(), 'root_tab'):
+            self.parent_window.parent().root_tab.setCurrentIndex(self.index)
+            self.parent_window.parent().pixmap_clicked()
 
     def _toggle_selected(self):
         if self.selected:
