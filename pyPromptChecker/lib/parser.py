@@ -30,6 +30,8 @@ class ChunkData:
         self.params = {}
         self.used_params = {}
 
+        self.index = -1
+
     def init_class(self):
         if not self.data:
             self.data = 'This file has no embedded data'
@@ -75,6 +77,9 @@ class ChunkData:
 
         self.main_status_parse()
         self.make_dictionary()
+
+    def set_index(self, index):
+        self.index = index
 
     def data_refresh(self, delete_target, add_list):
         if delete_target:

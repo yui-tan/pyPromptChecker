@@ -9,7 +9,6 @@ setup(
         'pypng',
         'pillow',
         'pyqtdarktheme',
-        'pandas',
         'onnxruntime',
         'numpy',
         'opencv-python',

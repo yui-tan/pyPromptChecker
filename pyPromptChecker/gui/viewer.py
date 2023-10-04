@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import difflib
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, QGridLayout
-from PyQt6.QtWidgets import QScrollArea, QLabel, QTextEdit, QSplitter, QPushButton
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QHBoxLayout, QGridLayout
+from PyQt6.QtWidgets import QScrollArea, QLabel, QTextEdit, QPushButton, QStackedWidget
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtCore import Qt
 
@@ -52,16 +52,16 @@ class ImageWindow(QMainWindow):
 
 
 class DiffWindow(QMainWindow):
-    def __init__(self, params, parent=None):
+    def __init__(self, params: list, parent=None):
         super().__init__(parent)
+        self.status = None
         self.params = params
         self.setWindowTitle('Diff Window')
         self.init_diff()
         self.setMinimumSize(1000, 1000)
 
     def init_diff(self):
-        statuses = ['Filepath',
-                    'Extensions',
+        statuses = ['Extensions',
                     'Timestamp',
                     'Image size',
                     'Size',
@@ -86,15 +86,24 @@ class DiffWindow(QMainWindow):
         diff_layout = QGridLayout()
 
         for i in range(len(self.params)):
+            filepath = self.params[i].get('Filepath')
+            filepath_label = QLabel(filepath)
+            filepath_label.setFixedSize(500, 25)
+            filepath_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            diff_layout.addWidget(filepath_label, 0, i)
+
             pixmap_label = PixmapLabel()
-            pixmap = QPixmap(self.params[i].get('Filepath'))
+            pixmap = QPixmap(filepath)
             pixmap = pixmap.scaled(500, 500, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
             pixmap_label.setPixmap(pixmap)
             pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
             pixmap_label.setFixedSize(500, 500)
+            diff_layout.addWidget(pixmap_label, 1, i)
 
-            diff_layout.addWidget(pixmap_label, 0, i)
+        status_widget = QStackedWidget()
 
+        page0 = QWidget()
+        page0_layout = QHBoxLayout()
         scroll_source = QScrollArea()
         scroll_target = QScrollArea()
         scroll_area_source = QWidget()
@@ -103,22 +112,11 @@ class DiffWindow(QMainWindow):
         scroll_layout_target = QGridLayout()
 
         html_tag = '<span style="color: red; font-weight: bold;">@@@</span>'
-        source_splitter = QSplitter(Qt.Orientation.Vertical)
-        target_splitter = QSplitter(Qt.Orientation.Vertical)
         for index, status in enumerate(statuses):
             source = self.params[0].get(status, 'None')
             target = self.params[1].get(status, 'None')
 
-            if status == 'Variation seed':
-                status = 'Var. seed'
-            elif status == 'Variation seed strength':
-                status = 'Var. strength'
-            elif status == 'Seed resize from':
-                status = 'Resize from'
-            elif status == 'Denoising strength':
-                status = 'Denoising'
-
-            if not source == target and index > 2:
+            if not source == target and index > 1:
                 status = html_tag.replace('@@@', status)
                 source = html_tag.replace('@@@', source)
                 target = html_tag.replace('@@@', target)
@@ -154,20 +152,45 @@ class DiffWindow(QMainWindow):
         scroll_target.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_target.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
-        source_splitter.addWidget(scroll_source)
-        target_splitter.addWidget(scroll_target)
+        page0_layout.addWidget(scroll_source)
+        page0_layout.addWidget(scroll_target)
+        page0.setLayout(page0_layout)
 
-        for key in ['Positive', 'Negative']:
-            source_textbox, target_textbox = self.make_textbox(key)
-            source_splitter.addWidget(source_textbox)
-            target_splitter.addWidget(target_textbox)
+        page1 = QWidget()
+        page1_layout = QHBoxLayout()
+        source_textbox, target_textbox = self.make_textbox('Positive')
+        page1_layout.addWidget(source_textbox)
+        page1_layout.addWidget(target_textbox)
+        page1.setLayout(page1_layout)
 
-        diff_layout.addWidget(source_splitter, 1, 0, 4, 1)
-        diff_layout.addWidget(target_splitter, 1, 1, 4, 1)
+        page2 = QWidget()
+        page2_layout = QHBoxLayout()
+        source_textbox, target_textbox = self.make_textbox('Negative')
+        page2_layout.addWidget(source_textbox)
+        page2_layout.addWidget(target_textbox)
+        page2.setLayout(page2_layout)
 
+        status_widget.addWidget(page0)
+        status_widget.addWidget(page1)
+        status_widget.addWidget(page2)
+
+        diff_layout.addWidget(status_widget, 2, 0, 4, 2)
+        self.status = status_widget
+
+        button_layout = QHBoxLayout()
         close_button = QPushButton('Close')
+        page0_button = QPushButton('Main status')
+        page1_button = QPushButton('Positive')
+        page2_button = QPushButton('Negative')
         close_button.clicked.connect(lambda: self.close())
-        diff_layout.addWidget(close_button, 5, 0, 1, 2)
+        page0_button.clicked.connect(lambda: self.status.setCurrentIndex(0))
+        page1_button.clicked.connect(lambda: self.status.setCurrentIndex(1))
+        page2_button.clicked.connect(lambda: self.status.setCurrentIndex(2))
+        button_layout.addWidget(page0_button)
+        button_layout.addWidget(page1_button)
+        button_layout.addWidget(page2_button)
+        button_layout.addWidget(close_button)
+        diff_layout.addLayout(button_layout, 6, 0, 1, 2)
 
         diff.setLayout(diff_layout)
         central_widget_layout.addWidget(diff)

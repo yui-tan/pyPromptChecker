@@ -3,6 +3,8 @@
 import os
 import sys
 import argparse
+import controller
+from PyQt6.QtWidgets import QApplication
 
 from lib import decoder
 from gui import window
@@ -111,6 +113,10 @@ def main():
         print('a hoy!!!!')
         valid_filepath.sort()
         window.from_main('result', valid_filepath)
+#        app = QApplication(sys.argv)
+#        main_data = controller.MainData(valid_filepath)
+#        sys.exit(app.exec())
+#        pass
     else:
         print('Cancelled!')
 

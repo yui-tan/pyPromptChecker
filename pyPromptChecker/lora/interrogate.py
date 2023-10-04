@@ -1,20 +1,16 @@
 # -*- coding: utf-8 -*-
 
 from PIL import Image
+from onnxruntime import InferenceSession
+
+import csv
 import sys
 import PIL.Image
+import cv2
 import functools
 import os
 import huggingface_hub
-
 import numpy as np
-from onnxruntime import InferenceSession
-from pandas import read_csv
-from cv2 import resize
-from cv2 import copyMakeBorder
-from cv2 import BORDER_CONSTANT
-from cv2 import INTER_AREA
-from cv2 import INTER_CUBIC
 
 HF_TOKEN = os.environ.get("HF_TOKEN", "cpu")
 
@@ -30,17 +26,17 @@ def make_square(img, target_size):
     left, right = delta_w // 2, delta_w - (delta_w // 2)
 
     color = [255, 255, 255]
-    new_im = copyMakeBorder(
-        img, top, bottom, left, right, BORDER_CONSTANT, value=color
+    new_im = cv2.copyMakeBorder(
+        img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color
     )
     return new_im
 
 
 def smart_resize(img, size):
     if img.shape[0] > size:
-        img = resize(img, (size, size), interpolation=INTER_AREA)
+        img = cv2.resize(img, (size, size), interpolation=cv2.INTER_AREA)
     elif img.shape[0] < size:
-        img = resize(img, (size, size), interpolation=INTER_CUBIC)
+        img = cv2.resize(img, (size, size), interpolation=cv2.INTER_CUBIC)
     return img
 
 
@@ -71,12 +67,22 @@ def label_loads(model_name, filename):
         print('Error')
         return None
 
-    tags = read_csv(label)
-    t_names = tags['name'].tolist()
-    r_indexes = list(np.where(tags["category"] == 9)[0])
-    g_indexes = list(np.where(tags["category"] == 0)[0])
-    c_indexes = list(np.where(tags["category"] == 4)[0])
-    return t_names, r_indexes, g_indexes, c_indexes
+    tags = []
+    with open(label, "r") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            tags.append(row)
+
+    tags_header = tags[0]
+    category_index = tags_header.index('category')
+    name_index = tags_header.index('name')
+
+    names = [row[name_index] for row in tags[1:]]
+    rating_indexes = [i for i, row in enumerate(tags[1:]) if row[category_index] == '9']
+    general_indexes = [i for i, row in enumerate(tags[1:]) if row[category_index] == '0']
+    chara_indexes = [i for i, row in enumerate(tags[1:]) if row[category_index] == '4']
+
+    return names, rating_indexes, general_indexes, chara_indexes
 
 
 def predict(image,
