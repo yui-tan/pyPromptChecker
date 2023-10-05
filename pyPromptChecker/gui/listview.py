@@ -17,15 +17,17 @@ class Listview(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle('Listview')
-        self.borders = []
         self.menu = ThumbnailMenu(self)
         custom_keybindings(self)
+
+        self.borders = []
 
     def init_listview(self, param_list: list, moved: set = None, deleted: set = None):
         progress = ProgressDialog()
         progress.setLabelText('Loading...')
         progress.setRange(0, len(param_list))
 
+        self.borders = []
         self.setCentralWidget(None)
 
         estimated_height = 0
@@ -39,7 +41,7 @@ class Listview(QMainWindow):
 
         scroll_area = QScrollArea()
 
-        for index, param in enumerate(param_list):
+        for index, param in param_list:
             listview_border = ListviewBorder(index, param, size, self)
             estimated_height += (listview_border.sizeHint().height() + 50)
             root_layout.addWidget(listview_border)
@@ -152,7 +154,7 @@ class Listview(QMainWindow):
             else:
                 search_str = status_str
 
-            for index, border in enumerate(self.borders):
+            for border in self.borders:
                 value = border.params.get(search_str, 'None')
                 title_label = border.findChild(QLabel, status_number + '_title')
                 value_label = border.findChild(QLabel, status_number + '_value')
@@ -183,9 +185,8 @@ class Listview(QMainWindow):
 
             elif where_from == 'Diff':
                 if len(selected_index) == 2:
-                    result = [self.borders[i].params for i in selected_index]
-                    diff = DiffWindow(result, self)
-                    move_centre(diff)
+                    result = [border.params for border in self.borders if border.index in selected_index]
+                    DiffWindow(result, self)
 
         if where_from == 'Close':
             self.close()

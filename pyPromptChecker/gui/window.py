@@ -579,9 +579,9 @@ class ResultWindow(QMainWindow):
             self.thumbnail.activateWindow()
         else:
             if indexes:
-                dictionary_list = [self.params[i].params for i in indexes]
+                dictionary_list = [(i, self.params[i].params) for i in indexes]
             else:
-                dictionary_list = [value.params for value in self.params]
+                dictionary_list = [(i, value.params) for i, value in enumerate(self.params)]
             self.thumbnail.init_thumbnail(dictionary_list, self.moved, self.deleted)
 
     def open_listview(self, indexes=None):
@@ -589,9 +589,9 @@ class ResultWindow(QMainWindow):
             self.listview.activateWindow()
         else:
             if indexes:
-                dictionary_list = [self.params[i].params for i in indexes]
+                dictionary_list = [(i, self.params[i].params) for i in indexes]
             else:
-                dictionary_list = [value.params for value in self.params]
+                dictionary_list = [(i, value.params) for i, value in enumerate(self.params)]
             self.listview.init_listview(dictionary_list, self.moved, self.deleted)
 
     def manage_image_files(self, indexes: list, where_from, kind='favourite'):

@@ -188,17 +188,22 @@ class SearchWindow(QDialog):
 
             if len(target_tabs) > 0:
                 if result == 'Tabs':
+                    target = None
                     self.parent().tab_tweak(target_tabs)
                 elif result == 'Listview':
+                    target = self.parent().listview
                     if self.parent().listview.isVisible():
                         self.parent().listview.close()
                     self.parent().open_listview(target_tabs)
                 elif result == 'Thumbnails':
+                    target = self.parent().thumbnail
                     if self.parent().thumbnail.isVisible():
                         self.parent().thumbnail.close()
                     self.parent().open_thumbnail(target_tabs)
                 text = str(len(target_tabs)) + ' image(s) found !'
                 MessageBox(text, 'Search result', 'ok', 'info', self)
+                if target:
+                    target.activateWindow()
             else:
                 MessageBox('There is no match to show.', 'Search result', 'ok', 'info', self)
 

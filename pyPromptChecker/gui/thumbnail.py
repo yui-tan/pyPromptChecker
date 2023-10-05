@@ -8,6 +8,7 @@ from .viewer import DiffWindow
 from . import config
 
 import os
+import json
 from PyQt6.QtCore import Qt, QPoint
 from PyQt6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QScrollArea
 from PyQt6.QtWidgets import QWidget, QPushButton
@@ -16,10 +17,18 @@ from PyQt6.QtWidgets import QWidget, QPushButton
 class ThumbnailView(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.size = config.get('ThumbnailPixmapSize', 150)
+        self.estimated_height = self.size + 67
+        self.estimated_width = self.size + 40
         self.setWindowTitle('Thumbnail View')
-        self.borders = []
         self.menu = ThumbnailMenu(self)
         custom_keybindings(self)
+
+        self.borders = []
+        self.pos_x = 0
+        self.pos_y = 0
+        self.max_x = 0
+        self.max_y = 0
 
     def init_thumbnail(self, param_list: list, moved: set = None, deleted: set = None):
         progress = ProgressDialog()
@@ -27,22 +36,20 @@ class ThumbnailView(QMainWindow):
         progress.setRange(0, len(param_list))
 
         self.setCentralWidget(None)
-
-        row = 0
-        col = 0
-        width = 0
-        real_row = 0
-        estimated_height = 0
-
-        size = config.get('ThumbnailPixmapSize', 150)
         thumbnails_layout = QGridLayout()
 
-        for index, param in enumerate(param_list):
-            real_row = row
-            portrait_border = ThumbnailBorder(index, param, size, self)
+        self.borders = []
+        self.pos_x = 0
+        self.pos_y = 0
+        self.max_x = 0
+        self.max_y = 0
+
+        for index, param in param_list:
+            self.max_y = self.pos_y + 1
+            self.max_x = max(self.pos_x + 1, self.max_x)
+            portrait_border = ThumbnailBorder(index, param, self.size, self)
             self.borders.append(portrait_border)
-            estimated_height = portrait_border.sizeHint().height()
-            thumbnails_layout.addWidget(portrait_border, row, col)
+            thumbnails_layout.addWidget(portrait_border, self.pos_y, self.pos_x)
 
             if moved and index in moved:
                 portrait_border.set_moved()
@@ -50,16 +57,16 @@ class ThumbnailView(QMainWindow):
             if deleted and index in deleted:
                 portrait_border.set_deleted()
 
-            width += (size + 40)
-            col += 1
-
-            if width > 900:
-                col = width = 0
-                row += 1
+            if self.pos_x * self.estimated_width < 900:
+                self.pos_x += 1
+            else:
+                self.pos_x = 0
+                self.pos_y += 1
 
             progress.update_value()
 
         thumbnails = QWidget()
+        thumbnails.setObjectName('thumbnail_view')
         thumbnails.setLayout(thumbnails_layout)
 
         scroll_area = QScrollArea()
@@ -79,15 +86,11 @@ class ThumbnailView(QMainWindow):
 
         self.setCentralWidget(central_widget)
 
-        if real_row == 0:
-            estimated_height = min(estimated_height + 70, 1000)
-        elif real_row == 1:
-            estimated_height = min(estimated_height * 2 + 70, 1000)
-        elif real_row > 1:
-            estimated_height = min(estimated_height * 3 + 70, 1000)
+        estimated_height = min(self.estimated_height * self.max_y + 70, 1000)
+        estimated_width = min(self.estimated_width * self.max_x, 900)
 
         self.show()
-        self.resize(900, estimated_height)
+        self.resize(estimated_width, estimated_height)
         move_centre(self)
 
         progress.close()
@@ -134,9 +137,8 @@ class ThumbnailView(QMainWindow):
 
             elif where_from == 'Diff':
                 if len(selected_index) == 2:
-                    result = [self.borders[i].params for i in selected_index]
-                    diff = DiffWindow(result, self)
-                    move_centre(diff)
+                    result = [border.params for border in self.borders if border.index in selected_index]
+                    DiffWindow(result, self)
 
         if where_from == 'Close':
             self.close()
@@ -278,3 +280,6 @@ class ThumbnailBorder(ClickableGroup):
             self.params['Filename'] = filename
             self.label.setText(filename)
             self.pixmap_label.setToolTip(self._tooltip())
+
+    def export_json(self):
+        return json.dumps(self.params, sort_keys=True, indent=4, ensure_ascii=False)

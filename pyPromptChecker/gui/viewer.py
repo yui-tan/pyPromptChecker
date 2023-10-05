@@ -59,6 +59,7 @@ class DiffWindow(QMainWindow):
         self.setWindowTitle('Diff Window')
         self.init_diff()
         self.setMinimumSize(1000, 1000)
+        move_centre(self)
 
     def init_diff(self):
         statuses = ['Extensions',
