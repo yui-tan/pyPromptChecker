@@ -4,19 +4,19 @@ import os
 import re
 import datetime
 
+PROMPT_REGEX = r'([\S\s]*)(?=Steps: )'
+LORA_HASH_REGEX = r'(?<=Lora hashes: )"[^"]*"'
+TI_HASH_REGEX = r'(?<=TI hashes: )"[^"]*"'
+TILED_DIFFUSION_REGEX = r'Tiled Diffusion: \{.*},'
+REGION_REGEX = r'"Region [0-9][^}]*}'
+REGION_CONTROL_REGEX = r'(?<="Region control": ).*$'
+CONTROL_NET_REGEX = r'(ControlNet.*"[^"]*",)'
+CFG_REGEX = r' CFG Scheduler Info: ".*",'
+HYPHENED_STR_REGEX = r'\"[^"]*"'
+
 
 class ChunkData:
     def __init__(self, data, filepath=None, filetype=None, size=None):
-        self.prompt_regex = r'([\S\s]*)(?=Steps: )'
-        self.lora_regex = r'(?<=Lora hashes: )"[^"]*"'
-        self.ti_regex = r'(?<=TI hashes: )"[^"]*"'
-        self.tiled_diffusion_regex = r'Tiled Diffusion: \{.*},'
-        self.region_regex = r'"Region [0-9][^}]*}'
-        self.region_control_regex = r'(?<="Region control": ).*$'
-        self.control_net_regex = r'(ControlNet.*"[^"]*",)'
-        self.cfg_regex = r' CFG Scheduler Info: ".*",'
-        self.hyphened_target = r'\"[^"]*"'
-
         self.filepath = filepath
         self.type = filetype
         self.size = size
@@ -29,8 +29,6 @@ class ChunkData:
 
         self.params = {}
         self.used_params = {}
-
-        self.index = -1
 
     def init_class(self):
         if not self.data:
@@ -77,9 +75,6 @@ class ChunkData:
 
         self.main_status_parse()
         self.make_dictionary()
-
-    def set_index(self, index):
-        self.index = index
 
     def data_refresh(self, delete_target, add_list):
         if delete_target:
@@ -181,8 +176,13 @@ class ChunkData:
                         if tmp[1] in ti_hash:
                             self.params[key] = tmp[0] + ' [' + ti_hash + ']'
 
+    def set_used_to_param_key(self, key):
+        if key in self.params:
+            self.used_params[key] = True
+
     def import_json(self, json_data):
         self.params = json_data
+        self.used_params['Model hash'] = True
 
     def prompt_parse(self):
         result = [['Positive', 'None'], ['Negative', 'None']]
@@ -191,7 +191,7 @@ class ChunkData:
             self.data_refresh(self.data, result)
             return
 
-        match = re.search(self.prompt_regex, self.data)
+        match = re.search(PROMPT_REGEX, self.data)
         if match:
             prompt = match.group()
             matched_prompt = prompt
@@ -222,7 +222,7 @@ class ChunkData:
                     self.data_refresh('UNICODE', matched_prompt)
 
     def lora_parse(self):
-        match = re.search(self.lora_regex, self.data)
+        match = re.search(LORA_HASH_REGEX, self.data)
         if match:
             target = match.group().replace('"', '')
             loras = [d1.split(':')[0].strip() + ' ' + '[' + d1.split(':')[1].strip() + ']' for d1 in target.split(',')]
@@ -231,7 +231,7 @@ class ChunkData:
             self.data_refresh('Lora hashes: "' + target + '",', loras)
 
     def ti_parse(self):
-        match = re.search(self.ti_regex, self.data)
+        match = re.search(TI_HASH_REGEX, self.data)
         if match:
             target = match.group().replace('"', '')
             tis = [d1.split(':')[0].strip() + ' ' + '[' + d1.split(':')[1].strip() + ']' for d1 in target.split(',')]
@@ -241,17 +241,17 @@ class ChunkData:
 
     def tiled_diffusion_parse(self):
         region_status_list = []
-        match = re.search(self.tiled_diffusion_regex, self.data)
+        match = re.search(TILED_DIFFUSION_REGEX, self.data)
         if match:
             tiled_diffusion_status = match.group()
 
             if 'Region' in tiled_diffusion_status:
-                region_status = re.findall(self.region_regex, tiled_diffusion_status)
-                tiled_diffusion_status = re.sub(self.region_control_regex, 'True', tiled_diffusion_status)
+                region_status = re.findall(REGION_REGEX, tiled_diffusion_status)
+                tiled_diffusion_status = re.sub(REGION_CONTROL_REGEX, 'True', tiled_diffusion_status)
 
                 for tmp in region_status:
-                    tmp = re.sub(self.hyphened_target, lambda match_part: match_part.group().replace(',', '<comma>'), tmp)
-                    tmp = re.sub(self.hyphened_target, lambda match_part: match_part.group().replace(':', '<colon>'), tmp)
+                    tmp = re.sub(HYPHENED_STR_REGEX, lambda match_part: match_part.group().replace(',', '<comma>'), tmp)
+                    tmp = re.sub(HYPHENED_STR_REGEX, lambda match_part: match_part.group().replace(':', '<colon>'), tmp)
                     number = tmp.split(':')[0]
                     target_str = tmp.replace(number + ':', '').replace('{', '').replace('}', '').replace('"', '')
                     target = target_str.split(',')
@@ -276,7 +276,7 @@ class ChunkData:
             self.data_refresh(match.group(), result)
 
     def control_net_parse(self):
-        match = re.search(self.control_net_regex, self.data)
+        match = re.search(CONTROL_NET_REGEX, self.data)
         if match:
             cnt = 0
             result = []
@@ -297,10 +297,10 @@ class ChunkData:
             self.data_refresh(target, result)
 
     def cfg_scheduler_parse(self):
-        match = re.search(self.cfg_regex, self.data)
+        match = re.search(CFG_REGEX, self.data)
         if match:
             target = match.group()
-            cfg_match = re.search(self.hyphened_target, target)
+            cfg_match = re.search(HYPHENED_STR_REGEX, target)
             if cfg_match:
                 cfg_result = cfg_match.group()
                 cfg_result = cfg_result.replace('terget denoising', '\\n target denoising')
@@ -314,7 +314,7 @@ class ChunkData:
             return
 
         if self.data:
-            target_str = re.sub(self.hyphened_target, lambda match: match.group().replace(',', '<comma>'), self.data)
+            target_str = re.sub(HYPHENED_STR_REGEX, lambda match: match.group().replace(',', '<comma>'), self.data)
             noise_match = re.search(r'\nTemplate:[\s\S]*$', self.data)
 
             if noise_match:
