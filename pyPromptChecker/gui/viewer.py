@@ -45,14 +45,17 @@ class ImageWindow(QMainWindow):
         self.adjustSize()
 
         if not visible:
-            move_centre(self)
+            frame_geometry = self.frameGeometry()
+            frame_geometry.moveCenter(self.screen_center)
+            self.move(frame_geometry.topLeft())
 
     def _image_window_clicked(self):
-        self.close()
+        if self.isActiveWindow():
+            self.close()
 
 
 class DiffWindow(QMainWindow):
-    def __init__(self, params: list, parent=None):
+    def __init__(self, params: tuple, parent=None):
         super().__init__(parent)
         self.status = None
         self.params = params
@@ -61,6 +64,7 @@ class DiffWindow(QMainWindow):
         self.setMinimumSize(1000, 1000)
         move_centre(self)
 
+    # noinspection PyUnresolvedReferences
     def init_diff(self):
         statuses = ['Extensions',
                     'Timestamp',

@@ -20,15 +20,18 @@ class TabBar(QWidget):
         self.scroll_contents = QWidget()
         self.diff_button = QPushButton()
         self.filepaths = filepaths
+
         self.current = 0
         self.moved = set()
         self.deleted = set()
         self.matched = set()
         self.selected = set()
-        self._init_bar(vertical)
+
+        self.__init_bar(vertical)
+
         self.image_current(0)
 
-    def _init_bar(self, vertical: bool):
+    def __init_bar(self, vertical: bool):
         root_layout = QVBoxLayout() if vertical else QHBoxLayout()
         root_layout.setContentsMargins(0, 0, 0, 0)
 
@@ -41,7 +44,6 @@ class TabBar(QWidget):
         if not vertical:
             scroll.setFixedHeight(140)
             scroll.setMinimumWidth(10)
-
         else:
             scroll.setFixedWidth(140)
             scroll.setMinimumHeight(10)
@@ -53,15 +55,16 @@ class TabBar(QWidget):
         self.scroll_contents.setLayout(layout)
         scroll.setWidget(self.scroll_contents)
 
-        root_layout.addLayout(self._button_area())
+        root_layout.addLayout(self.__button_area())
         root_layout.addWidget(scroll)
         self.setLayout(root_layout)
 
         self._tab_bar_thumbnails(self.filepaths)
 
-    def _button_area(self):
+    def __button_area(self):
         button_area_layout = QHBoxLayout()
-        for text in [['S', 'Search'], ['R', 'Restore'], ['D', 'Diffview'], ['L', 'Listview'], ['T', 'Thumbnails']]:
+        button_area_layout.setContentsMargins(0, 0, 0, 0)
+        for text in (('S', 'Search'), ('R', 'Restore'), ('D', 'Diffview'), ('L', 'Listview'), ('T', 'Thumbnails')):
             button = QPushButton(text[0])
             button.setObjectName(text[0])
             button.setToolTip(text[1])

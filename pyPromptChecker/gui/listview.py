@@ -176,8 +176,8 @@ class Listview(QMainWindow):
                 self.management_image('favourite')
 
             elif where_from == 'Export JSON':
-                if hasattr(window, 'export_json_selected'):
-                    self.parent().export_json_selected(selected_index)
+                if hasattr(window, 'export_json'):
+                    self.parent().export_json(selected_index)
 
             elif where_from == 'Interrogate':
                 if hasattr(window, 'add_interrogate_tab'):

@@ -395,6 +395,7 @@ class ResultWindow(QMainWindow):
         where_from = self.sender().objectName()
         clipboard = QApplication.clipboard()
         current_page = self.root_tab.currentWidget()
+        current_index = self.root_tab.currentIndex()
 
         if where_from == 'Copy positive':
             text_edit = current_page.findChild(QTextEdit, 'Positive')
@@ -420,10 +421,10 @@ class ResultWindow(QMainWindow):
                 self.toast_window.init_toast('Seed Copied!', 1000)
 
         elif where_from == 'Export JSON (This)':
-            self.export_json_single()
+            self.export_json([current_index])
 
         elif where_from == 'Export JSON (All)':
-            self.export_json_all()
+            self.export_json(list(range(len(self.params))))
 
         elif where_from == 'Shrink':
             if self.sender().text() == 'Shrink':
@@ -716,51 +717,32 @@ class ResultWindow(QMainWindow):
 
     def export_json_single(self):
         current_index = self.root_tab.currentIndex()
-        data = self.params[current_index].params
-        filename = config.get('JsonSingle', 'filename')
-        if filename == 'filename':
-            filename = self.params[current_index].params.get('Filepath')
-            filename = os.path.splitext(os.path.basename(filename))[0] + '.json'
-        dialog = FileDialog('save-file', 'Save JSON', self, 'JSON', filename)
-        filepath = dialog.result[0] if dialog.result else None
-        if filepath:
-            result, e = io.export_json(data, filepath)
-            if not e:
-                self.toast_window.init_toast('Saved!', 1000)
-            else:
-                MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
+        self.export_json([current_index])
 
     def export_json_all(self):
-        filename = config.get('JsonMultiple', 'directory')
-        if filename == 'directory':
-            filename = self.params[0].params.get('Filepath')
-            filename = os.path.basename(os.path.dirname(filename)) + '.json'
-        dialog = FileDialog('save-file', 'Save JSON', self, 'JSON', filename)
-        filepath = dialog.result[0] if dialog.result else None
-        if filepath:
-            dict_list = []
-            for tmp in self.params:
-                dict_list.append(tmp.params)
-            result, e = io.export_json(dict_list, filepath)
-            if not e:
-                self.toast_window.init_toast('Saved!', 1000)
-            else:
-                MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
+        self.export_json(list(range(len(self.params))))
 
-    def export_json_selected(self, selected_files):
+    def export_json(self, selected_files: list = None, request: str = None):
         if isinstance(selected_files, set):
             selected_files = list(selected_files)
-        filename = config.get('JsonSelected', 'selected')
-        if filename == 'selected':
-            filename = self.params[selected_files[0]].params.get('Filepath')
-            filename = os.path.splitext(os.path.basename(filename))[0] + '_and_so_on.json'
+
+        category = 'selected'
+        if len(selected_files) == len(self.params):
+            category = 'all'
+        elif len(selected_files) == 1:
+            category = 'single'
+
+        filepath = self.params[selected_files[0]].params.get('Filepath')
+        filename = custom_filename(filepath, category)
+
         dialog = FileDialog('save-file', 'Save JSON', self, 'JSON', filename)
         destination = dialog.result[0] if dialog.result else None
+
         if destination:
             dict_list = []
             for index in selected_files:
                 dict_list.append(self.params[index].params)
-            result, e = io.export_json(dict_list, destination)
+            result, e = io.io_export_json(dict_list, destination)
             if not e:
                 self.toast_window.init_toast('Saved!', 1000)
             else:

@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import os
-from PyQt6.QtWidgets import QFileDialog, QProgressDialog, QMessageBox, QLabel, QWidget, QVBoxLayout, QApplication
+from PyQt6.QtWidgets import QFileDialog, QProgressDialog, QMessageBox, QLabel, QWidget, QVBoxLayout
 from PyQt6.QtWidgets import QDialog, QRadioButton, QPushButton, QHBoxLayout, QComboBox, QSlider, QGridLayout
 from PyQt6.QtCore import Qt, QTimer
 from .widget import move_centre
 
 
 class SelectDialog(QDialog):
-    def __init__(self, parent: object = None):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle('Model hash extractor')
         self.selected = 0
@@ -47,7 +47,7 @@ class SelectDialog(QDialog):
 
 
 class InterrogateSelectDialog(QDialog):
-    def __init__(self, parent: object = None):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle('Interrogate Settings')
         self.selected_model = 'moat'
@@ -114,7 +114,7 @@ class InterrogateSelectDialog(QDialog):
 
 class FileDialog(QFileDialog):
 
-    def __init__(self, category: str, title: str, parent: object = None, file_filter: str = None, filename: str = None):
+    def __init__(self, category: str, title: str, parent=None, file_filter: str = None, filename: str = None):
         super().__init__(parent)
         self.result = None
         self.file_filter = ''
@@ -152,7 +152,7 @@ class FileDialog(QFileDialog):
 
 class ProgressDialog(QProgressDialog):
 
-    def __init__(self, parent: object = None):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Progress")
         self.setWindowModality(Qt.WindowModality.WindowModal)
@@ -204,7 +204,7 @@ class MessageBox(QMessageBox):
 
 
 class Toast(QWidget):
-    def __init__(self, parent: object = None):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.timer = None
         self.message_label = QLabel()

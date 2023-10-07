@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import os
 import sys
 from PyQt6.QtGui import QKeySequence, QShortcut, QColor
+
+from . import config
 
 
 def custom_stylesheet(category: str, purpose: str):
@@ -38,7 +41,7 @@ def custom_stylesheet(category: str, purpose: str):
                     "QTextEdit:focus, QTextEdit:selected, QLineEdit:focus, QLineEdit:selected { selection-background-color: rgba(19, 122, 127, 1.0); } "
                     "QTextEdit:focus, QLineEdit:focus { border-color: rgba(134, 206, 203, 1.0); } "
                     "QSplitter:handle:hover { background-color: rgba(134, 206, 203, 1.0); } "
-                    "QTabBar:tab:selected:enabled { color: #86cecb; border-color: rgba(134, 206, 203, 1.0); } "
+                    "QTabBar:tab:selected:enabled { color: rgba(134, 206, 203, 1.0); border-color: rgba(134, 206, 203, 1.0); } "
                     "QProgressBar::chunk {background: rgba(134, 206, 203, 1.0); } "
                     "QCheckBox:hover,QRadioButton:hover {border-bottom:2px solid rgba(134, 206, 203, 1.0); }"
                     "QSlider::sub-page:horizontal,QSlider::add-page:vertical,QSlider::handle {background: rgba(134, 206, 203, 1.0)}"
@@ -99,7 +102,8 @@ def custom_color(purpose: str):
         return
 
 
-def custom_keybindings(parent: object):
+# noinspection PyUnresolvedReferences
+def custom_keybindings(parent):
     if parent.parent() is not None:
         parent = parent.parent()
 
@@ -116,5 +120,25 @@ def custom_keybindings(parent: object):
     quit_shortcut.activated.connect(lambda: sys.exit())
 
 
+def custom_filename(filepath: str, category: str):
+    if category == 'single':
+        filename = config.get('JsonSingle', 'filename')
+        if filename == 'filename':
+            filename = os.path.splitext(os.path.basename(filepath))[0] + '.json'
+
+    elif category == 'all':
+        filename = config.get('JsonMultiple', 'directory')
+        if filename == 'directory':
+            filename = os.path.basename(os.path.dirname(filepath)) + '.json'
+
+    else:
+        filename = config.get('JsonSelected', 'selected')
+        if filename == 'selected':
+            filename = os.path.splitext(os.path.basename(filepath))[0] + '_and_so_on.json'
+
+    return filename
+
+
 def custom_text(purpose):
-    pass
+    if purpose == '404':
+        return "Couldn't find destination directory.\nPlease check your selected directory exists."

@@ -227,6 +227,10 @@ class SearchWindow(QDialog):
         self.show()
         self.search_box.setFocus()
 
+    def update_model_list(self, model_list):
+        self.search_model.clear()
+        self.search_model.addItems(model_list)
+
     def window_close(self):
         self.close()
 

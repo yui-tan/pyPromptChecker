@@ -8,10 +8,10 @@ import shutil
 import hashlib
 
 
-def export_json(target_json, filepath):
+def io_export_json(json_data, filepath):
     try:
         with open(filepath, 'w') as f:
-            json.dump(target_json, f, sort_keys=True, indent=4, ensure_ascii=False)
+            json.dump(json_data, f, sort_keys=True, indent=4, ensure_ascii=False)
             return True, None
 
     except Exception as e:
