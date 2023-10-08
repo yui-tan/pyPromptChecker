@@ -455,6 +455,8 @@ class ImageController(QObject):
         else:
             if self.thumbnail:
                 self.thumbnail.search_process(result[0])
+            if self.listview:
+                self.listview.search_process(result[0])
             MessageBox(result[1], 'Result', parent=caller)
 
     def __add_images(self, which: str, sender, is_replace: bool = False):

@@ -11,6 +11,10 @@ from PyQt6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, 
 from PyQt6.QtWidgets import QWidget, QComboBox, QLabel
 from PyQt6.QtCore import Qt, QTimer, QPoint
 
+LISTVIEW_PIXMAP = config.get('ListViewPixmapSize', 200)
+MOVE_DELETE = config.get('MoveDelete', False)
+HIDE_NOT_MATCH = config.get('HideNotMatchedTabs', False)
+
 
 class Listview(QMainWindow):
     def __init__(self, parent=None, controller=None):
@@ -18,7 +22,7 @@ class Listview(QMainWindow):
         self.toast = None
         self.root_widget = None
         self.controller = controller
-        self.size = config.get('ListViewPixmapSize', 200)
+        self.size = LISTVIEW_PIXMAP
         self.setWindowTitle('Listview')
         self.menu = FooterButtonMenu(self)
 
@@ -110,6 +114,8 @@ class Listview(QMainWindow):
             self.controller.request_reception(selected_index, 'search')
         elif where_from == 'Select all':
             self.__select_all_toggle(len(selected_index))
+        elif where_from == 'Restore':
+            self.search_process(None)
         elif where_from == 'Close':
             self.close()
 
@@ -129,6 +135,21 @@ class Listview(QMainWindow):
 
             if progress:
                 progress.update_value()
+
+    def search_process(self, indexes: tuple = None):
+        if indexes:
+            for border in self.borders:
+                if border.index in indexes:
+                    border.show()
+                    border.set_matched()
+                else:
+                    border.clear_matched()
+                    if HIDE_NOT_MATCH:
+                        border.hide()
+        else:
+            for border in self.borders:
+                border.show()
+                border.clear_matched()
 
     def manage_subordinates(self, index: int, detail: str, remarks=None):
         for border in self.borders:
@@ -197,12 +218,12 @@ class Listview(QMainWindow):
         return header_layout
 
     def __footer_section(self):
+        management = MOVE_DELETE
         button_layout = QHBoxLayout()
-        management = config.get('MoveDelete', False)
         buttons = ('Select all', 'Search', 'Diff', 'Interrogate', 'Export JSON', 'Close')
 
         if management:
-            buttons = ('Select all', 'Search', 'Diff', 'Interrogate', 'Export JSON', 'Add favourite', 'Close')
+            buttons = ('Select all', 'Search', 'Restore', 'Interrogate', 'Export JSON', 'Add favourite', 'Close')
 
         for button_text in buttons:
             button = ButtonWithMenu()
@@ -268,6 +289,7 @@ class ListviewBorder(ClickableGroup):
         self.selected = False
         self.moved = False
         self.deleted = False
+        self.matched = False
         self.changed = 0
         self.status = ['Timestamp', 'Seed', 'Sampler', 'Steps', 'CFG scale', 'Model', 'VAE', 'Version']
         self.__init_class()
@@ -420,6 +442,18 @@ class ListviewBorder(ClickableGroup):
         self.moved = False
         self.deleted = True
         self.setStyleSheet(custom_stylesheet('title', 'deleted'))
+
+    def set_matched(self):
+        self.matched = True
+        self.setStyleSheet(custom_stylesheet('title', 'matched'))
+
+    def clear_matched(self):
+        if self.moved:
+            self.set_moved()
+        elif self.deleted:
+            self.set_deleted()
+        else:
+            self.setStyleSheet('')
 
     def title_change(self, filepath: str):
         current_filepath = self.params.get('Filepath')
