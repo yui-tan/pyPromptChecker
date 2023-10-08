@@ -11,13 +11,17 @@ from PyQt6.QtCore import Qt, QPoint
 from PyQt6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QScrollArea
 from PyQt6.QtWidgets import QWidget
 
+THUMBNAIL_PIXMAP = config.get('ThumbnailPixmapSize', 150)
+MOVE_DELETE = config.get('MoveDelete', False)
+HIDE_NOT_MATCH = config.get('HideNotMatchedTabs', False)
+
 
 class ThumbnailView(QMainWindow):
     def __init__(self, parent=None, controller=None):
         super().__init__(parent)
         self.toast = None
         self.controller = controller
-        self.size = config.get('ThumbnailPixmapSize', 150)
+        self.size = THUMBNAIL_PIXMAP
         self.estimated_height = self.size + 67
         self.estimated_width = self.size + 40
         self.setWindowTitle('Thumbnail View')
@@ -111,6 +115,7 @@ class ThumbnailView(QMainWindow):
             x = self.sender().mapToGlobal(self.sender().rect().topLeft()).x()
             y = self.sender().mapToGlobal(self.sender().rect().topLeft()).y() - self.controller.main_menu.sizeHint().height()
             adjusted_pos = QPoint(x, y)
+            self.controller.main_menu.present_check(self)
             self.controller.main_menu.exec(adjusted_pos)
         elif where_from == 'Add favourite':
             result = self.controller.request_reception(selected_index, 'add')
@@ -164,6 +169,8 @@ class ThumbnailView(QMainWindow):
             self.controller.request_reception(selected_index, 'tab')
         elif where_from == 'Select all':
             self.__select_all_toggle(len(selected_index))
+        elif where_from == 'Restore':
+            self.search_process(None)
         elif where_from == 'Close':
             self.close()
 
@@ -192,6 +199,21 @@ class ThumbnailView(QMainWindow):
             if progress:
                 progress.update_value()
 
+    def search_process(self, indexes: tuple = None):
+        if indexes:
+            for border in self.borders:
+                if border.index in indexes:
+                    border.show()
+                    border.set_matched()
+                else:
+                    border.clear_matched()
+                    if HIDE_NOT_MATCH:
+                        border.hide()
+        else:
+            for border in self.borders:
+                border.show()
+                border.clear_matched()
+
     def manage_subordinates(self, index: int, detail: str, remarks=None):
         for border in self.borders:
             if border.index == index:
@@ -217,12 +239,12 @@ class ThumbnailView(QMainWindow):
         return result
 
     def __footer_buttons(self):
+        management = MOVE_DELETE
         button_layout = QHBoxLayout()
-        management = config.get('MoveDelete', False)
         buttons = ('Select all', 'Search', 'Diff', 'Interrogate', 'Export JSON', '▲Menu')
 
         if management:
-            buttons = ('Select all', 'List', 'Tab', 'Diff', 'Interrogate', 'Export JSON', 'Add favourite', '▲Menu')
+            buttons = ('Select all', 'List', 'Tab', 'Diff', 'Search', 'Restore', 'Add favourite', '▲Menu')
 
         for button_text in buttons:
             button = ButtonWithMenu()
@@ -264,6 +286,7 @@ class ThumbnailBorder(ClickableGroup):
         self.selected = False
         self.moved = False
         self.deleted = False
+        self.matched = False
         self.__init_class()
 
         self.setObjectName(f'group_{self.index}')
@@ -337,6 +360,18 @@ class ThumbnailBorder(ClickableGroup):
         self.label.setStyleSheet(custom_stylesheet('colour', 'deleted'))
         self.moved = False
         self.deleted = True
+
+    def set_matched(self):
+        self.label.setStyleSheet(custom_stylesheet('colour', 'matched'))
+        self.matched = True
+
+    def clear_matched(self):
+        if self.moved:
+            self.set_moved()
+        elif self.deleted:
+            self.set_deleted()
+        else:
+            self.label.setStyleSheet(custom_stylesheet('label', 'leave'))
 
     def label_change(self, filepath: str):
         current_filepath = self.params.get('Filepath')

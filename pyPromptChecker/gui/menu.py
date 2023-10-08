@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import sys
 from PyQt6.QtWidgets import QMenu
 from PyQt6.QtGui import QAction
 
@@ -144,11 +143,17 @@ class MainMenu(QMenu):
         self.reselect_renewal_dir.triggered.connect(lambda: self.__reselect_files('directory', 'replace'))
         self.json_import_files.triggered.connect(lambda: self.__json_import('files', True))
         self.json_import_directory.triggered.connect(lambda: self.__json_import('directory', True))
-#        self.json_export_single.triggered.connect(self.main.export_json_single)
+        self.json_export_single.triggered.connect(lambda: self.__json_export('single'))
         self.json_export_all.triggered.connect(lambda: self.__json_export('all'))
         self.json_export_selected.triggered.connect(lambda: self.__json_export('select'))
 #        self.interrogate_this.triggered.connect(self.main.add_interrogate_tab)
 #        self.interrogate_all.triggered.connect(lambda: self.main.add_interrogate_tab(1))
+
+    def present_check(self, destination):
+        if not hasattr(destination, 'root_tab'):
+            self.json_export_single.setDisabled(True)
+        else:
+            self.json_export_single.setDisabled(False)
 
     def __exit_app(self):
         self.main.request_reception(None, 'exit', self.window)
@@ -166,7 +171,11 @@ class MainMenu(QMenu):
                 result = self.window.get_selected_images(True)
             elif which == 'all':
                 result = self.window.get_selected_images(False)
-            self.main.request_reception(result, 'json')
+            elif which == 'single':
+                if hasattr(self.window, 'root_tab'):
+                    result = (self.window.root_tab.currentIndex(),)
+            if result:
+                self.main.request_reception(result, 'json')
 
     def theme_check(self):
         if self.main.dark:

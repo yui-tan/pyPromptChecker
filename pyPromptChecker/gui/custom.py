@@ -74,7 +74,7 @@ def custom_color(purpose: str):
     elif purpose == 'Q_deleted':
         return QColor(204, 0, 34, 255)
     elif purpose == 'Q_matched':
-        return QColor(255, 255, 255, 255)
+        return QColor(19, 122, 127, 128)
     elif purpose == 'current':
         return 'rgba(134, 206, 203, 1.0)'
     elif purpose == 'moved':
@@ -82,7 +82,7 @@ def custom_color(purpose: str):
     elif purpose == 'deleted':
         return 'rgba(204, 0, 34, 1.0)'
     elif purpose == 'matched':
-        return ''
+        return 'rgba(19, 122, 127, 1.0)'
     elif purpose == 'leave':
         return 'transparent'
     elif purpose == 'hover':

@@ -11,11 +11,13 @@ from .dialog import MessageBox
 
 
 class SearchWindow(QDialog):
-    def __init__(self, model_list: list, parent=None):
+    def __init__(self, model_list: list, controller, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Search")
+        self.controller = controller
         self.conditions = {}
         self.result = 'Tabs'
+        self.caller = None
         self.prompt = None
         self.status = None
         self.extension = None
@@ -25,15 +27,16 @@ class SearchWindow(QDialog):
         self.search_cfg_label = None
         self.search_button = None
         self.central_widget = None
-        self._init_search_window(model_list)
+        self.__init_search_window(model_list)
 
-    def _init_search_window(self, model_list: list):
+    def __init_search_window(self, model_list: list):
         layout = QGridLayout()
 
         result_label = QLabel('Result shows: ')
         result_box = QComboBox()
         result_box.addItems(['Tabs', 'Listview', 'Thumbnails'])
-        result_box.currentIndexChanged.connect(self._result_change)
+        # noinspection PyUnresolvedReferences
+        result_box.currentIndexChanged.connect(self.__result_change)
 
         prompt_group = QGroupBox()
         prompt_group.setTitle('Search Keywords')
@@ -89,7 +92,8 @@ class SearchWindow(QDialog):
         search_cfg.setOrientation(Qt.Orientation.Horizontal)
         search_cfg.setTickInterval(1)
         search_cfg.setRange(0, 40)
-        search_cfg.valueChanged.connect(self._value_change)
+        # noinspection PyUnresolvedReferences
+        search_cfg.valueChanged.connect(self.__value_change)
 
         for i, tmp in enumerate(['Less than', 'Equal to', 'Greater than']):
             radio_button = QRadioButton(tmp)
@@ -126,8 +130,10 @@ class SearchWindow(QDialog):
         self.extension = extension_group
 
         search_button = QPushButton("Search", self)
-        search_button.clicked.connect(self._do_search)
+        # noinspection PyUnresolvedReferences
+        search_button.clicked.connect(self.__do_search)
         close_button = QPushButton('Close', self)
+        # noinspection PyUnresolvedReferences
         close_button.clicked.connect(self.window_close)
 
         layout.addWidget(result_label, 0, 0)
@@ -142,13 +148,13 @@ class SearchWindow(QDialog):
         central_widget.setLayout(layout)
         self.setLayout(layout)
 
-    def _result_change(self):
+    def __result_change(self):
         self.result = self.sender().currentText()
 
-    def _value_change(self):
+    def __value_change(self):
         self.search_cfg_label.setText('CFG : ' + str(self.sender().value() * 0.5))
 
-    def _do_search(self):
+    def __do_search(self):
         self.conditions['Result'] = self.result
         if self.prompt.isChecked():
             self.conditions['Search'] = self.search_box.text()
@@ -179,35 +185,16 @@ class SearchWindow(QDialog):
                 self.conditions[tmp.objectName()] = tmp.isChecked()
         self.conditions['Extension'] = self.extension.isChecked()
 
-        if self._validation():
-            result = self.conditions.get('Result', 'Tabs')
-            params = [value.params for value in self.parent().params]
-
-            self.parent().tab_tweak()
-            target_tabs = list(search_images(self.conditions, params))
-
-            if len(target_tabs) > 0:
-                if result == 'Tabs':
-                    target = None
-                    self.parent().tab_tweak(target_tabs)
-                elif result == 'Listview':
-                    target = self.parent().listview
-                    if self.parent().listview.isVisible():
-                        self.parent().listview.close()
-                    self.parent().open_listview(target_tabs)
-                elif result == 'Thumbnails':
-                    target = self.parent().thumbnail
-                    if self.parent().thumbnail.isVisible():
-                        self.parent().thumbnail.close()
-                    self.parent().open_thumbnail(target_tabs)
-                text = str(len(target_tabs)) + ' image(s) found !'
-                MessageBox(text, 'Search result', 'ok', 'info', self)
-                if target:
-                    target.activateWindow()
+        if self.__validation():
+            params = self.controller.get_all_dictionary()
+            matched = search_images(self.conditions, params)
+            if len(matched) > 0:
+                match_text = str(len(matched)) + ' image(s) found !'
             else:
-                MessageBox('There is no match to show.', 'Search result', 'ok', 'info', self)
+                match_text = 'There is no match to show.'
+            self.controller.request_reception((matched, match_text), 'apply', sender=self.caller)
 
-    def _validation(self):
+    def __validation(self):
         words = self.conditions.get('Search', 'None')
         count = words.count('"')
 
@@ -223,15 +210,17 @@ class SearchWindow(QDialog):
 
         return True
 
-    def show_dialog(self):
-        self.show()
+    def show_dialog(self, caller):
+        self.caller = caller
         self.search_box.setFocus()
+        self.show()
 
     def update_model_list(self, model_list):
         self.search_model.clear()
         self.search_model.addItems(model_list)
 
     def window_close(self):
+        self.caller = None
         self.close()
 
 

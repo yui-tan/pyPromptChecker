@@ -229,6 +229,12 @@ class ImageController(QObject):
                 return image_data.params.get(key)
         return None
 
+    def get_all_dictionary(self):
+        dictionaries = []
+        for image_index, image_data in self.loaded_images:
+            dictionaries.append(image_data.params)
+        return dictionaries
+
     def request_reception(self, indexes: tuple, request: str, sender=None):
         result = None
 
@@ -245,7 +251,9 @@ class ImageController(QObject):
             if len(indexes) > 0:
                 result = self.__manage_image_files(indexes, request)
         elif request == 'search':
-            self.open_search_dialog()
+            self.open_search_dialog(sender)
+        elif request == 'apply':
+            self.__searched_check_and_emit(indexes, sender)
         elif request == 'append':
             result = self.__add_images(indexes[0], sender)
         elif request == 'replace':
@@ -269,13 +277,13 @@ class ImageController(QObject):
         self.image_view.filepath = filepath
         self.image_view.init_image_window()
 
-    def open_search_dialog(self):
+    def open_search_dialog(self, sender):
         models = list(self.applied_model)
         models.sort()
         models.insert(0, '')
         if not self.search_dialog:
-            self.search_dialog = SearchWindow(models)
-        self.search_dialog.show_dialog()
+            self.search_dialog = SearchWindow(models, self)
+        self.search_dialog.show_dialog(sender)
 
     def open_diff_view(self, indexes: tuple):
         image_a = self.get_dictionary_by_index(indexes[0])
@@ -403,7 +411,7 @@ class ImageController(QObject):
             flag = self.__result_check_and_emit(request, succeed, changed, errored)
             return flag
 
-        elif not os.path.exists(destination):
+        elif destination and not os.path.exists(destination):
             MessageBox(custom_text('404'), icon='critical', parent=self.main_window)
             return
 
@@ -440,6 +448,14 @@ class ImageController(QObject):
             MessageBox(error_text, icon='critical', parent=self.main_window)
 
         return succeed_flag
+
+    def __searched_check_and_emit(self, result: tuple, caller):
+        if not result[0]:
+            MessageBox(result[1], 'Result', parent=caller)
+        else:
+            if self.thumbnail:
+                self.thumbnail.search_process(result[0])
+            MessageBox(result[1], 'Result', parent=caller)
 
     def __add_images(self, which: str, sender, is_replace: bool = False):
         depth = config.get('SubDirectoryDepth', 0)
