@@ -13,6 +13,18 @@ from gui.thumbnail import ThumbnailView
 from gui.viewer import *
 from lib import *
 
+DARK_THEME = config.get('AlwaysStartWithDarkMode', False)
+MAIN_WINDOW = config.get('AlwaysOpenBy', 'tab').lower()
+MODEL_LIST = config.get('ModelList', 'model_list.csv')
+FAVOURITE = config.get('Favourites')
+IGNORE_IMAGE = config.get('IgnoreIfDataIsNotEmbedded', False)
+LORA_NAME = config.get('ModelListSearchApplyLora', False)
+TI_NAME = config.get('ModelListSearchApplyTi', False)
+ASK_CLEAR = config.get('AskIfClearTrashBin')
+ASK_DELETE = config.get('AskIfDelete', True)
+USE_MOVE = config.get('UseCopyInsteadOfMove', True)
+SUBDIRECTORY_DEPTH = config.get('SubDirectoryDepth', 0)
+
 
 class ImageController(QObject):
     def __init__(self, app, filepaths):
@@ -20,13 +32,14 @@ class ImageController(QObject):
         self.app = app
         self.filepaths = filepaths
 
-        self.dark = config.get('AlwaysStartWithDarkMode')
+        self.dark = DARK_THEME
 
         self.main_window = None
         self.main_menu = None
         self.thumbnail = None
         self.listview = None
         self.tabview = None
+        self.interrogate = None
         self.image_view = None
         self.search_dialog = None
 
@@ -44,7 +57,7 @@ class ImageController(QObject):
         self.app.aboutToQuit.connect(self.__obliterate)
 
     def __init_class(self):
-        self.models = io.import_model_list(config.get('ModelList', 'model_list.csv'))
+        self.models = io.import_model_list(MODEL_LIST)
         self.__load_images()
 
     def __clear_class(self):
@@ -59,9 +72,6 @@ class ImageController(QObject):
     def __load_images(self, filepath_list: list = None):
         filepaths = filepath_list if filepath_list is not None else self.filepaths
         image_indexes = 0 if not self.loaded_images else len(self.loaded_images)
-        ignore = config.get('IgnoreIfDataIsNotEmbedded', False)
-        lora = config.get('ModelListSearchApplyLora', False)
-        ti = config.get('ModelListSearchApplyTi', False)
         valid_total = len(filepaths)
         progress_bar = None
 
@@ -74,7 +84,7 @@ class ImageController(QObject):
             filepath, filetype = tuples
             chunk_data, original_size = chunk_text_extractor(filepath, filetype)
 
-            if not chunk_data and ignore:
+            if not chunk_data and IGNORE_IMAGE:
                 valid_total -= 1
                 continue
 
@@ -85,7 +95,7 @@ class ImageController(QObject):
             parameters = ChunkData(chunk_data, filepath, filetype, original_size)
             parameters.init_class()
 
-            if parameters.params.get('Positive') == 'This file has no embedded data' and ignore:
+            if parameters.params.get('Positive') == 'This file has no embedded data' and IGNORE_IMAGE:
                 valid_total -= 1
                 continue
 
@@ -95,11 +105,11 @@ class ImageController(QObject):
             parameters.model_name(self.models)
             parameters.vae_name(self.models)
 
-            if lora:
+            if LORA_NAME:
                 parameters.override_lora(self.models)
                 parameters.override_addnet_model(self.models)
 
-            if ti:
+            if TI_NAME:
                 parameters.override_textual_inversion(self.models)
 
             self.applied_model.add(parameters.params.get('Model'))
@@ -119,10 +129,9 @@ class ImageController(QObject):
             MessageBox('There is no data to parse.', 'Oops!', parent=self.main_window)
 
     def __init_main_window(self):
-        main_window = config.get('AlwaysOpenBy', 'tab').lower()
-        if main_window == 'thumbnail':
+        if MAIN_WINDOW == 'thumbnail':
             self.__initialize_thumbnail_window()
-        elif main_window == 'listview':
+        elif MAIN_WINDOW == 'listview':
             self.__initialize_listview_window()
         else:
             self.__initialize_tab_window()
@@ -203,13 +212,12 @@ class ImageController(QObject):
     def __obliterate(self):
         trash_bin = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.trash')
         if os.path.exists(trash_bin):
-            ask = config.get('AskIfClearTrashBin')
             if not io.is_directory_empty(trash_bin):
                 answer = None
-                if ask:
+                if ASK_CLEAR:
                     text = 'Do you want to obliterate files in the trash bin ?'
                     answer = MessageBox(text, 'pyPromptChecker', 'okcancel', 'question', self.main_window)
-                if answer.success or not ask:
+                if answer.success or not ASK_CLEAR:
                     io.clear_trash_bin(trash_bin)
 
     def get_data_by_index(self, index):
@@ -374,26 +382,24 @@ class ImageController(QObject):
         return
 
     def __manage_image_files(self, indexes: tuple, request: str):
-        move = not config.get('UseCopyInsteadOfMove', True)
-        ask = config.get('AskIfDelete', True)
+        use_copy = USE_MOVE
         destination = None
         succeed = []
         changed = []
         errored = []
 
-        if ask and request == 'delete':
+        if ASK_DELETE and request == 'delete':
             result = MessageBox('Really?', 'Confirm', 'okcancel', 'question', self.main_window)
             if not result.success:
                 return
 
         if request == 'add':
-            destination = config.get('Favourites')
             if not destination:
                 return
         elif request == 'delete':
             destination = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.trash')
             os.makedirs(destination, exist_ok=True)
-            move = True
+            use_copy = False
         elif request == 'move':
             dialog = FileDialog('choose-directory', 'Select Directory', parent=self.main_window)
             destination = dialog.result[0] if dialog.result else None
@@ -401,7 +407,7 @@ class ImageController(QObject):
         if destination and os.path.exists(destination):
             for index in indexes:
                 source = self.get_tag_data_by_index(index, 'Filepath')
-                result, e = io.image_copy_to(source, destination, move)
+                result, e = io.image_copy_to(source, destination, use_copy)
                 if not e and os.path.basename(source) == os.path.basename(result):
                     succeed.append((index, result))
                 elif not e and os.path.basename(source) != os.path.basename(result):
@@ -460,8 +466,6 @@ class ImageController(QObject):
             MessageBox(result[1], 'Result', parent=caller)
 
     def __add_images(self, which: str, sender, is_replace: bool = False):
-        depth = config.get('SubDirectoryDepth', 0)
-
         def filepaths_check(target):
             valid, not_found, directories, not_image = check_files(target)
 
@@ -500,7 +504,7 @@ class ImageController(QObject):
         else:
             dialog = FileDialog('choose-directory', 'Select Directory', sender)
             directory = dialog.result
-            filepaths = None if not directory else find_target(directory, depth)
+            filepaths = None if not directory else find_target(directory, SUBDIRECTORY_DEPTH)
 
         if filepaths:
             if not is_replace:
@@ -646,11 +650,9 @@ class ImageController(QObject):
 
 
 def from_main(purpose, filepaths=None):
-    theme = config.get('AlwaysStartWithDarkMode')
-
     if purpose == 'directory':
         app = QApplication(sys.argv)
-        if theme:
+        if DARK_THEME:
             qdarktheme.setup_theme('dark', additional_qss=custom_stylesheet('theme', 'dark'))
         else:
             qdarktheme.setup_theme('light')
@@ -660,7 +662,7 @@ def from_main(purpose, filepaths=None):
 
     elif purpose == 'files':
         app = QApplication(sys.argv)
-        if theme:
+        if DARK_THEME:
             qdarktheme.setup_theme('dark', additional_qss=custom_stylesheet('theme', 'dark'))
         else:
             qdarktheme.setup_theme('light')

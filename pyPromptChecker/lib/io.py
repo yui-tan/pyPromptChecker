@@ -42,7 +42,7 @@ def import_model_list(filepath):
         return None
 
 
-def image_copy_to(source, destination, is_move=False):
+def image_copy_to(source, destination, use_copy=True):
     destination_path = os.path.join(destination, os.path.basename(source))
 
     if os.path.exists(destination_path):
@@ -53,7 +53,7 @@ def image_copy_to(source, destination, is_move=False):
     if os.path.exists(source):
         try:
             shutil.copy(source, destination_path)
-            if os.path.exists(destination_path) and is_move:
+            if os.path.exists(destination_path) and not use_copy:
                 os.remove(source)
                 return destination_path, None
             return destination_path, None
