@@ -14,10 +14,11 @@ class SelectDialog(QDialog):
         self.selected = 0
         self.model = None
         self.lora = None
-        self._init_select_dialog()
+        self.__init_select_dialog()
         self.resize(200, 80)
 
-    def _init_select_dialog(self):
+    # noinspection PyUnresolvedReferences
+    def __init_select_dialog(self):
         layout = QVBoxLayout()
         button_layout = QHBoxLayout()
 
@@ -30,16 +31,16 @@ class SelectDialog(QDialog):
 
         self.model = QRadioButton('Model / VAE hash')
         self.model.setChecked(True)
-        self.model.toggled.connect(self._toggle_radio_button)
+        self.model.toggled.connect(self.__toggle_radio_button)
         self.lora = QRadioButton('LoRa / Textual inversion hash')
-        self.lora.toggled.connect(self._toggle_radio_button)
+        self.lora.toggled.connect(self.__toggle_radio_button)
         layout.addWidget(self.model)
         layout.addWidget(self.lora)
         layout.addLayout(button_layout)
 
         self.setLayout(layout)
 
-    def _toggle_radio_button(self):
+    def __toggle_radio_button(self):
         if self.model.isChecked():
             self.selected = 0
         elif self.lora.isChecked():
@@ -56,9 +57,10 @@ class InterrogateSelectDialog(QDialog):
         self.chara_threshold = 0.85
         self.chara_label = QLabel()
 
-        self._init_interrogate_dialog()
+        self.__init_interrogate_dialog()
 
-    def _init_interrogate_dialog(self):
+    # noinspection PyUnresolvedReferences
+    def __init_interrogate_dialog(self):
         root_layout = QGridLayout()
 
         for index, name in enumerate(('Model', 'Tag threshold', 'Character threshold')):
@@ -69,7 +71,7 @@ class InterrogateSelectDialog(QDialog):
             if index == 0:
                 value = QComboBox()
                 value.addItems(('MOAT', 'Swin', 'ConvNext', 'ConvNextV2', 'ViT'))
-                value.currentIndexChanged.connect(self._model_change)
+                value.currentIndexChanged.connect(self.__model_change)
                 root_layout.addWidget(value, index, 1, 1, 2)
 
             else:
@@ -85,7 +87,7 @@ class InterrogateSelectDialog(QDialog):
                 slider.setMinimumWidth(200)
                 slider.setValue(int(value * 100))
                 slider.setOrientation(Qt.Orientation.Horizontal)
-                slider.valueChanged.connect(self._threshold_change)
+                slider.valueChanged.connect(self.__threshold_change)
                 root_layout.addWidget(slider, index, 2)
 
         button_layout = QHBoxLayout()
@@ -99,10 +101,10 @@ class InterrogateSelectDialog(QDialog):
 
         self.setLayout(root_layout)
 
-    def _model_change(self):
+    def __model_change(self):
         self.selected_model = self.sender().currentText()
 
-    def _threshold_change(self):
+    def __threshold_change(self):
         value = float(self.sender().value() / 100)
         if self.sender().objectName() == 'Tag threshold':
             self.tag_threshold = value
@@ -119,15 +121,15 @@ class FileDialog(QFileDialog):
         self.result = None
         self.file_filter = ''
         self.setWindowTitle(title)
-        self._set_filter(file_filter)
+        self.__set_filter(file_filter)
         self.setDirectory(os.path.expanduser('~'))
         self.category = category
-        self._set_category(self.category, filename)
+        self.__set_category(self.category, filename)
 
         if self.exec():
             self.result = self.selectedFiles()
 
-    def _set_category(self, category: str, filename: str):
+    def __set_category(self, category: str, filename: str):
         if category == 'save-file':
             self.setFileMode(QFileDialog.FileMode.AnyFile)
             self.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
@@ -143,7 +145,7 @@ class FileDialog(QFileDialog):
             self.setFileMode(QFileDialog.FileMode.Directory)
             self.setOption(QFileDialog.Option.ShowDirsOnly, True)
 
-    def _set_filter(self, str_filter: str):
+    def __set_filter(self, str_filter: str):
         if str_filter == 'JSON':
             self.file_filter = 'JSON Files(*.json)'
         elif str_filter == 'PNG':
@@ -174,15 +176,15 @@ class MessageBox(QMessageBox):
         self.success = False
         self.setText(text)
         self.setWindowTitle(title)
-        self._set_style(style)
-        self._add_icon(icon)
+        self.__set_style(style)
+        self.__add_icon(icon)
 
         self.result = self.exec()
 
         if self.result == QMessageBox.StandardButton.Ok:
             self.success = True
 
-    def _set_style(self, style: str):
+    def __set_style(self, style: str):
         if 'ok' in style:
             self.addButton(QMessageBox.StandardButton.Ok)
         if 'no' in style:
@@ -190,7 +192,7 @@ class MessageBox(QMessageBox):
         if 'cancel' in style:
             self.addButton(QMessageBox.StandardButton.Cancel)
 
-    def _add_icon(self, icon: str):
+    def __add_icon(self, icon: str):
         if icon == 'critical':
             self.setIcon(QMessageBox.Icon.Critical)
         elif icon == 'warning':
@@ -218,6 +220,7 @@ class Toast(QWidget):
         toast_layout.addWidget(self.message_label)
         self.setLayout(toast_layout)
 
+    # noinspection PyUnresolvedReferences
     def init_toast(self, message: str, duration: int = 2000):
         self.message_label.setText(message)
         self.show()
@@ -231,9 +234,9 @@ class Toast(QWidget):
         self.move(x - adjust_x, y - adjust_y)
 
         self.timer = QTimer()
-        self.timer.timeout.connect(self._close_toast)
+        self.timer.timeout.connect(self.__close_toast)
         self.timer.start(duration)
 
-    def _close_toast(self):
+    def __close_toast(self):
         self.timer.stop()
         self.close()

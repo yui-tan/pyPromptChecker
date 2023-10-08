@@ -18,6 +18,10 @@ class ImageWindow(QMainWindow):
         self.max_screen = self.screen.availableGeometry()
         self.screen_center = self.screen.geometry().center()
 
+    def __image_window_clicked(self):
+        if self.isActiveWindow():
+            self.close()
+
     def init_image_window(self):
         label = PixmapLabel()
         pixmap = QPixmap(self.filepath)
@@ -37,7 +41,7 @@ class ImageWindow(QMainWindow):
 
         label.setPixmap(pixmap)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.clicked.connect(self._image_window_clicked)
+        label.clicked.connect(self.__image_window_clicked)
 
         self.setCentralWidget(label)
         visible = self.isVisible()
@@ -49,10 +53,6 @@ class ImageWindow(QMainWindow):
             frame_geometry.moveCenter(self.screen_center)
             self.move(frame_geometry.topLeft())
 
-    def _image_window_clicked(self):
-        if self.isActiveWindow():
-            self.close()
-
 
 class DiffWindow(QMainWindow):
     def __init__(self, params: tuple, parent=None):
@@ -60,12 +60,12 @@ class DiffWindow(QMainWindow):
         self.status = None
         self.params = params
         self.setWindowTitle('Diff Window')
-        self.init_diff()
+        self.__init_diff()
         self.setMinimumSize(1000, 1000)
         move_centre(self)
 
     # noinspection PyUnresolvedReferences
-    def init_diff(self):
+    def __init_diff(self):
         statuses = ['Extensions',
                     'Timestamp',
                     'Image size',
@@ -163,14 +163,14 @@ class DiffWindow(QMainWindow):
 
         page1 = QWidget()
         page1_layout = QHBoxLayout()
-        source_textbox, target_textbox = self.make_textbox('Positive')
+        source_textbox, target_textbox = self.__make_textbox('Positive')
         page1_layout.addWidget(source_textbox)
         page1_layout.addWidget(target_textbox)
         page1.setLayout(page1_layout)
 
         page2 = QWidget()
         page2_layout = QHBoxLayout()
-        source_textbox, target_textbox = self.make_textbox('Negative')
+        source_textbox, target_textbox = self.__make_textbox('Negative')
         page2_layout.addWidget(source_textbox)
         page2_layout.addWidget(target_textbox)
         page2.setLayout(page2_layout)
@@ -204,7 +204,7 @@ class DiffWindow(QMainWindow):
 
         self.show()
 
-    def make_textbox(self, key: str):
+    def __make_textbox(self, key: str):
         original_source_words = self.params[0].get(key, 'None').replace('-', '<hyphen>').replace('@', '<atmark>')
         original_target_words = self.params[1].get(key, 'None').replace('-', '<hyphen>').replace('@', '<atmark>')
         source_words = original_source_words

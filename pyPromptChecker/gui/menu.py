@@ -17,10 +17,10 @@ class FooterButtonMenu(QMenu):
         self.add_favourite = QAction('Add favourite', self)
         self.add_favourite.setObjectName('Add favourite')
 
-        self.menu_position()
-        self.menu_trigger()
+        self.__menu_position()
+        self.__menu_trigger()
 
-    def menu_position(self):
+    def __menu_position(self):
         self.addMenu(self.delete_menu)
         self.delete_menu.addAction(self.delete)
 
@@ -30,7 +30,7 @@ class FooterButtonMenu(QMenu):
         self.addAction(self.add_favourite)
 
     # noinspection PyUnresolvedReferences
-    def menu_trigger(self):
+    def __menu_trigger(self):
         self.delete.triggered.connect(lambda: self.main.signal_received())
         self.move_to.triggered.connect(lambda: self.main.signal_received())
         self.add_favourite.triggered.connect(lambda: self.main.signal_received())
@@ -149,12 +149,6 @@ class MainMenu(QMenu):
 #        self.interrogate_this.triggered.connect(self.main.add_interrogate_tab)
 #        self.interrogate_all.triggered.connect(lambda: self.main.add_interrogate_tab(1))
 
-    def present_check(self, destination):
-        if not hasattr(destination, 'root_tab'):
-            self.json_export_single.setDisabled(True)
-        else:
-            self.json_export_single.setDisabled(False)
-
     def __exit_app(self):
         self.main.request_reception(None, 'exit', self.window)
 
@@ -176,6 +170,12 @@ class MainMenu(QMenu):
                     result = (self.window.root_tab.currentIndex(),)
             if result:
                 self.main.request_reception(result, 'json')
+
+    def present_check(self, destination):
+        if not hasattr(destination, 'root_tab'):
+            self.json_export_single.setDisabled(True)
+        else:
+            self.json_export_single.setDisabled(False)
 
     def theme_check(self):
         if self.main.dark:

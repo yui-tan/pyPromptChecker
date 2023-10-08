@@ -337,14 +337,6 @@ class Tabview(QMainWindow):
                         self.tab_bar.image_deleted((tab_index,))
                     break
 
-    def export_all_text(self):
-        for i in range(self.root_tab.count()):
-            extension_tab = self.root_tab.widget(i).findChild(QTabWidget, 'extension_tab')
-            interrogate_tab = extension_tab.findChild(QStackedWidget, 'interrogate')
-            if interrogate_tab is not None:
-                interrogate_tab.export_text(True)
-        self.toast.init_toast('Exported!', 1000)
-
     def __change_window(self, button):
         text = ''
         for index in range(self.root_tab.count()):
