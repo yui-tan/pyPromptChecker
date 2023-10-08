@@ -50,8 +50,6 @@ class Tabview(QMainWindow):
         root_layout = QVBoxLayout()
         root_layout.setContentsMargins(5, 5, 5, 5)
 
-#        footer_layout = make_footer_area(self)
-
         filelist = [value.params.get('Filename') for _, value in loaded_images]
         self.tab_navigation = TabNavigation(self, self.controller, filelist)
         root_layout.addWidget(self.tab_navigation)
@@ -76,7 +74,6 @@ class Tabview(QMainWindow):
         middle_section.setLayout(middle_section_layout)
         root_layout.addWidget(middle_section)
 
-#        root_layout.addLayout(footer_layout)
         self.footer = FooterButtons(BUTTONS, self)
         self.footer.fixed_size_button('bar_toggle', 25)
         root_layout.addWidget(self.footer)
@@ -313,7 +310,7 @@ class Tabview(QMainWindow):
             timer = QTimer(self)
             timer.timeout.connect(lambda: self.adjustSize())
             timer.start(10)
-
+# ToDO: Do not use currentIndex below, Use global Index
         elif where_from == 'pixmap':
             self.controller.request_reception((current_index,), 'view', self)
 
@@ -665,12 +662,6 @@ class TabBar(QWidget):
         add_items = [(index, filepath) for index, filepath in filepaths if index not in current_filepaths]
         self.__tab_bar_thumbnails(add_items, len(self.filepaths))
         self.filepaths.extend(add_items)
-
-    def toggle_tab_bar(self):
-        if self.isHidden():
-            self.show()
-        else:
-            self.hide()
 
     def pixmap_hide(self):
         for index in range(len(self.scroll_contents.findChildren(PixmapLabel))):

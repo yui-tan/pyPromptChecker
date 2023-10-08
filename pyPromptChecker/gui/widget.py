@@ -214,36 +214,6 @@ class FooterButtons(QWidget):
             button.show()
 
 
-def make_footer_area(parent):
-    shortened_window = config.get('OpenWithShortenedWindow', False)
-    now_shortened = parent.hide_tab
-    footer_layout = QHBoxLayout()
-    button_text = ['Copy positive', 'Copy negative', 'Copy seed', 'Shrink', '▲Menu']
-
-    for button_name in button_text:
-        footer_button = QPushButton()
-        footer_button.setObjectName(button_name)
-        footer_button.clicked.connect(parent.tab_signal_received)
-        footer_layout.addWidget(footer_button)
-
-        if button_name == 'Copy positive':
-            footer_button.setText('Copy &positive')
-        elif button_name == 'Copy negative':
-            footer_button.setText('Copy &negative')
-        elif button_name == 'Copy seed':
-            footer_button.setText('Copy &seed')
-        elif button_name == '▲Menu':
-            footer_button.setText('▲M&enu')
-        elif button_name == 'Shrink':
-            if shortened_window or now_shortened:
-                footer_button.setText('Expand')
-            else:
-                footer_button.setText('Shrink')
-            footer_button.setShortcut(QKeySequence('Ctrl+Tab'))
-
-    return footer_layout
-
-
 def make_main_section(target, tab):
     status = [['File count', 'Number'],
               'Extensions',
