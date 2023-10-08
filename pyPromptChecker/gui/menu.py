@@ -1,34 +1,84 @@
 # -*- coding: utf-8 -*-
 
-from PyQt6.QtWidgets import QApplication, QMenu
+import sys
+from PyQt6.QtWidgets import QMenu
 from PyQt6.QtGui import QAction
 
 
-def quit_triggered():
-    QApplication.quit()
+class FooterButtonMenu(QMenu):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.main = parent
+
+        self.delete_menu = QMenu('Delete', self)
+        self.delete = QAction('Confirm', self.delete_menu)
+        self.delete.setObjectName('Delete')
+        self.move_to = QAction('Move to', self)
+        self.move_to.setObjectName('Move')
+        self.add_favourite = QAction('Add favourite', self)
+        self.add_favourite.setObjectName('Add favourite')
+
+        self.menu_position()
+        self.menu_trigger()
+
+    def menu_position(self):
+        self.addMenu(self.delete_menu)
+        self.delete_menu.addAction(self.delete)
+
+        self.addSeparator()
+
+        self.addAction(self.move_to)
+        self.addAction(self.add_favourite)
+
+    # noinspection PyUnresolvedReferences
+    def menu_trigger(self):
+        self.delete.triggered.connect(lambda: self.main.signal_received())
+        self.move_to.triggered.connect(lambda: self.main.signal_received())
+        self.add_favourite.triggered.connect(lambda: self.main.signal_received())
 
 
-class MainMenu(QMenu):
+class TabMenu(QMenu):
+    # noinspection PyUnresolvedReferences
     def __init__(self, parent=None):
         super().__init__(parent)
 
         self.main = parent
 
+        self.tab_link = QAction('Compare extension', self)
+        self.addAction(self.tab_link)
+        self.tab_link.setCheckable(True)
+
+        self.tab_link.triggered.connect(self.main.toggle_tab_link)
+
+
+class MainMenu(QMenu):
+    def __init__(self, parent, controller):
+        super().__init__(parent)
+
+        self.main = controller
+        self.window = parent
+
         self.lora_wizard = QAction('LoRa wizard', self)
         self.interrogate_menu = QMenu('Interrogate', self)
         self.interrogate_wd14 = QMenu('WD 1.4 Tagger', self)
         self.interrogate_all = QAction('All images', self)
-        self.interrogate_selected = QAction('Select images', self)
+        self.interrogate_selected = QAction('Selected images', self)
         self.interrogate_this = QAction('This image', self)
 
         self.reselect_menu = QMenu('Reselect', self)
-        self.reselect_add = QAction('Append tabs', self.reselect_menu)
-        self.reselect_renewal = QAction('Repalece all tabs', self.reselect_menu)
+
+        self.reselect_from_file = QMenu('Select files', self.reselect_menu)
+        self.reselect_add_file = QAction('Append images', self.reselect_from_file)
+        self.reselect_renewal_file = QAction('Replace all images', self.reselect_from_file)
+
+        self.reselect_from_dir = QMenu('Select directory', self.reselect_menu)
+        self.reselect_add_dir = QAction('Append tabs', self.reselect_from_dir)
+        self.reselect_renewal_dir = QAction('Replace all images', self.reselect_from_dir)
 
         self.json_export_menu = QMenu('Export JSON', self)
         self.json_export_single = QAction("Present image", self.json_export_menu)
         self.json_export_all = QAction("All images", self.json_export_menu)
-        self.json_export_selected = QAction('Image selection', self)
+        self.json_export_selected = QAction('Selected images', self)
 
         self.json_import_menu = QMenu('Import JSON', self)
         self.json_import_files = QAction("Select files", self.json_import_menu)
@@ -39,7 +89,12 @@ class MainMenu(QMenu):
         self.dark_mode = QAction('Dark mode', self)
         self.dark_mode.setCheckable(True)
 
+        self.__menu_position()
+        self.__menu_trigger()
+
         self.theme_check()
+
+    def __menu_position(self):
 
         self.addAction(self.model_hash_extractor)
 
@@ -53,8 +108,10 @@ class MainMenu(QMenu):
 
         self.addSeparator()
 
-        self.reselect_menu.addAction(self.reselect_add)
-        self.reselect_menu.addAction(self.reselect_renewal)
+        self.reselect_from_dir.addActions([self.reselect_add_dir, self.reselect_renewal_dir])
+        self.reselect_menu.addMenu(self.reselect_from_dir)
+        self.reselect_from_file.addActions([self.reselect_add_file, self.reselect_renewal_file])
+        self.reselect_menu.addMenu(self.reselect_from_file)
         self.addMenu(self.reselect_menu)
 
         self.addSeparator()
@@ -76,61 +133,43 @@ class MainMenu(QMenu):
 
         self.addAction(self.quit)
 
-        self.quit.triggered.connect(quit_triggered)
+    # noinspection PyUnresolvedReferences
+    def __menu_trigger(self):
+        self.quit.triggered.connect(self.__exit_app)
         self.dark_mode.triggered.connect(self.main.change_themes)
         self.model_hash_extractor.triggered.connect(self.main.model_hash_extractor)
+        self.reselect_add_file.triggered.connect(lambda: self.__reselect_files('files', 'append'))
+        self.reselect_renewal_file.triggered.connect(lambda: self.__reselect_files('files', 'replace'))
+        self.reselect_add_dir.triggered.connect(lambda: self.__reselect_files('directory', 'append'))
+        self.reselect_renewal_dir.triggered.connect(lambda: self.__reselect_files('directory', 'replace'))
+        self.json_import_files.triggered.connect(lambda: self.__json_import('files', True))
+        self.json_import_directory.triggered.connect(lambda: self.__json_import('directory', True))
+#        self.json_export_single.triggered.connect(self.main.export_json_single)
+        self.json_export_all.triggered.connect(lambda: self.__json_export('all'))
+        self.json_export_selected.triggered.connect(lambda: self.__json_export('select'))
+#        self.interrogate_this.triggered.connect(self.main.add_interrogate_tab)
+#        self.interrogate_all.triggered.connect(lambda: self.main.add_interrogate_tab(1))
 
-        self.reselect_add.triggered.connect(self.main.reselect_files_append)
-        self.reselect_renewal.triggered.connect(self.main.reselect_files)
+    def __exit_app(self):
+        self.main.request_reception(None, 'exit', self.window)
 
-        self.json_import_files.triggered.connect(self.main.import_json_from_files)
-        self.json_import_directory.triggered.connect(self.main.import_json_from_directory)
+    def __reselect_files(self, which: str, replace_or_append: str):
+        self.main.request_reception((which, ), replace_or_append, self.window)
 
-        self.json_export_single.triggered.connect(self.main.export_json_single)
-        self.json_export_all.triggered.connect(self.main.export_json_all)
-        self.json_export_selected.triggered.connect(self.main.open_thumbnail)
+    def __json_import(self, which: str, is_replace: bool):
+        self.main.request_reception((which, is_replace), 'import', self.window)
 
-        self.interrogate_this.triggered.connect(self.main.add_interrogate_tab)
-        self.interrogate_all.triggered.connect(lambda: self.main.add_interrogate_tab(1))
+    def __json_export(self, which: str):
+        if hasattr(self.window, 'get_selected_images'):
+            result = None
+            if which == 'select':
+                result = self.window.get_selected_images(True)
+            elif which == 'all':
+                result = self.window.get_selected_images(False)
+            self.main.request_reception(result, 'json')
 
     def theme_check(self):
         if self.main.dark:
             self.dark_mode.setChecked(True)
         else:
             self.dark_mode.setChecked(False)
-
-
-class TabMenu(QMenu):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        self.main = parent
-
-        self.tab_link = QAction('Compare extension', self)
-        self.addAction(self.tab_link)
-        self.tab_link.setCheckable(True)
-
-        self.tab_link.triggered.connect(self.main.tab_link)
-
-
-class ThumbnailMenu(QMenu):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.main = parent
-
-        self.delete_menu = QMenu('Delete', self)
-        self.delete = QAction('Confirm', self.delete_menu)
-        self.move_to = QAction('Move to', self)
-        self.add_favourite = QAction('Add favourite', self)
-
-        self.addMenu(self.delete_menu)
-        self.delete_menu.addAction(self.delete)
-
-        self.addSeparator()
-
-        self.addAction(self.move_to)
-        self.addAction(self.add_favourite)
-
-        self.delete.triggered.connect(lambda: self.main.management_image('delete'))
-        self.move_to.triggered.connect(lambda: self.main.management_image('move'))
-        self.add_favourite.triggered.connect(lambda: self.main.management_image('favourite'))

@@ -1,12 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import os
-import sys
 import importlib
 from functools import lru_cache
-from PyQt6.QtWidgets import QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QComboBox, QTextEdit, QSizePolicy
+from PyQt6.QtWidgets import QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QTextEdit, QSizePolicy
 from PyQt6.QtWidgets import QApplication, QGroupBox, QTabWidget, QScrollArea, QSplitter, QGridLayout, QWidget
-from PyQt6.QtGui import QPixmap, QPainter, QColor, QKeySequence, QShortcut, QImageReader
+from PyQt6.QtGui import QPixmap, QPainter, QImageReader
 from PyQt6.QtCore import Qt, pyqtSignal
 
 from .custom import *
@@ -23,6 +21,7 @@ class PixmapLabel(QLabel):
         super().__init__(parent)
         self.setStyleSheet("border: none;")
 
+    # noinspection PyUnresolvedReferences
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton and event.modifiers() == Qt.KeyboardModifier.ControlModifier:
             self.ctrl_clicked.emit()
@@ -41,6 +40,7 @@ class ClickableGroup(QGroupBox):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+    # noinspection PyUnresolvedReferences
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
@@ -54,6 +54,7 @@ class ButtonWithMenu(QPushButton):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+    # noinspection PyUnresolvedReferences
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
@@ -87,50 +88,55 @@ class HoverLabel(QLabel):
 
 
 class MoveDelete(QWidget):
-    def __init__(self, filepath):
+    def __init__(self, filepath, tab):
         super().__init__()
+        self.tab = tab
         self.filepath = filepath
         self.favourite = QPushButton()
         self.move_to = QPushButton()
         self.delete = QPushButton()
 
         self.setObjectName('move_delete')
-        self._init_class()
+        self.__init_class()
 
-    def _init_class(self):
+    # noinspection PyUnresolvedReferences
+    def __init_class(self):
         root_layout = QHBoxLayout()
         root_layout.setContentsMargins(5, 0, 5, 0)
 
         self.favourite.setText('&Favourite')
         self.favourite.setObjectName('Favourite')
+        self.favourite.clicked.connect(self.tab.tab_signal_received)
         root_layout.addWidget(self.favourite)
 
         self.move_to.setText('&Move to')
         self.move_to.setObjectName('Move to')
+        self.move_to.clicked.connect(self.tab.tab_signal_received)
         root_layout.addWidget(self.move_to)
 
         self.delete.setText('Delete')
         self.delete.setObjectName('Delete')
         self.delete.setShortcut(QKeySequence('Delete'))
+        self.delete.clicked.connect(self.tab.tab_signal_received)
         root_layout.addWidget(self.delete)
 
         self.setLayout(root_layout)
-        self._check_filepath()
+        self.__check_filepath()
 
-    def _check_filepath(self):
+    def __check_filepath(self):
         fav = config.get('Favourites')
         directory = os.path.dirname(self.filepath)
         trash_bin = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.trash')
-        self.toggle_button('d', False)
-        self.toggle_button('f', False)
+        self.__toggle_button('d', False)
+        self.__toggle_button('f', False)
 
         if directory == trash_bin:
-            self.toggle_button('d', True)
+            self.__toggle_button('d', True)
 
         if not fav or (fav and directory == fav):
-            self.toggle_button('f', True)
+            self.__toggle_button('f', True)
 
-    def toggle_button(self, which, disable=True):
+    def __toggle_button(self, which, disable=True):
         if which == 'f':
             self.favourite.setDisabled(disable)
         elif which == 'm':
@@ -140,35 +146,26 @@ class MoveDelete(QWidget):
 
     def refresh_filepath(self, filepath):
         self.filepath = filepath
-        self._check_filepath()
+        self.__check_filepath()
 
 
+# noinspection PyUnresolvedReferences
 def make_footer_area(parent):
-    json_export_enable = config.get('JsonExport', False)
     shortened_window = config.get('OpenWithShortenedWindow', False)
     now_shortened = parent.hide_tab
     footer_layout = QHBoxLayout()
-    button_text = ['Copy positive', 'Copy negative', 'Copy seed']
-
-    if json_export_enable:
-        button_text.extend(['Export JSON (This)', 'Export JSON (All)'])
-
-    button_text.extend(['Shrink', '▲Menu'])
+    button_text = ['Copy positive', 'Copy negative', 'Copy seed', 'Shrink', '▲Menu']
 
     for button_name in button_text:
         footer_button = QPushButton()
         footer_button.setObjectName(button_name)
-        footer_button.clicked.connect(parent.button_clicked)
+        footer_button.clicked.connect(parent.tab_signal_received)
         footer_layout.addWidget(footer_button)
 
         if button_name == 'Copy positive':
             footer_button.setText('Copy &positive')
         elif button_name == 'Copy negative':
             footer_button.setText('Copy &negative')
-        elif button_name == 'Export JSON (This)':
-            footer_button.setText('Export JSON (&This)')
-        elif button_name == 'Export JSON (All)':
-            footer_button.setText('Export JSON (&All)')
         elif button_name == 'Copy seed':
             footer_button.setText('Copy &seed')
         elif button_name == '▲Menu':
@@ -183,59 +180,7 @@ def make_footer_area(parent):
     return footer_layout
 
 
-def tab_navigation(parent):
-    tab_search = config.get('TabSearch', True)
-    thumbnails = config.get('TabNavigationWithThumbnails', True)
-    listview = config.get('TabNavigationWithListview', True)
-    filename_list = [value.params.get('Filename') for value in parent.params]
-
-    header_layout = QHBoxLayout()
-
-    dropdown_box = QComboBox()
-    dropdown_box.addItems(filename_list)
-    dropdown_box.setEditable(True)
-    dropdown_box.setObjectName('Combo')
-    dropdown_box.currentIndexChanged.connect(parent.header_button_clicked)
-
-    if tab_search:
-        search_button = QPushButton('Search')
-        search_button.setObjectName('Search')
-        search_button.clicked.connect(parent.header_button_clicked)
-        header_layout.addWidget(search_button, 1)
-        search_shortcut = QShortcut(QKeySequence('Ctrl+F'), parent)
-        search_shortcut.activated.connect(parent.tab_search_window)
-
-        restore_button = QPushButton('Restore')
-        restore_button.setObjectName('Restore')
-        restore_button.clicked.connect(parent.header_button_clicked)
-        header_layout.addWidget(restore_button, 1)
-        restore_shortcut = QShortcut(QKeySequence('Ctrl+R'), parent)
-        restore_shortcut.activated.connect(parent.tab_tweak)
-        if not parent.retracted:
-            restore_button.setDisabled(True)
-
-    header_layout.addWidget(dropdown_box, 5)
-
-    if listview:
-        listview_button = QPushButton('Listview')
-        listview_button.setObjectName('Listview')
-        listview_button.clicked.connect(parent.header_button_clicked)
-        header_layout.addWidget(listview_button, 1)
-        listview_shortcut = QShortcut(QKeySequence('Ctrl+L'), parent)
-        listview_shortcut.activated.connect(parent.open_listview)
-
-    if thumbnails:
-        thumbnail_button = QPushButton('Thumbnail')
-        thumbnail_button.setObjectName('Thumbnail')
-        thumbnail_button.clicked.connect(parent.header_button_clicked)
-        header_layout.addWidget(thumbnail_button, 1)
-        thumbnail_shortcut = QShortcut(QKeySequence('Ctrl+T'), parent)
-        thumbnail_shortcut.activated.connect(parent.open_thumbnail)
-
-    return header_layout
-
-
-def make_main_section(target):
+def make_main_section(target, tab):
     status = [['File count', 'Number'],
               'Extensions',
               'Filepath',
@@ -267,6 +212,7 @@ def make_main_section(target):
               'ENSD',
               'Version'
               ]
+
     max_height = config.get('PixmapSize', 350)
     filepath = target.params.get('Filepath')
 
@@ -274,8 +220,9 @@ def make_main_section(target):
         status = [value for value in status if not isinstance(value, list) or value[0] != 'Denoising strength']
 
     main_section_layout = QHBoxLayout()
-    pixmap_label = make_pixmap_label(filepath)
+    pixmap_label = make_pixmap_label(filepath, tab)
     label_layout = label_maker(status, target, 1, 1, True, True, 20, 95)
+    label_layout.setContentsMargins(0, 0, 0, 0)
     label_layout.setSpacing(5)
 
     for i in range(label_layout.count()):
@@ -297,7 +244,8 @@ def make_main_section(target):
     return main_section_layout
 
 
-def make_pixmap_label(filepath):
+# noinspection PyUnresolvedReferences
+def make_pixmap_label(filepath, tab):
     scale = config.get('PixmapSize', 350)
     move_delete_enable = config.get('MoveDelete', True)
     pixmap_section = QWidget()
@@ -310,13 +258,15 @@ def make_pixmap_label(filepath):
     else:
         pixmap_label = QLabel("Couldn't load image")
 
-    pixmap_label.setObjectName('Pixmap')
-    pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    pixmap_label.setObjectName('pixmap')
     pixmap_label.setFixedSize(scale, scale)
+    pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    pixmap_label.clicked.connect(tab.tab_signal_received)
+    pixmap_label.rightClicked.connect(tab.tab_signal_received)
     pixmap_layout.addWidget(pixmap_label, alignment=Qt.AlignmentFlag.AlignCenter)
 
     if move_delete_enable:
-        move_delete = MoveDelete(filepath)
+        move_delete = MoveDelete(filepath, tab)
         pixmap_layout.addWidget(move_delete)
 
     pixmap_section.setLayout(pixmap_layout)
@@ -694,10 +644,11 @@ def make_control_net_tab(target, starts):
 def make_regional_prompter_tab(target):
     filepath = target.params.get('Filepath')
     scale = config.get('RegionalPrompterPixmapSize', 350)
+    pixmap = None
+
     if os.path.exists(filepath):
         pixmap = QPixmap(filepath)
-        pixmap = pixmap.scaled(scale, int(scale * 0.7), Qt.AspectRatioMode.KeepAspectRatio,
-                               Qt.TransformationMode.FastTransformation)
+        pixmap = pixmap.scaled(scale, int(scale * 0.7), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
 
     regional_prompter_group = QHBoxLayout()
     regional_prompter_group.addWidget(make_regional_prompter_status_section(target), 1)

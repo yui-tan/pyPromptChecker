@@ -3,22 +3,24 @@
 from .widget import *
 from .dialog import *
 from .custom import *
-from .menu import ThumbnailMenu
-from .viewer import DiffWindow
+from .menu import FooterButtonMenu
 from . import config
 
 import os
 from PyQt6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QScrollArea
-from PyQt6.QtWidgets import QWidget, QComboBox, QLabel, QPushButton
+from PyQt6.QtWidgets import QWidget, QComboBox, QLabel
 from PyQt6.QtCore import Qt, QTimer, QPoint
 
 
 class Listview(QMainWindow):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, controller=None):
         super().__init__(parent)
+        self.toast = None
+        self.root_widget = None
+        self.controller = controller
+        self.size = config.get('ListViewPixmapSize', 200)
         self.setWindowTitle('Listview')
-        self.menu = ThumbnailMenu(self)
-        custom_keybindings(self)
+        self.menu = FooterButtonMenu(self)
 
         self.borders = []
 
@@ -28,12 +30,10 @@ class Listview(QMainWindow):
         progress.setRange(0, len(param_list))
 
         self.borders = []
-        self.setCentralWidget(None)
 
         estimated_height = 0
-        size = config.get('ListViewPixmapSize', 200)
 
-        root_widget = QWidget()
+        self.root_widget = QWidget()
         root_layout = QVBoxLayout()
 
         central_widget = QWidget()
@@ -42,7 +42,7 @@ class Listview(QMainWindow):
         scroll_area = QScrollArea()
 
         for index, param in param_list:
-            listview_border = ListviewBorder(index, param, size, self)
+            listview_border = ListviewBorder(index, param, self.controller, self.size, self)
             estimated_height += (listview_border.sizeHint().height() + 50)
             root_layout.addWidget(listview_border)
             self.borders.append(listview_border)
@@ -55,20 +55,20 @@ class Listview(QMainWindow):
 
             progress.update_value()
 
-        root_widget.setLayout(root_layout)
+        self.root_widget.setLayout(root_layout)
 
-        estimated_width = root_widget.sizeHint().width() + 50
+        estimated_width = self.root_widget.sizeHint().width() + 50
         estimated_height = 800 if estimated_height > 800 else estimated_height
 
-        scroll_area.setWidget(root_widget)
+        scroll_area.setWidget(self.root_widget)
         scroll_area.setMinimumWidth(estimated_width)
         scroll_area.setMinimumHeight(estimated_height)
         scroll_area.setWidgetResizable(True)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
-        central_widget_layout.addLayout(self._header_section())
+        central_widget_layout.addLayout(self.__header_section())
         central_widget_layout.addWidget(scroll_area)
-        central_widget_layout.addLayout(self._footer_section())
+        central_widget_layout.addLayout(self.__footer_section())
 
         central_widget.setLayout(central_widget_layout)
 
@@ -78,7 +78,83 @@ class Listview(QMainWindow):
         self.resize(estimated_width, estimated_height)
         move_centre(self)
 
-    def _header_section(self):
+    def signal_received(self):
+        where_from = self.sender().objectName()
+        selected_index = set()
+
+        for border in self.borders:
+            if border.selected:
+                selected_index.add(border.index)
+
+        if where_from == 'Add favourite':
+            result = self.controller.request_reception(selected_index, 'add')
+            if result:
+                self.toast.init_toast('Added!', 1000)
+        elif where_from == 'Delete':
+            result = self.controller.request_reception(selected_index, 'delete')
+            if result:
+                self.toast.init_toast('Added!', 1000)
+        elif where_from == 'Move':
+            result = self.controller.request_reception(selected_index, 'move')
+            if result:
+                self.toast.init_toast('Moved!', 1000)
+        elif where_from == 'Export JSON':
+            result = self.controller.request_reception(selected_index, 'json')
+            if result:
+                self.toast.init_toast('Exported!', 1000)
+        elif where_from == 'Interrogate':
+            self.controller.request_reception(selected_index, 'interrogate')
+        elif where_from == 'Diff':
+            self.controller.request_reception(selected_index, 'diff')
+        elif where_from == 'Search':
+            self.controller.request_reception(selected_index, 'search')
+        elif where_from == 'Select all':
+            self.__select_all_toggle(len(selected_index))
+        elif where_from == 'Close':
+            self.close()
+
+    def listview_add_images(self, param_list: list):
+        progress = None
+        if self.isActiveWindow():
+            progress = ProgressDialog()
+            progress.setLabelText('Loading...')
+            progress.setRange(0, len(param_list))
+
+        layout = self.root_widget.layout()
+
+        for index, param in param_list:
+            listview_border = ListviewBorder(index, param, self.controller, self.size, self)
+            layout.addWidget(listview_border)
+            self.borders.append(listview_border)
+
+            if progress:
+                progress.update_value()
+
+    def manage_subordinates(self, index: int, detail: str, remarks=None):
+        for border in self.borders:
+            if border.index == index:
+                if detail == 'moved':
+                    border.set_moved()
+                    if remarks:
+                        border.title_change(remarks)
+                if detail == 'deleted':
+                    border.set_deleted()
+                    if remarks:
+                        border.title_change(remarks)
+                if border.selected:
+                    border.set_deselected()
+                break
+
+    def get_selected_images(self, selected=True):
+        result = []
+        for border in self.borders:
+            if border.selected and selected:
+                result.append(border.index)
+            elif not selected:
+                result.append(border.index)
+        return result
+
+    def __header_section(self):
         row = 1
         col = 0
         header_layout = QGridLayout()
@@ -108,7 +184,8 @@ class Listview(QMainWindow):
         for index, status in enumerate(('Timestamp', 'Seed', 'Sampler', 'Steps', 'CFG scale', 'Model', 'VAE', 'Version')):
             combo_box = QComboBox()
             combo_box.setObjectName(f'status_{index}')
-            combo_box.currentIndexChanged.connect(self._status_changed)
+            # noinspection PyUnresolvedReferences
+            combo_box.currentIndexChanged.connect(self.__status_changed)
             header_layout.addWidget(combo_box, row, col)
             combo_box.addItems(combo_items)
             combo_box.setCurrentText(status)
@@ -119,26 +196,27 @@ class Listview(QMainWindow):
 
         return header_layout
 
-    def _footer_section(self):
+    def __footer_section(self):
         button_layout = QHBoxLayout()
         management = config.get('MoveDelete', False)
-        buttons = ('Select all', 'Export JSON', 'Diff', 'Interrogate', 'Close')
+        buttons = ('Select all', 'Search', 'Diff', 'Interrogate', 'Export JSON', 'Close')
+
         if management:
-            buttons = ('Select all', 'Export JSON', 'Diff', 'Interrogate', 'Add favourite', 'Close')
+            buttons = ('Select all', 'Search', 'Diff', 'Interrogate', 'Export JSON', 'Add favourite', 'Close')
 
         for button_text in buttons:
-            button = QPushButton() if button_text != 'Add favourite' else ButtonWithMenu()
+            button = ButtonWithMenu()
             button.setText(button_text)
             button.setObjectName(button_text)
             button_layout.addWidget(button)
+            button.clicked.connect(self.signal_received)
 
-            button.clicked.connect(self._footer_button_clicked)
             if button_text == 'Add favourite':
-                button.rightClicked.connect(self._footer_submenu)
+                button.rightClicked.connect(self.__footer_submenu)
 
         return button_layout
 
-    def _status_changed(self):
+    def __status_changed(self):
         if self.centralWidget():
             status_number = self.sender().objectName().split('_')[1]
             status_str = self.sender().currentText()
@@ -162,84 +240,25 @@ class Listview(QMainWindow):
                 title_label.setText(status_str)
                 value_label.setText(value)
 
-    def _footer_button_clicked(self):
-        where_from = self.sender().objectName()
-        selected_index = set()
-        window = self.parent()
-
-        for border in self.borders:
-            if border.selected:
-                selected_index.add(border.index)
-
-        if len(selected_index) > 0:
-            if where_from == 'Add favourite':
-                self.management_image('favourite')
-
-            elif where_from == 'Export JSON':
-                if hasattr(window, 'export_json'):
-                    self.parent().export_json(selected_index)
-
-            elif where_from == 'Interrogate':
-                if hasattr(window, 'add_interrogate_tab'):
-                    self.parent().add_interrogate_tab(2, selected_index)
-
-            elif where_from == 'Diff':
-                if len(selected_index) == 2:
-                    result = [border.params for border in self.borders if border.index in selected_index]
-                    DiffWindow(result, self)
-
-        if where_from == 'Close':
-            self.close()
-
-        elif where_from == 'Select all':
-            if len(selected_index) == len(self.borders):
-                for border in self.borders:
-                    border.set_deselected()
-            else:
-                for border in self.borders:
-                    border.set_selected()
-
-    def _footer_submenu(self):
+    def __footer_submenu(self):
         x = self.sender().mapToGlobal(self.sender().rect().topLeft()).x()
         y = self.sender().mapToGlobal(self.sender().rect().topLeft()).y() - self.menu.sizeHint().height()
         adjusted_pos = QPoint(x, y)
         self.menu.exec(adjusted_pos)
 
-    def management_image(self, kind: str):
-        selected = set()
-
-        for border in self.borders:
-            if border.selected:
-                selected.add(border.index)
-
-        if hasattr(self.parent(), 'manage_image_files'):
-            success, error = self.parent().manage_image_files(selected, self, kind)
+    def __select_all_toggle(self, count):
+        if count == len(self.borders):
+            for border in self.borders:
+                border.set_deselected()
         else:
-            success, error = None, 'An unexpected error has occurred.'
-
-        if not success and not error:
-            return
-
-        if success:
-            deselect_target = [[value[0], value[1]] for value in success if value[0] in selected]
-            for index, filepath in deselect_target:
-                widget = self.borders[index]
-                widget.set_deselected()
-                widget.title_change(filepath)
-
-                if kind == 'delete':
-                    widget.set_deleted()
-                else:
-                    widget.set_moved()
-
-        if error:
-            text = '\n'.join(error)
-            MessageBox(text, 'Error', 'ok', 'critical', self)
+            for border in self.borders:
+                border.set_selected()
 
 
 class ListviewBorder(ClickableGroup):
-    def __init__(self, index: int, params: dict, size: int = 200, parent=None):
+    def __init__(self, index: int, params: dict, controller, size: int = 200, parent=None):
         super().__init__(parent)
+        self.controller = controller
         self.parent_window = parent
         self.size = size
         self.index = index
@@ -251,34 +270,33 @@ class ListviewBorder(ClickableGroup):
         self.deleted = False
         self.changed = 0
         self.status = ['Timestamp', 'Seed', 'Sampler', 'Steps', 'CFG scale', 'Model', 'VAE', 'Version']
-        self._init_class()
+        self.__init_class()
 
         self.setObjectName(f'group_{index}')
-        self.clicked.connect(self._toggle_selected)
+        self.clicked.connect(self.__toggle_selected)
 
-    def _init_class(self):
+    def __init_class(self):
         layout = QHBoxLayout()
 
-        layout.addWidget(self._pixmap_label())
-        layout.addLayout(self._status_labels())
-        layout.addLayout(self._extension_labels())
+        layout.addWidget(self.__pixmap_label())
+        layout.addLayout(self.__status_labels())
+        layout.addLayout(self.__extension_labels())
 
         self.setLayout(layout)
         self.setTitle(self.params.get('Filepath', 'None'))
 
-    def _pixmap_label(self):
+    def __pixmap_label(self):
         filepath = self.params.get('Filepath')
         pixmap = portrait_generator(filepath, self.size)
         pixmap_label = PixmapLabel()
         pixmap_label.setPixmap(pixmap)
         pixmap_label.setFixedSize(self.size, self.size)
-        pixmap_label.clicked.connect(self._toggle_selected)
-        pixmap_label.rightClicked.connect(self._toggle_selected)
+        pixmap_label.clicked.connect(self.__toggle_selected)
         pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         pixmap_label.setObjectName(f'pixmap_{self.index}')
         return pixmap_label
 
-    def _status_labels(self):
+    def __status_labels(self):
         status_layout = QGridLayout()
         status_layout.setColumnMinimumWidth(0, 20)
         status_layout.setColumnMinimumWidth(0, 20)
@@ -300,7 +318,7 @@ class ListviewBorder(ClickableGroup):
 
         return status_layout
 
-    def _extension_labels(self):
+    def __extension_labels(self):
         j = 0
         k = 0
         extension_layout = QGridLayout()
@@ -358,7 +376,7 @@ class ListviewBorder(ClickableGroup):
 
         return extension_layout
 
-    def _toggle_selected(self):
+    def __toggle_selected(self):
         if self.parent_window.isActiveWindow():
             if 'group' in self.sender().objectName() and self.changed == 0:
                 if self.selected:
@@ -368,23 +386,17 @@ class ListviewBorder(ClickableGroup):
                 self.changed = 1
 
             elif 'pixmap' in self.sender().objectName() and self.changed == 0:
-                if hasattr(self.parent_window.parent(), 'root_tab'):
-                    self.parent_window.parent().root_tab.setCurrentIndex(self.index)
-                    self.parent_window.parent().pixmap_clicked()
+                self.controller.request_reception((self.index,), 'view')
                 self.changed = 1
 
             self.timer = QTimer()
-            self.timer.timeout.connect(self._initialize_changed)
+            # noinspection PyUnresolvedReferences
+            self.timer.timeout.connect(self.__initialize_changed)
             self.timer.start(10)
 
-    def _initialize_changed(self):
+    def __initialize_changed(self):
         self.changed = 0
         self.timer.stop()
-
-    def _pixmap_clicked(self):
-        if hasattr(self.parent_window.parent(), 'root_tab'):
-            self.parent_window.parent().root_tab.setCurrentIndex(self.index)
-            self.parent_window.parent().pixmap_clicked()
 
     def set_selected(self):
         current_stylesheet = self.styleSheet()
