@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import random
 import qdarktheme
 from PyQt6.QtCore import QObject
 
@@ -133,6 +134,22 @@ class ImageController(QObject):
             self.__initialize_thumbnail_window()
         elif MAIN_WINDOW == 'listview':
             self.__initialize_listview_window()
+        elif MAIN_WINDOW == 'depends':
+            number = len(self.loaded_images)
+            if 0 < number < 11:
+                self.__initialize_tab_window()
+            elif 10 < number < 21:
+                self.__initialize_listview_window()
+            elif 20 < number:
+                self.__initialize_thumbnail_window()
+        elif MAIN_WINDOW == 'random':
+            number = random.randint(1, 3)
+            if number == 1:
+                self.__initialize_tab_window()
+            elif number == 2:
+                self.__initialize_listview_window()
+            elif number == 3:
+                self.__initialize_thumbnail_window()
         else:
             self.__initialize_tab_window()
 
@@ -520,6 +537,7 @@ class ImageController(QObject):
 
             self.__load_images(requested)
             param_list = [(index, value.params) for index, value in self.loaded_images if index >= index_start]
+            params = [(index, value) for index, value in self.loaded_images if index >= index_start]
 
             if is_replace:
                 if self.thumbnail:
@@ -527,12 +545,14 @@ class ImageController(QObject):
                 if self.listview:
                     self.listview.init_listview(param_list)
                 if self.tabview:
-                    self.tabview.init_tabview()
+                    self.tabview.init_tabview(params)
             else:
                 if self.thumbnail:
                     self.thumbnail.thumbnail_add_images(param_list)
                 if self.listview:
                     self.listview.listview_add_images(param_list)
+                if self.tabview:
+                    self.tabview.tabview_add_images(params)
 
             if duplicate > 0:
                 MessageBox(f'{duplicate} file(s) are already shown.', parent=sender)

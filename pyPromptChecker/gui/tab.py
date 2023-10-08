@@ -26,9 +26,8 @@ class Tabview(QMainWindow):
         self.setWindowTitle('PNG Prompt Data')
         self.setObjectName('Tabview')
 
-        self.root_tab = QTabWidget()
-        self.root_tab.setObjectName('root_tab')
         self.tab_pages = []
+        self.root_tab = None
         self.tab_navigation = None
         self.tab_bar = None
 
@@ -39,6 +38,9 @@ class Tabview(QMainWindow):
         self.tab_link_index = 'Prompt'
 
     def init_tabview(self, loaded_images, moved=None, deleted=None):
+        self.root_tab = None
+        self.tab_pages = []
+
         central_widget = QWidget()
         root_layout = QVBoxLayout()
         root_layout.setContentsMargins(5, 5, 5, 5)
@@ -52,6 +54,9 @@ class Tabview(QMainWindow):
         filepaths = [value.params.get('Filepath') for _, value in loaded_images]
         self.tab_bar = TabBar(filepaths, self.controller, self, TAB_BAR_ORIENTATION)
         middle_section = QWidget()
+
+        self.root_tab = QTabWidget()
+        self.root_tab.setObjectName('root_tab')
 
         if TAB_BAR_ORIENTATION:
             middle_section_layout = QHBoxLayout()
@@ -202,6 +207,13 @@ class Tabview(QMainWindow):
         if not all([THUMBNAIL_TAB_BAR, TAB_MINIMUMS < total]):
             self.tab_bar.hide()
 
+        if moved:
+            for i in list(moved):
+                self.manage_subordinates(i, 'moved')
+        if deleted:
+            for i in list(deleted):
+                self.manage_subordinates(i, 'deleted')
+
         if progress:
             progress.close()
 
@@ -213,7 +225,7 @@ class Tabview(QMainWindow):
         else:
             self.init_root_tab(loaded_images)
 
-        total += loaded_images
+        total += len(loaded_images)
         for index in range(total):
             text = str(index + 1) + ' / ' + str(total)
             widget = self.root_tab.widget(index)
@@ -305,23 +317,24 @@ class Tabview(QMainWindow):
 
     def manage_subordinates(self, index: int, detail: str, remarks=None):
         for tab_index in range(self.root_tab.count()):
-            filename = os.path.basename(remarks)
             tab_page = self.root_tab.widget(tab_index)
+            main_section = tab_page.findChild(QWidget, 'main_section')
+            move_delete_section = tab_page.findChild(QWidget, 'move_delete')
+            filepath_label = main_section.findChild(QLabel, 'Filepath_value')
             tab_name = tab_page.objectName()
             number = int(tab_name.split('_')[1])
-            main_section = tab_page.findChild(QWidget, 'main_section')
-            filepath_label = main_section.findChild(QLabel, 'Filepath_value')
-            move_delete_section = tab_page.findChild(QWidget, 'move_delete')
-            main_section.setTitle(filename)
-            filepath_label.setText(remarks)
-            filepath_label.setToolTip(remarks)
+            if remarks:
+                filename = os.path.basename(remarks)
+                main_section.setTitle(filename)
+                filepath_label.setText(remarks)
+                filepath_label.setToolTip(remarks)
             if number == index:
                 if detail == 'moved':
                     stylesheet = custom_stylesheet('colour', 'moved')
                     filepath_label.setStyleSheet(stylesheet)
-                    move_delete_section.refresh_filepath(remarks)
                     self.root_tab.tabBar().setTabTextColor(tab_index, custom_color('Q_moved'))
                     if remarks:
+                        move_delete_section.refresh_filepath(remarks)
                         self.root_tab.tabBar().setTabText(tab_index, filename)
                     if self.tab_bar:
                         self.tab_bar.image_moved((tab_index,))
@@ -329,9 +342,9 @@ class Tabview(QMainWindow):
                 if detail == 'deleted':
                     stylesheet = custom_stylesheet('colour', 'deleted')
                     filepath_label.setStyleSheet(stylesheet)
-                    move_delete_section.refresh_filepath(remarks)
                     self.root_tab.tabBar().setTabTextColor(tab_index, custom_color('Q_deleted'))
                     if remarks:
+                        move_delete_section.refresh_filepath(remarks)
                         self.root_tab.tabBar().setTabText(tab_index, filename)
                     if self.tab_bar:
                         self.tab_bar.image_deleted((tab_index,))
@@ -499,6 +512,7 @@ class TabBar(QWidget):
 
         self.__tab_bar_thumbnails(self.filepaths)
 
+    # noinspection PyUnresolvedReferences
     def __button_area(self):
         button_area_layout = QHBoxLayout()
         button_area_layout.setContentsMargins(0, 0, 0, 0)
@@ -582,6 +596,7 @@ class TabBar(QWidget):
                     self.__border_clear(num)
                 if number != self.current:
                     self.image_current(number)
+                    self.tab.root_tab.setCurrentIndex(number)
 
     def __pixmap_right_clicked(self):
         self.__pixmap_clicked(right=True)
