@@ -17,7 +17,6 @@ class SelectDialog(QDialog):
         self.__init_select_dialog()
         self.resize(200, 80)
 
-    # noinspection PyUnresolvedReferences
     def __init_select_dialog(self):
         layout = QVBoxLayout()
         button_layout = QHBoxLayout()
@@ -59,7 +58,6 @@ class InterrogateSelectDialog(QDialog):
 
         self.__init_interrogate_dialog()
 
-    # noinspection PyUnresolvedReferences
     def __init_interrogate_dialog(self):
         root_layout = QGridLayout()
 
@@ -220,7 +218,6 @@ class Toast(QWidget):
         toast_layout.addWidget(self.message_label)
         self.setLayout(toast_layout)
 
-    # noinspection PyUnresolvedReferences
     def init_toast(self, message: str, duration: int = 2000):
         self.message_label.setText(message)
         self.show()

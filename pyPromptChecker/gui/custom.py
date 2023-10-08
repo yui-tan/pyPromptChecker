@@ -17,6 +17,9 @@ def custom_stylesheet(category: str, purpose: str):
     elif category == 'border':
         style = 'border: 2px solid @@@'
         return style.replace('@@@', custom_color(purpose))
+    elif category == 'pixmap':
+        style = 'border: 1px solid @@@'
+        return style.replace('@@@', custom_color(purpose))
     elif category == 'label':
         style = 'border-top: 2px solid transparent; border-bottom: 2px solid @@@ ; border-radius: 0px'
         return style.replace('@@@', custom_color(purpose))
@@ -87,6 +90,8 @@ def custom_color(purpose: str):
         return 'transparent'
     elif purpose == 'hover':
         return 'rgba(134, 206, 203, 1.0)'
+    elif purpose == 'default':
+        return 'palette(dark)'
     elif purpose == 'available' or purpose == 'txt2img':
         return 'palette(highlight)'
     elif purpose == 'PNG':
@@ -102,7 +107,6 @@ def custom_color(purpose: str):
         return
 
 
-# noinspection PyUnresolvedReferences
 def custom_keybindings(parent):
     if parent.parent() is not None:
         parent = parent.parent()

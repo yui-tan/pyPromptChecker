@@ -29,7 +29,6 @@ class FooterButtonMenu(QMenu):
         self.addAction(self.move_to)
         self.addAction(self.add_favourite)
 
-    # noinspection PyUnresolvedReferences
     def __menu_trigger(self):
         self.delete.triggered.connect(lambda: self.main.signal_received())
         self.move_to.triggered.connect(lambda: self.main.signal_received())
@@ -37,7 +36,6 @@ class FooterButtonMenu(QMenu):
 
 
 class TabMenu(QMenu):
-    # noinspection PyUnresolvedReferences
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -132,7 +130,6 @@ class MainMenu(QMenu):
 
         self.addAction(self.quit)
 
-    # noinspection PyUnresolvedReferences
     def __menu_trigger(self):
         self.quit.triggered.connect(self.__exit_app)
         self.dark_mode.triggered.connect(self.main.change_themes)

@@ -205,7 +205,6 @@ class Listview(QMainWindow):
         for index, status in enumerate(('Timestamp', 'Seed', 'Sampler', 'Steps', 'CFG scale', 'Model', 'VAE', 'Version')):
             combo_box = QComboBox()
             combo_box.setObjectName(f'status_{index}')
-            # noinspection PyUnresolvedReferences
             combo_box.currentIndexChanged.connect(self.__status_changed)
             header_layout.addWidget(combo_box, row, col)
             combo_box.addItems(combo_items)
@@ -412,7 +411,6 @@ class ListviewBorder(ClickableGroup):
                 self.changed = 1
 
             self.timer = QTimer()
-            # noinspection PyUnresolvedReferences
             self.timer.timeout.connect(self.__initialize_changed)
             self.timer.start(10)
 

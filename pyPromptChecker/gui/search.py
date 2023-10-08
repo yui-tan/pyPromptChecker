@@ -35,7 +35,6 @@ class SearchWindow(QDialog):
         result_label = QLabel('Result shows: ')
         result_box = QComboBox()
         result_box.addItems(['Tabs', 'Listview', 'Thumbnails'])
-        # noinspection PyUnresolvedReferences
         result_box.currentIndexChanged.connect(self.__result_change)
 
         prompt_group = QGroupBox()
@@ -92,7 +91,6 @@ class SearchWindow(QDialog):
         search_cfg.setOrientation(Qt.Orientation.Horizontal)
         search_cfg.setTickInterval(1)
         search_cfg.setRange(0, 40)
-        # noinspection PyUnresolvedReferences
         search_cfg.valueChanged.connect(self.__value_change)
 
         for i, tmp in enumerate(['Less than', 'Equal to', 'Greater than']):
@@ -130,10 +128,8 @@ class SearchWindow(QDialog):
         self.extension = extension_group
 
         search_button = QPushButton("Search", self)
-        # noinspection PyUnresolvedReferences
         search_button.clicked.connect(self.__do_search)
         close_button = QPushButton('Close', self)
-        # noinspection PyUnresolvedReferences
         close_button.clicked.connect(self.window_close)
 
         layout.addWidget(result_label, 0, 0)

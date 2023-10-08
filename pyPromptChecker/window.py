@@ -9,10 +9,11 @@ from gui.dialog import *
 from gui.listview import Listview
 from gui.menu import MainMenu
 from gui.search import SearchWindow
-from gui.tab import Tabview
+from gui.tab import Tabview, InterrogateTab
 from gui.thumbnail import ThumbnailView
 from gui.viewer import *
 from lib import *
+from lora import *
 
 DARK_THEME = config.get('AlwaysStartWithDarkMode', False)
 MAIN_WINDOW = config.get('AlwaysOpenBy', 'tab').lower()
@@ -563,8 +564,7 @@ class ImageController(QObject):
             return True
         return
 
-    '''
-    def __add_interrogate_wd14(self, select: int = 0, indexes: tuple = None):
+    def __add_interrogate_wd14(self, indexes: tuple = None):
         progress = None
         dialog = InterrogateSelectDialog(self.main_window)
         result = dialog.exec()
@@ -574,46 +574,20 @@ class ImageController(QObject):
             tag = dialog.tag_threshold
             chara = dialog.chara_threshold
 
-            if select == 0:
-                indexes = [self.root_tab.currentIndex()]
-            elif select == 1:
-                indexes = tuple(range(self.root_tab.count()))
-
             if len(indexes) > 1:
                 progress = ProgressDialog(self)
                 progress.setRange(0, len(indexes))
                 progress.setLabelText('Interrogating......')
 
             for index in indexes:
-                filepath = self.params[index].params.get('Filepath')
-                current_tab_page = self.root_tab.widget(index)
-                extension_tab = current_tab_page.findChild(QTabWidget, 'extension_tab')
-
-                for tab_index in range(extension_tab.count()):
-                    if extension_tab.tabText(tab_index) == 'Interrogate':
-                        extension_tab.removeTab(tab_index)
-                        break
-
-                interrogate_result = interrogate(model, filepath, tag, chara)
-                interrogate_tab = InterrogateTab(interrogate_result, extension_tab, self)
-                extension_tab.addTab(interrogate_tab, 'Interrogate')
-                new_index = extension_tab.indexOf(interrogate_tab)
-                extension_tab.setCurrentIndex(new_index)
-
+                for image_index, image_data in self.loaded_images:
+                    if image_index == index:
+                        filepath = image_data.params.get('Filepath')
+                        interrogate_result = interrogate(model, filepath, tag, chara)
                 if progress:
                     progress.update_value()
-
             if progress:
                 progress.close()
-                
-    def export_all_text(self):
-        for i in range(self.root_tab.count()):
-            extension_tab = self.root_tab.widget(i).findChild(QTabWidget, 'extension_tab')
-            interrogate_tab = extension_tab.findChild(QStackedWidget, 'interrogate')
-            if interrogate_tab is not None:
-                interrogate_tab.export_text(True)
-        self.toast.init_toast('Exported!', 1000)
-'''
 
     def model_hash_extractor(self):
         which_mode = SelectDialog(self.main_window)

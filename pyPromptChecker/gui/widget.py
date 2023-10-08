@@ -10,6 +10,8 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from .custom import *
 from . import config
 
+SHORTENED = config.get('OpenWithShortenedWindow', False)
+
 
 class PixmapLabel(QLabel):
     clicked = pyqtSignal()
@@ -21,7 +23,6 @@ class PixmapLabel(QLabel):
         super().__init__(parent)
         self.setStyleSheet("border: none;")
 
-    # noinspection PyUnresolvedReferences
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton and event.modifiers() == Qt.KeyboardModifier.ControlModifier:
             self.ctrl_clicked.emit()
@@ -34,13 +35,19 @@ class PixmapLabel(QLabel):
         return QLabel.mousePressEvent(self, event)
 
 
+class ThumbnailLabel(PixmapLabel):
+    def __init__(self, index, image_index):
+        super().__init__()
+        self.index = index
+        self.image_index = image_index
+
+
 class ClickableGroup(QGroupBox):
     clicked = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
 
-    # noinspection PyUnresolvedReferences
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
@@ -54,7 +61,6 @@ class ButtonWithMenu(QPushButton):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-    # noinspection PyUnresolvedReferences
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
@@ -99,7 +105,6 @@ class MoveDelete(QWidget):
         self.setObjectName('move_delete')
         self.__init_class()
 
-    # noinspection PyUnresolvedReferences
     def __init_class(self):
         root_layout = QHBoxLayout()
         root_layout.setContentsMargins(5, 0, 5, 0)
@@ -149,7 +154,66 @@ class MoveDelete(QWidget):
         self.__check_filepath()
 
 
-# noinspection PyUnresolvedReferences
+class FooterButtons(QWidget):
+    def __init__(self, button_layout: tuple, parent=None):
+        super().__init__()
+        self.caller = parent
+        self.shortened = SHORTENED
+        self.buttons = button_layout
+        self.__init_footer()
+        self.__establish_connection()
+        self.setContentsMargins(0, 0, 0, 0)
+
+    def __init_footer(self):
+        layout = QHBoxLayout()
+        for text, name in self.buttons:
+            button = ButtonWithMenu()
+            button.setText(text)
+            button.setObjectName(name)
+            layout.addWidget(button)
+        self.setLayout(layout)
+
+    def __establish_connection(self):
+        if hasattr(self.caller, 'tab_signal_received'):
+            for _, name in self.buttons:
+                button = self.findChild(ButtonWithMenu, name)
+                button.clicked.connect(self.caller.tab_signal_received)
+                if name == 'Shrink':
+                    button.setShortcut(QKeySequence('Ctrl+Tab'))
+                    if self.shortened:
+                        button.setText('Expand')
+        elif hasattr(self.caller, 'thumbnail_signal_received'):
+            for _, name in self.buttons:
+                button = self.findChild(ButtonWithMenu, name)
+                button.clicked.connect(self.caller.thumbnail_signal_received)
+        elif hasattr(self.caller, 'listview_signal_received'):
+            for _, name in self.buttons:
+                button = self.findChild(ButtonWithMenu, name)
+                button.clicked.connect(self.caller.listview_signal_received)
+
+    def shrink_button_change(self, is_shrink):
+        button = self.findChild(ButtonWithMenu, 'Shrink')
+        if is_shrink:
+            self.shortened = True
+            button.setText('Expand')
+            button.setShortcut(QKeySequence('Ctrl+Tab'))
+        else:
+            self.shortened = False
+            button.setText('Shrink')
+            button.setShortcut(QKeySequence('Ctrl+Tab'))
+
+    def fixed_size_button(self, name, size):
+        button = self.findChild(ButtonWithMenu, name)
+        button.setFixedSize(size, size)
+
+    def remove_button(self, name, remove=True):
+        button = self.findChild(ButtonWithMenu, name)
+        if remove:
+            button.hide()
+        else:
+            button.show()
+
+
 def make_footer_area(parent):
     shortened_window = config.get('OpenWithShortenedWindow', False)
     now_shortened = parent.hide_tab
@@ -244,7 +308,7 @@ def make_main_section(target, tab):
     return main_section_layout
 
 
-# noinspection PyUnresolvedReferences
+# noinspection
 def make_pixmap_label(filepath, tab):
     scale = config.get('PixmapSize', 350)
     move_delete_enable = config.get('MoveDelete', True)

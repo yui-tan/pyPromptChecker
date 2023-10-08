@@ -64,7 +64,6 @@ class DiffWindow(QMainWindow):
         self.setMinimumSize(1000, 1000)
         move_centre(self)
 
-    # noinspection PyUnresolvedReferences
     def __init_diff(self):
         statuses = ['Extensions',
                     'Timestamp',
