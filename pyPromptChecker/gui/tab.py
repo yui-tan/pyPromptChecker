@@ -2,6 +2,7 @@
 
 from PyQt6.QtWidgets import QMainWindow, QStackedWidget, QLineEdit
 from PyQt6.QtCore import QPoint
+from PyQt6.QtGui import QPalette
 
 from .dialog import *
 from .menu import *
@@ -214,6 +215,8 @@ class Tabview(QMainWindow):
             for i in list(deleted):
                 self.manage_subordinates(i, 'deleted')
 
+        self.tab_navigation.toggle_button_availability(True)
+
         if progress:
             progress.close()
 
@@ -315,6 +318,37 @@ class Tabview(QMainWindow):
             if result:
                 self.toast.init_toast('Deleted!', 1000)
 
+    def search_process(self, indexes: tuple = None):
+        hide = config.get('HideNotMatchedTabs', False)
+        if indexes:
+            for tab_index in reversed(range(self.root_tab.count())):
+                if tab_index not in indexes:
+                    if hide:
+                        title = self.root_tab.tabText(tab_index)
+                        self.tab_pages.append([tab_index, self.root_tab.widget(tab_index), title])
+                        self.root_tab.removeTab(tab_index)
+                        self.tab_navigation.toggle_button_availability(False)
+                else:
+                    self.root_tab.tabBar().setTabTextColor(tab_index, Qt.GlobalColor.green)
+                    self.tab_bar.image_matched(indexes)
+                    if hide:
+                        self.tab_bar.pixmap_hide()
+
+        else:
+            palette = self.root_tab.palette()
+            text_color = palette.color(QPalette.ColorRole.Text)
+            for index in range(self.root_tab.count()):
+                color = self.root_tab.tabBar().tabTextColor(index)
+                if color == Qt.GlobalColor.green:
+                    self.root_tab.tabBar().setTabTextColor(index, text_color)
+            if self.tab_pages:
+                for widget in reversed(self.tab_pages):
+                    self.root_tab.insertTab(widget[0], widget[1], widget[2])
+                self.tab_pages = []
+                self.tab_navigation.toggle_button_availability(True)
+            if self.tab_bar:
+                self.tab_bar.result_clear()
+
     def manage_subordinates(self, index: int, detail: str, remarks=None):
         for tab_index in range(self.root_tab.count()):
             tab_page = self.root_tab.widget(tab_index)
@@ -409,6 +443,7 @@ class Tabview(QMainWindow):
 class TabNavigation(QWidget):
     def __init__(self, parent, controller, filelist):
         super().__init__(parent)
+        self.tab = parent
         self.controller = controller
         self.dropdown = None
         self.filelist = filelist
@@ -442,7 +477,7 @@ class TabNavigation(QWidget):
         if where_from == 'Search':
             self.controller.request_reception(None, 'search', self.tab)
         elif where_from == 'Restore':
-            pass
+            self.tab.search_process(None)
         elif where_from == 'Listview':
             self.controller.request_reception(None, 'list', self.tab)
         elif where_from == 'Thumbnail':

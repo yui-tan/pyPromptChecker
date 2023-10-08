@@ -480,6 +480,8 @@ class ImageController(QObject):
                 self.thumbnail.search_process(result[0])
             if self.listview:
                 self.listview.search_process(result[0])
+            if self.tabview:
+                self.tabview.search_process(result[0])
             MessageBox(result[1], 'Result', parent=caller)
 
     def __add_images(self, which: str, sender, is_replace: bool = False):
@@ -604,39 +606,6 @@ class ImageController(QObject):
             if progress:
                 progress.close()
                 
-    def __apply_search_result(self, indexes=None):
-        hide = config.get('HideNotMatchedTabs', False)
-        restore = self.centralWidget().findChild(QPushButton, 'Restore')
-        if indexes:
-            for tab_index in reversed(range(self.root_tab.count())):
-                if tab_index not in indexes:
-                    if hide:
-                        title = self.root_tab.tabText(tab_index)
-                        self.retracted.append([tab_index, self.root_tab.widget(tab_index), title])
-                        self.root_tab.removeTab(tab_index)
-                        restore.setDisabled(False)
-                else:
-                    self.root_tab.tabBar().setTabTextColor(tab_index, Qt.GlobalColor.green)
-                    if self.tab_bar:
-                        self.tab_bar.image_matched(indexes)
-                        if hide:
-                            self.tab_bar.pixmap_hide()
-
-        else:
-            palette = self.root_tab.palette()
-            text_color = palette.color(QPalette.ColorRole.Text)
-            for index in range(self.root_tab.count()):
-                color = self.root_tab.tabBar().tabTextColor(index)
-                if color == Qt.GlobalColor.green:
-                    self.root_tab.tabBar().setTabTextColor(index, text_color)
-            if self.retracted:
-                for widget in reversed(self.retracted):
-                    self.root_tab.insertTab(widget[0], widget[1], widget[2])
-                self.retracted = []
-                restore.setDisabled(True)
-            if self.tab_bar:
-                self.tab_bar.result_clear()
-
     def export_all_text(self):
         for i in range(self.root_tab.count()):
             extension_tab = self.root_tab.widget(i).findChild(QTabWidget, 'extension_tab')
