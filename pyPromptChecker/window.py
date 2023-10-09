@@ -412,12 +412,15 @@ class ImageController(QObject):
                 return
 
         if request == 'add':
+            destination = FAVOURITE
             if not destination:
                 return
+
         elif request == 'delete':
             destination = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.trash')
             os.makedirs(destination, exist_ok=True)
             use_copy = False
+
         elif request == 'move':
             dialog = FileDialog('choose-directory', 'Select Directory', parent=self.main_window)
             destination = dialog.result[0] if dialog.result else None
@@ -444,6 +447,7 @@ class ImageController(QObject):
 
     def __result_check_and_emit(self, category, success: list = None, name_changed: list = None, errors: list = None):
         succeed_flag = False
+        print(success)
 
         if success:
             for index, filepath in success:
@@ -478,12 +482,16 @@ class ImageController(QObject):
             MessageBox(result[1], 'Result', parent=caller)
         else:
             if self.thumbnail:
+                self.thumbnail.search_process(None)
                 self.thumbnail.search_process(result[0])
             if self.listview:
+                self.listview.search_process(None)
                 self.listview.search_process(result[0])
             if self.tabview:
+                self.tabview.search_process(None)
                 self.tabview.search_process(result[0])
             MessageBox(result[1], 'Result', parent=caller)
+            self.search_dialog.activateWindow()
 
     def __add_images(self, which: str, sender, is_replace: bool = False):
         def filepaths_check(target):
@@ -536,30 +544,30 @@ class ImageController(QObject):
                 requested = filepaths_check(filepaths)
                 duplicate = 0
 
-            index_start = len(self.loaded_images)
+            if requested:
+                index_start = len(self.loaded_images)
+                self.__load_images(requested)
+                param_list = [(index, value.params) for index, value in self.loaded_images if index >= index_start]
+                params = [(index, value) for index, value in self.loaded_images if index >= index_start]
 
-            self.__load_images(requested)
-            param_list = [(index, value.params) for index, value in self.loaded_images if index >= index_start]
-            params = [(index, value) for index, value in self.loaded_images if index >= index_start]
-
-            if is_replace:
-                if self.thumbnail:
-                    self.thumbnail.init_thumbnail(param_list)
-                if self.listview:
-                    self.listview.init_listview(param_list)
-                if self.tabview:
-                    self.tabview.init_tabview(params)
-            else:
-                if self.thumbnail:
-                    self.thumbnail.thumbnail_add_images(param_list)
-                if self.listview:
-                    self.listview.listview_add_images(param_list)
-                if self.tabview:
-                    self.tabview.tabview_add_images(params)
+                if is_replace:
+                    if self.thumbnail:
+                        self.thumbnail.init_thumbnail(param_list)
+                    if self.listview:
+                        self.listview.init_listview(param_list)
+                    if self.tabview:
+                        self.tabview.init_tabview(params)
+                else:
+                    if self.thumbnail:
+                        self.thumbnail.thumbnail_add_images(param_list)
+                    if self.listview:
+                        self.listview.listview_add_images(param_list)
+                    if self.tabview:
+                        self.tabview.tabview_add_images(params)
 
             if duplicate > 0:
                 MessageBox(f'{duplicate} file(s) are already shown.', parent=sender)
-                if len(requested) == 0:
+                if not requested:
                     return
             return True
         return

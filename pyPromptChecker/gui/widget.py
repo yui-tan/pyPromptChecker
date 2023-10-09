@@ -58,8 +58,9 @@ class ButtonWithMenu(QPushButton):
     clicked = pyqtSignal()
     rightClicked = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, text: str = None, parent=None):
         super().__init__(parent)
+        self.setText(text)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -91,67 +92,6 @@ class HoverLabel(QLabel):
             current_style = current_style.replace(target_part, stylesheet)
 
         self.setStyleSheet(current_style)
-
-
-class MoveDelete(QWidget):
-    def __init__(self, filepath, tab):
-        super().__init__()
-        self.tab = tab
-        self.filepath = filepath
-        self.favourite = QPushButton()
-        self.move_to = QPushButton()
-        self.delete = QPushButton()
-
-        self.setObjectName('move_delete')
-        self.__init_class()
-
-    def __init_class(self):
-        root_layout = QHBoxLayout()
-        root_layout.setContentsMargins(5, 0, 5, 0)
-
-        self.favourite.setText('&Favourite')
-        self.favourite.setObjectName('Favourite')
-        self.favourite.clicked.connect(self.tab.tab_signal_received)
-        root_layout.addWidget(self.favourite)
-
-        self.move_to.setText('&Move to')
-        self.move_to.setObjectName('Move to')
-        self.move_to.clicked.connect(self.tab.tab_signal_received)
-        root_layout.addWidget(self.move_to)
-
-        self.delete.setText('Delete')
-        self.delete.setObjectName('Delete')
-        self.delete.setShortcut(QKeySequence('Delete'))
-        self.delete.clicked.connect(self.tab.tab_signal_received)
-        root_layout.addWidget(self.delete)
-
-        self.setLayout(root_layout)
-        self.__check_filepath()
-
-    def __check_filepath(self):
-        fav = config.get('Favourites')
-        directory = os.path.dirname(self.filepath)
-        trash_bin = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.trash')
-        self.__toggle_button('d', False)
-        self.__toggle_button('f', False)
-
-        if directory == trash_bin:
-            self.__toggle_button('d', True)
-
-        if not fav or (fav and directory == fav):
-            self.__toggle_button('f', True)
-
-    def __toggle_button(self, which, disable=True):
-        if which == 'f':
-            self.favourite.setDisabled(disable)
-        elif which == 'm':
-            self.move_to.setDisabled(disable)
-        elif which == 'd':
-            self.delete.setDisabled(disable)
-
-    def refresh_filepath(self, filepath):
-        self.filepath = filepath
-        self.__check_filepath()
 
 
 class FooterButtons(QWidget):
@@ -214,7 +154,35 @@ class FooterButtons(QWidget):
             button.show()
 
 
-def make_main_section(target, tab):
+def make_pixmap_section(page, scale):
+    pixmap_section = QWidget()
+    pixmap_section_layout = QVBoxLayout()
+    pixmap_section_layout.setContentsMargins(0, 5, 0, 0)
+
+    filepath = page.filepath
+    index = page.image_index
+
+    if os.path.exists(filepath):
+        pixmap = portrait_generator(filepath, scale)
+        label = PixmapLabel()
+        label.setPixmap(pixmap)
+    else:
+        label = QLabel("Couldn't load image")
+
+    label.setObjectName(f'pixmap_{index}')
+    label.setFixedSize(scale, scale)
+    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    label.clicked.connect(page.page_signal_received)
+    label.rightClicked.connect(lambda: page.page_signal_received(right=True))
+
+    pixmap_section_layout.addWidget(label, alignment=Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop)
+    pixmap_section_layout.setContentsMargins(0, 0, 0, 0)
+    pixmap_section.setLayout(pixmap_section_layout)
+
+    return pixmap_section
+
+
+def make_label_section(page, scale):
     status = [['File count', 'Number'],
               'Extensions',
               'Filepath',
@@ -247,66 +215,31 @@ def make_main_section(target, tab):
               'Version'
               ]
 
-    max_height = config.get('PixmapSize', 350)
-    filepath = target.params.get('Filepath')
-
-    if target.params.get('Hires upscaler'):
+    if page.params.get('Hires upscaler'):
         status = [value for value in status if not isinstance(value, list) or value[0] != 'Denoising strength']
 
-    main_section_layout = QHBoxLayout()
-    pixmap_label = make_pixmap_label(filepath, tab)
-    label_layout = label_maker(status, target, 1, 1, True, True, 20, 95)
+    label_layout = label_maker(status, page, 1, 1, True, True, 20, 95)
     label_layout.setContentsMargins(0, 0, 0, 0)
-    label_layout.setSpacing(5)
 
     for i in range(label_layout.count()):
         label_layout.itemAt(i).widget().setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
     scroll_area = QScrollArea()
     scroll_area.setMinimumWidth(350)
-    scroll_area.setMaximumHeight(max_height + 50)
-    scroll_area.setStyleSheet('border: 0px; padding 0px; ')
+    scroll_area.setMaximumHeight(scale)
+    scroll_area.setStyleSheet('border: 0px; padding 0px;')
 
     scroll_contents = QWidget()
     scroll_contents.setLayout(label_layout)
     scroll_area.setWidget(scroll_contents)
 
-    main_section_layout.addWidget(pixmap_label, 1)
-    main_section_layout.addWidget(scroll_area, 1)
-    main_section_layout.setContentsMargins(0, 0, 0, 0)
+    label_area = QWidget()
+    label_area_layout = QVBoxLayout()
+    label_area_layout.setContentsMargins(0, 0, 0, 0)
+    label_area_layout.addWidget(scroll_area, alignment=Qt.AlignmentFlag.AlignTop)
+    label_area.setLayout(label_area_layout)
 
-    return main_section_layout
-
-
-# noinspection
-def make_pixmap_label(filepath, tab):
-    scale = config.get('PixmapSize', 350)
-    move_delete_enable = config.get('MoveDelete', True)
-    pixmap_section = QWidget()
-    pixmap_layout = QVBoxLayout()
-
-    if os.path.exists(filepath):
-        pixmap = portrait_generator(filepath, scale)
-        pixmap_label = PixmapLabel()
-        pixmap_label.setPixmap(pixmap)
-    else:
-        pixmap_label = QLabel("Couldn't load image")
-
-    pixmap_label.setObjectName('pixmap')
-    pixmap_label.setFixedSize(scale, scale)
-    pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    pixmap_label.clicked.connect(tab.tab_signal_received)
-    pixmap_label.rightClicked.connect(tab.tab_signal_received)
-    pixmap_layout.addWidget(pixmap_label, alignment=Qt.AlignmentFlag.AlignCenter)
-
-    if move_delete_enable:
-        move_delete = MoveDelete(filepath, tab)
-        pixmap_layout.addWidget(move_delete)
-
-    pixmap_section.setLayout(pixmap_layout)
-    pixmap_layout.setContentsMargins(0, 5, 0, 0)
-
-    return pixmap_section
+    return label_area
 
 
 # Todo: Make Tokenize functionality
@@ -843,6 +776,7 @@ def make_error_tab(target, parameter):
         inner_page_layout.addWidget(description)
         inner_page.setLayout(inner_page_layout)
         return inner_page
+    return None
 
 
 def label_maker(status,
@@ -923,7 +857,7 @@ def label_maker(status,
             value.setObjectName(name + '_value')
         if name == 'Filepath' or name == 'Filename':
             value.setToolTip(item)
-            value.setMaximumWidth(250)
+            value.setMaximumWidth(300)
         size_policy_title = title.sizePolicy()
         size_policy_value = value.sizePolicy()
         size_policy_title.setHorizontalStretch(stretch_title)

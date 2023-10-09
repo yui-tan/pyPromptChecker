@@ -9,6 +9,7 @@ from .menu import *
 from .widget import *
 from . import config
 
+FAVOURITE_DIR = config.get('Favourites')
 TAB_NAVIGATION_ENABLE = config.get('TabNavigation', True)
 TAB_MINIMUMS = config.get('TabNavigationMinimumTabs', True)
 THUMBNAIL_TAB_BAR = config.get('ThumbnailTabBar', False)
@@ -16,6 +17,9 @@ TAB_BAR_ORIENTATION = config.get('ThumbnailTabBarVertical', True)
 ERROR_LIST_PARAMETER = config.get('ErrorList', 1)
 USE_NUMBER = config.get('UsesNumberAsTabName', False)
 HIDE_NORMAL_TAB_BAR = config.get('HideNormalTabBar', False)
+HIDE_NOT_MATCH = config.get('HideNotMatchedTabs', False)
+FILE_MANAGEMENT = config.get('MoveDelete', True)
+PIXMAP_SCALE = config.get('PixmapSize', 350)
 BUTTONS = (('Copy &positive', 'Copy positive'),
            ('Copy &negative', 'Copy negative'),
            ('Copy &seed', 'Copy seed'),
@@ -39,7 +43,6 @@ class Tabview(QMainWindow):
         self.footer = None
 
         self.tab_link = False
-        self.tab_link_menu = TabMenu(self)
         self.tab_link_index = 'Prompt'
 
     def init_tabview(self, loaded_images, moved=None, deleted=None):
@@ -99,104 +102,30 @@ class Tabview(QMainWindow):
         progress.setRange(0, len(loaded_images))
 
         for index, image in loaded_images:
+            title = image.params.get('Filename', '---')
+            tab_index = shown_tab + image_count
+
             if total > 1:
                 image.params['File count'] = str(shown_tab + image_count + 1) + ' / ' + str(total)
 
-            tab_page = QWidget()
-            tab_page.setObjectName(f'index_{index}')
-            tab_page_layout = QVBoxLayout()
-            tab_page_layout.setContentsMargins(5, 5, 5, 5)
+            tab_page = RootTabPage(index, image, self.controller, self)
 
-            main_section = QGroupBox()
-            main_section.setObjectName('main_section')
-            main_section.setTitle(image.params.get('Filename', 'None'))
-            image.used_params['Filename'] = True
+            if moved and index in moved:
+                tab_page.tab_page_image_moved()
 
-            main_section_layout = QHBoxLayout()
-            main_section_layout.setContentsMargins(5, 5, 0, 5)
-            main_label_layout = make_main_section(image, self)
-            main_section_layout.addLayout(main_label_layout)
-            main_section.setLayout(main_section_layout)
-            tab_page_layout.addWidget(main_section)
-
-            main_section_height = config.get('PixmapSize', 350) + 60
-            main_section.setFixedHeight(main_section_height)
-
-            dummy_widget = QWidget()
-            dummy_widget.setObjectName('dummy')
-            tab_page_layout.addWidget(dummy_widget)
-
-            hires_tab = ['Hires upscaler', 'Face restoration', 'Extras']
-            cfg_fix_auto_tab = ['Dynamic thresholding enabled', 'CFG auto', 'CFG scheduler']
-            lora_tab = ['Lora', 'AddNet Enabled', 'Textual inversion']
-
-            tabs = [['Prompts', True, True],
-                    ['Hires.fix / Extras',
-                     any(key in v for v in image.params for key in hires_tab),
-                     config.get('HiresExtras', True)],
-                    ['CFG',
-                     any(key in v for v in image.params for key in cfg_fix_auto_tab),
-                     config.get('CFG', True)],
-                    ['LoRa / Add networks',
-                     any(key in v for v in image.params for key in lora_tab),
-                     config.get('LoraAddNet', True)],
-                    ['Tiled diffusion',
-                     'Tiled diffusion' in image.params,
-                     config.get('TiledDiffusion', True)],
-                    ['Control net',
-                     'ControlNet' in image.params,
-                     config.get('ControlNet', True)],
-                    ['Regional prompter',
-                     'RP Active' in image.params,
-                     config.get('RegionalPrompter', True)]
-                    ]
-
-            inner_tab = QTabWidget()
-
-            for i, tab in enumerate(tabs):
-                if tab[1] and tab[2]:
-                    inner_page = QWidget()
-                    inner_page.setMinimumHeight(config.get('PixmapSize', 350))
-                    if i == 0:
-                        inner_page.setLayout(make_prompt_tab(image))
-                    if i == 1:
-                        inner_page.setLayout(make_hires_other_tab(image))
-                    if i == 2:
-                        inner_page.setLayout(make_cfg_tab(image))
-                    if i == 3:
-                        inner_page.setLayout(make_lora_addnet_tab(image))
-                    if i == 4:
-                        inner_page.setLayout(make_tiled_diffusion_tab(image))
-                    if i == 5:
-                        inner_page = make_control_net_tab(image, 0)
-                    if i == 6:
-                        inner_page = make_regional_prompter_tab(image)
-                    inner_tab.addTab(inner_page, tab[0])
-
-            if not ERROR_LIST_PARAMETER == 0:
-                error_page = make_error_tab(image, ERROR_LIST_PARAMETER)
-                inner_tab.addTab(error_page, 'Errors')
-
-            inner_tab.setTabPosition(QTabWidget.TabPosition.South)
-            inner_tab.setObjectName('extension_tab')
-            inner_tab.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-            inner_tab.customContextMenuRequested.connect(self.__show_tab_menu)
-            inner_tab.currentChanged.connect(self.__tab_changed)
-
-            if self.footer.shortened:
-                inner_tab.hide()
-
-            tab_page_layout.addWidget(inner_tab)
-            tab_page.setLayout(tab_page_layout)
+            if deleted and index in deleted:
+                tab_page.tab_page_image_deleted()
 
             if 'File count' in image.params:
                 del image.params['File count']
 
-            if USE_NUMBER:
-                self.root_tab.addTab(tab_page, str(shown_tab + image_count))
-            else:
-                self.root_tab.addTab(tab_page, image.params.get('Filename', '---'))
+            if self.footer.shortened:
+                tab_page.extension_tab.hide()
 
+            if USE_NUMBER:
+                title = str(tab_index)
+
+            self.root_tab.addTab(tab_page, title)
             self.root_tab.setTabToolTip(shown_tab + image_count, image.params.get('Filename', '---'))
             self.root_tab.currentChanged.connect(self.__tab_changed)
             image_count += 1
@@ -206,10 +135,13 @@ class Tabview(QMainWindow):
 
         total = self.root_tab.count()
         self.footer.remove_button('bar_toggle', False)
+
         if all([THUMBNAIL_TAB_BAR, HIDE_NORMAL_TAB_BAR]) or total == 1:
             self.root_tab.tabBar().hide()
+
         if not all([TAB_NAVIGATION_ENABLE, TAB_MINIMUMS < total]):
             self.tab_navigation.hide()
+
         if not all([THUMBNAIL_TAB_BAR, TAB_MINIMUMS < total]):
             self.tab_bar.hide()
             self.footer.remove_button('bar_toggle')
@@ -222,6 +154,7 @@ class Tabview(QMainWindow):
                 self.manage_subordinates(i, 'deleted')
 
         self.tab_navigation.toggle_button_availability(True)
+        self.root_tab.setMovable(True)
 
         if progress:
             progress.close()
@@ -246,26 +179,13 @@ class Tabview(QMainWindow):
             self.tab_navigation.refresh_combobox(filelist)
 
         if self.tab_bar:
-            filelist = [value.params.get('Filepath') for _, value in loaded_images]
+            filelist = [(index, value.params.get('Filepath')) for index, value in loaded_images]
             self.tab_bar.add_tab(filelist)
-
-    def toggle_tab_link(self):
-        if self.tab_link:
-            self.tab_link = False
-        else:
-            current_tab_index = self.root_tab.currentIndex()
-            current_tab_page = self.root_tab.widget(current_tab_index)
-            extension_tab = current_tab_page.findChild(QTabWidget, 'extension_tab')
-            extension_tab_index = extension_tab.currentIndex()
-            extension_tab_text = extension_tab.tabText(extension_tab_index) if extension_tab else None
-            self.tab_link = True
-            self.tab_link_index = extension_tab_text
 
     def tab_signal_received(self):
         where_from = self.sender().objectName()
         clipboard = QApplication.clipboard()
         current_page = self.root_tab.currentWidget()
-        current_index = self.root_tab.currentIndex()
 
         if where_from == 'Copy positive':
             text_edit = current_page.findChild(QTextEdit, 'Positive')
@@ -310,39 +230,22 @@ class Tabview(QMainWindow):
             timer = QTimer(self)
             timer.timeout.connect(lambda: self.adjustSize())
             timer.start(10)
-# ToDO: Do not use currentIndex below, Use global Index
-        elif where_from == 'pixmap':
-            self.controller.request_reception((current_index,), 'view', self)
-
-        elif where_from == 'Favourite':
-            result = self.controller.request_reception((current_index,), 'add')
-            if result:
-                self.toast.init_toast('Added!', 1000)
-
-        elif where_from == 'Move to':
-            result = self.controller.request_reception((current_index,), 'move')
-            if result:
-                self.toast.init_toast('Moved!', 1000)
-
-        elif where_from == 'Delete':
-            result = self.controller.request_reception((current_index,), 'delete')
-            if result:
-                self.toast.init_toast('Deleted!', 1000)
 
     def search_process(self, indexes: tuple = None):
-        hide = config.get('HideNotMatchedTabs', False)
         if indexes:
             for tab_index in reversed(range(self.root_tab.count())):
-                if tab_index not in indexes:
-                    if hide:
+                page = self.root_tab.widget(tab_index)
+                index = page.image_index
+                if index not in indexes:
+                    if HIDE_NOT_MATCH:
                         title = self.root_tab.tabText(tab_index)
-                        self.tab_pages.append([tab_index, self.root_tab.widget(tab_index), title])
+                        self.tab_pages.append([tab_index, page, title])
                         self.root_tab.removeTab(tab_index)
                         self.tab_navigation.toggle_button_availability(False)
                 else:
-                    self.root_tab.tabBar().setTabTextColor(tab_index, Qt.GlobalColor.green)
+                    self.root_tab.tabBar().setTabTextColor(tab_index, custom_color('Q_matched'))
                     self.tab_bar.image_matched(indexes)
-                    if hide:
+                    if HIDE_NOT_MATCH:
                         self.tab_bar.pixmap_hide()
 
         else:
@@ -350,7 +253,7 @@ class Tabview(QMainWindow):
             text_color = palette.color(QPalette.ColorRole.Text)
             for index in range(self.root_tab.count()):
                 color = self.root_tab.tabBar().tabTextColor(index)
-                if color == Qt.GlobalColor.green:
+                if color == custom_color('Q_matched'):
                     self.root_tab.tabBar().setTabTextColor(index, text_color)
             if self.tab_pages:
                 for widget in reversed(self.tab_pages):
@@ -363,36 +266,27 @@ class Tabview(QMainWindow):
     def manage_subordinates(self, index: int, detail: str, remarks=None):
         for tab_index in range(self.root_tab.count()):
             tab_page = self.root_tab.widget(tab_index)
-            main_section = tab_page.findChild(QWidget, 'main_section')
-            move_delete_section = tab_page.findChild(QWidget, 'move_delete')
-            filepath_label = main_section.findChild(QLabel, 'Filepath_value')
-            tab_name = tab_page.objectName()
-            number = int(tab_name.split('_')[1])
-            if number == index:
+            if index == tab_page.image_index:
                 if remarks:
                     filename = os.path.basename(remarks)
-                    main_section.setTitle(filename)
-                    filepath_label.setText(remarks)
-                    filepath_label.setToolTip(remarks)
-                    move_delete_section.refresh_filepath(remarks)
-                    self.root_tab.tabBar().setTabText(tab_index, filename)
+                    tab_page.update_filepath(remarks)
+                    if not USE_NUMBER:
+                        self.root_tab.tabBar().setTabText(tab_index, filename)
                 if detail == 'moved':
-                    stylesheet = custom_stylesheet('colour', 'moved')
-                    filepath_label.setStyleSheet(stylesheet)
+                    tab_page.tab_page_image_moved()
                     self.root_tab.tabBar().setTabTextColor(tab_index, custom_color('Q_moved'))
-                    self.tab_bar.image_moved((tab_index,))
+                    self.tab_bar.image_moved((index,))
                     break
                 if detail == 'deleted':
-                    stylesheet = custom_stylesheet('colour', 'deleted')
-                    filepath_label.setStyleSheet(stylesheet)
+                    tab_page.tab_page_image_deleted()
                     self.root_tab.tabBar().setTabTextColor(tab_index, custom_color('Q_deleted'))
-                    self.tab_bar.image_deleted((tab_index,))
+                    self.tab_bar.image_deleted((index,))
                     break
 
     def __change_window(self):
         flag = True
         for index in range(self.root_tab.count()):
-            extension_tab = self.root_tab.widget(index).findChild(QTabWidget, 'extension_tab')
+            extension_tab = self.root_tab.widget(index).extension_tab
             if extension_tab.isHidden():
                 extension_tab.show()
                 flag = False
@@ -405,39 +299,13 @@ class Tabview(QMainWindow):
         timer.start(10)
 
     def __tab_changed(self):
-        which_tab = self.sender().objectName()
-        if which_tab == 'root_tab':
-            current_index = self.root_tab.currentIndex()
-            current_page = self.root_tab.widget(current_index)
-            image_index = int(current_page.objectName().split('_')[1])
-            extension_tab = current_page.findChild(QTabWidget, 'extension_tab')
-
-            self.tab_navigation.current_changes(current_index)
-            self.tab_bar.image_current(current_index)
-            self.controller.request_reception((image_index,), 'change', self)
-
-            if self.tab_link:
-                tab_name = self.tab_link_index
-                for index in range(extension_tab.count()):
-                    if extension_tab.tabText(index) == tab_name:
-                        extension_tab.setCurrentIndex(index)
-                        break
-
-        elif which_tab == 'extension_tab':
-            current_index = self.sender().currentIndex()
-            tab_name = self.sender().tabText(current_index)
-            self.tab_link_index = tab_name
-
-    def __show_tab_menu(self, pos):
-        current_index = self.sender().currentIndex()
-        tab_bar = self.sender().tabBar()
-        tab_rect = tab_bar.tabRect(current_index)
-        changed_pos = tab_bar.mapFrom(self.sender(), pos)
-        if tab_rect.contains(changed_pos):
-            x = tab_bar.mapToGlobal(tab_rect.topLeft()).x()
-            y = tab_bar.mapToGlobal(tab_rect.topLeft()).y() - self.tab_link_menu.sizeHint().height()
-            adjusted_pos = QPoint(x, y)
-            self.tab_link_menu.exec(adjusted_pos)
+        current_index = self.root_tab.currentIndex()
+        current_page = self.root_tab.widget(current_index)
+        index = current_page.image_index
+        self.tab_navigation.current_changes(current_index)
+        self.tab_bar.image_current(index)
+        if self.tab_link:
+            current_page.apply_tab_link(self.tab_link_index)
 
 
 class TabNavigation(QWidget):
@@ -506,6 +374,8 @@ class TabBar(QWidget):
         self.controller = controller
         self.scroll_contents = QWidget()
         self.filepaths = filepaths
+        self.pixmap_label = []
+        self.positions = {}  # key:image_index item:position
 
         self.current = 0
         self.moved = set()
@@ -559,21 +429,22 @@ class TabBar(QWidget):
             button_area_layout.addWidget(button)
         return button_area_layout
 
-    def __tab_bar_thumbnails(self, filepaths: list, starts=0):
+    def __tab_bar_thumbnails(self, filepaths: list):
         layout = self.scroll_contents.layout()
+        total = len(self.positions)
 
-        for tab_index, filepath in enumerate(filepaths):
-            number = starts + tab_index
-            image_index, filepath = filepath
-            filename = os.path.basename(filepath)
+        for position, filepath_tuple in enumerate(filepaths):
+            image_index, filepath = filepath_tuple
+            filename = (os.path.basename(filepath))
+            current_position = total + position
 
-            pixmap_label = ThumbnailLabel(number, image_index)
-            pixmap_label.setObjectName('index_' + str(number))
+            pixmap_label = PixmapLabel()
+            pixmap_label.setObjectName(f'index_{str(image_index)}')
             pixmap_label.setToolTip(filename)
             pixmap_label.clicked.connect(self.__pixmap_clicked)
-            pixmap_label.rightClicked.connect(self.__pixmap_right_clicked)
-            pixmap_label.ctrl_clicked.connect(self.__pixmap_ctrl_clicked)
-            pixmap_label.shift_clicked.connect(self.__pixmap_shift_clicked)
+            pixmap_label.rightClicked.connect(lambda: self.__pixmap_clicked(right=True))
+            pixmap_label.ctrl_clicked.connect(lambda: self.__pixmap_clicked(ctrl=True))
+            pixmap_label.shift_clicked.connect(lambda: self.__pixmap_clicked(shift=True))
 
             pixmap = portrait_generator(filepath, 100)
             pixmap_label.setPixmap(pixmap)
@@ -581,11 +452,13 @@ class TabBar(QWidget):
             pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
             pixmap_label.setStyleSheet(custom_stylesheet('pixmap', 'default'))
 
+            self.positions[image_index] = current_position
+
             layout.addWidget(pixmap_label)
 
     def __border_change(self, indexes: tuple, stylesheet: str):
         for index in indexes:
-            target = self.scroll_contents.findChild(PixmapLabel, 'index_' + str(index))
+            target = self.scroll_contents.findChild(PixmapLabel, f'index_{str(index)}')
             target.setStyleSheet(stylesheet)
 
     def __border_clear(self, index: int):
@@ -618,13 +491,13 @@ class TabBar(QWidget):
 
         elif shift:
             if self.current != number:
-                starts = min(self.current, number)
-                ends = max(self.current, number)
-                for i in range(starts, ends + 1):
-                    label = self.scroll_contents.findChild(PixmapLabel, 'index_' + str(i))
-                    label.setStyleSheet(custom_stylesheet('border', 'current'))
-                    if i not in self.selected:
-                        self.selected.add(i)
+                current = self.positions.get(self.current)
+                clicked = self.positions.get(number)
+                starts = min(current, clicked)
+                ends = max(current, clicked)
+                for image_index, position in self.positions.items():
+                    if starts <= position <= ends:
+                        self.image_selected(image_index)
 
         else:
             target = list(self.selected)
@@ -633,23 +506,22 @@ class TabBar(QWidget):
                     self.__border_clear(num)
                 if number != self.current:
                     self.image_current(number)
-                    self.tab.root_tab.setCurrentIndex(number)
+                    index = self.__image_index_to_tab_index(number)
+                    self.tab.root_tab.setCurrentIndex(index)
 
-    def __pixmap_right_clicked(self):
-        self.__pixmap_clicked(right=True)
-
-    def __pixmap_ctrl_clicked(self):
-        self.__pixmap_clicked(ctrl=True)
-
-    def __pixmap_shift_clicked(self):
-        self.__pixmap_clicked(shift=True)
+    def __image_index_to_tab_index(self, index):
+        for i in range(self.tab.root_tab.count()):
+            widget = self.tab.root_tab.widget(i)
+            if widget.image_index == index:
+                return i
+        return 0
 
     def __button_clicked(self):
         where_from = self.sender().objectName()
         if where_from == 'S':
             self.controller.request_reception(tuple(self.selected), 'search', self.tab)
         elif where_from == 'R':
-            pass
+            self.tab.search_process(None)
         elif where_from == 'D':
             self.controller.request_reception(tuple(self.selected), 'diff', self.tab)
         elif where_from == 'L':
@@ -660,7 +532,7 @@ class TabBar(QWidget):
     def add_tab(self, filepaths: list):
         current_filepaths = [filepath for _, filepath in self.filepaths]
         add_items = [(index, filepath) for index, filepath in filepaths if index not in current_filepaths]
-        self.__tab_bar_thumbnails(add_items, len(self.filepaths))
+        self.__tab_bar_thumbnails(add_items)
         self.filepaths.extend(add_items)
 
     def pixmap_hide(self):
@@ -669,24 +541,24 @@ class TabBar(QWidget):
                 target = self.scroll_contents.findChild(PixmapLabel, 'index_' + str(index))
                 target.hide()
 
-    def image_selected(self, index: int):
-        self.__border_change((index, ), custom_stylesheet('border', 'current'))
-        self.selected.add(index)
-
     def image_moved(self, indexes: tuple):
-        stylesheet = 'border: 2px solid rgba(0, 0, 255, 0.5)'
+        stylesheet = custom_stylesheet('border', 'moved')
         self.__border_change(indexes, stylesheet)
         self.moved.update(indexes)
 
     def image_deleted(self, indexes: tuple):
-        stylesheet = 'border: 2px solid rgba(255, 0, 0, 0.5)'
+        stylesheet = custom_stylesheet('border', 'deleted')
         self.__border_change(indexes, stylesheet)
         self.deleted.update(indexes)
 
     def image_matched(self, indexes: tuple):
-        stylesheet = 'border: 2px solid rgba(0, 255, 0, 0.5)'
+        stylesheet = custom_stylesheet('border', 'matched')
         self.__border_change(indexes, stylesheet)
         self.matched.update(indexes)
+
+    def image_selected(self, index: int):
+        self.__border_change((index, ), custom_stylesheet('border', 'current'))
+        self.selected.add(index)
 
     def image_current(self, index: int):
         self.__border_clear(self.current)
@@ -695,7 +567,7 @@ class TabBar(QWidget):
         self.selected.add(index)
 
     def image_default(self, index: int):
-        stylesheet = 'border: 1px solid palette(midlight)'
+        stylesheet = 'border: 1px solid palette(dark)'
         self.__border_change((index,), stylesheet)
 
     def result_clear(self):
@@ -708,6 +580,262 @@ class TabBar(QWidget):
             index = int(tmp.split('_')[1])
             self.__border_clear(index)
         self.image_current(self.current)
+
+
+class RootTabPage(QWidget):
+    def __init__(self, image_index: int, image, controller, parent):
+        super().__init__()
+        self.controller = controller
+        self.signal_recipient = parent
+        self.tab_index = image_index
+        self.image_index = image_index
+        self.params = image.params
+        self.filename = ''
+        self.filepath = ''
+        self.used_params = {}
+
+        self.tab_link_menu = TabMenu(self)
+        self.main_section = None
+        self.extension_tab = None
+        self.filepath_label = None
+        self.filename_label = None
+
+        self.moved = False
+        self.deleted = False
+        self.matched = False
+        self.hidden = False
+
+        self.__init_tab_page(image)
+
+    def __init_tab_page(self, image):
+        layout = QVBoxLayout()
+        layout.setContentsMargins(5, 5, 5, 5)
+
+        self.__init_main_section()
+        layout.addWidget(self.main_section)
+
+        dummy_widget = QWidget()
+        layout.addWidget(dummy_widget)
+
+        self.__init_extension_section(image)
+        layout.addWidget(self.extension_tab)
+
+        self.setLayout(layout)
+        self.setObjectName(f'page_{self.image_index}')
+
+        if FILE_MANAGEMENT:
+            self.__check_filepath()
+
+    def __init_main_section(self):
+        self.filename = self.params.get('Filename', 'None')
+        self.filepath = self.params.get('Filepath', 'None')
+
+        main_section = QGroupBox()
+        main_section.setObjectName('main_section')
+        main_section.setTitle(self.filename)
+        main_section.setFixedHeight(PIXMAP_SCALE + 40)
+
+        main_section_layout = QHBoxLayout()
+        main_section_layout.setContentsMargins(5, 15, 0, 5)
+        main_section_layout.setSpacing(15)
+
+        main_pixmap = make_pixmap_section(self, PIXMAP_SCALE)
+        main_label = make_label_section(self, PIXMAP_SCALE)
+
+        if FILE_MANAGEMENT:
+            main_pixmap, main_label = self.__init_move_delete(main_pixmap, main_label)
+            main_section.setFixedHeight(PIXMAP_SCALE + 70)
+
+        main_section_layout.addWidget(main_pixmap)
+        main_section_layout.addWidget(main_label, alignment=Qt.AlignmentFlag.AlignRight)
+        main_section.setLayout(main_section_layout)
+
+        self.main_section = main_section
+        self.main_section.setObjectName(f'main_tab_{self.image_index}')
+
+        self.filepath_label = self.main_section.findChild(QLabel, 'Filepath_value')
+
+    def __init_move_delete(self, pixmap_section, label_section):
+        button_text = (('&Favourite', 'fav'), ('&Move to', 'mov'), ('Delete', 'del'))
+        pixmap_layout = pixmap_section.layout()
+        label_layout = label_section.layout()
+
+        dummy = QWidget()
+        dummy.setFixedHeight(10)
+        label_layout.addWidget(dummy)
+
+        layout = QHBoxLayout()
+        layout.setContentsMargins(5, 0, 5, 0)
+
+        for button_tuple in button_text:
+            button = QPushButton(button_tuple[0])
+            button.setObjectName(f'{button_tuple[1]}_{self.image_index}')
+            button.clicked.connect(self.page_signal_received)
+            if button_tuple[1] == 'del':
+                button.setShortcut(QKeySequence('Delete'))
+            layout.addWidget(button)
+
+        pixmap_layout.addLayout(layout)
+
+        return pixmap_section, label_section
+
+    def __check_filepath(self):
+        favourite = FAVOURITE_DIR
+        trash_bin = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.trash')
+        directory = os.path.dirname(self.filepath)
+        fav_button = self.main_section.findChild(QPushButton, f'fav_{self.image_index}')
+        del_button = self.main_section.findChild(QPushButton, f'del_{self.image_index}')
+
+        fav_button.setDisabled(False)
+        del_button.setDisabled(False)
+
+        if directory == trash_bin:
+            del_button.setDisabled(True)
+
+        if not favourite or (favourite and directory == favourite):
+            fav_button.setDisabled(True)
+
+    def __init_extension_section(self, image):
+        extension_tab = QTabWidget()
+
+        hires_tab = ['Hires upscaler', 'Face restoration', 'Extras']
+        cfg_fix_auto_tab = ['Dynamic thresholding enabled', 'CFG auto', 'CFG scheduler']
+        lora_tab = ['Lora', 'AddNet Enabled', 'Textual inversion']
+
+        tabs = [['Prompts', True, True],
+                ['Hires.fix / Extras',
+                 any(key in v for v in self.params for key in hires_tab),
+                 config.get('HiresExtras', True)],
+                ['CFG',
+                 any(key in v for v in self.params for key in cfg_fix_auto_tab),
+                 config.get('CFG', True)],
+                ['LoRa / Add networks',
+                 any(key in v for v in self.params for key in lora_tab),
+                 config.get('LoraAddNet', True)],
+                ['Tiled diffusion',
+                 'Tiled diffusion' in self.params,
+                 config.get('TiledDiffusion', True)],
+                ['Control net',
+                 'ControlNet' in self.params,
+                 config.get('ControlNet', True)],
+                ['Regional prompter',
+                 'RP Active' in self.params,
+                 config.get('RegionalPrompter', True)],
+                ['Errors',
+                 not ERROR_LIST_PARAMETER == 0,
+                 True]
+                ]
+
+        for i, tab in enumerate(tabs):
+            if tab[1] and tab[2]:
+                inner_page = QWidget()
+                inner_page.setMinimumHeight(PIXMAP_SCALE)
+
+                if i == 0:
+                    inner_page.setLayout(make_prompt_tab(self))
+                if i == 1:
+                    inner_page.setLayout(make_hires_other_tab(self))
+                if i == 2:
+                    inner_page.setLayout(make_cfg_tab(self))
+                if i == 3:
+                    inner_page.setLayout(make_lora_addnet_tab(self))
+                if i == 4:
+                    inner_page.setLayout(make_tiled_diffusion_tab(self))
+                if i == 5:
+                    inner_page = make_control_net_tab(self, 0)
+                if i == 6:
+                    inner_page = make_regional_prompter_tab(self)
+                if i == 7:
+                    inner_page = make_error_tab(image, ERROR_LIST_PARAMETER)
+
+                if inner_page:
+                    extension_tab.addTab(inner_page, tab[0])
+
+        extension_tab.setTabPosition(QTabWidget.TabPosition.South)
+        extension_tab.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        extension_tab.customContextMenuRequested.connect(self.__show_tab_menu)
+        extension_tab.currentChanged.connect(self.__refresh_tab_link_target)
+
+        self.extension_tab = extension_tab
+        self.extension_tab.setObjectName(f'main_tab_{self.image_index}')
+
+    def __show_tab_menu(self, pos):
+        current_index = self.sender().currentIndex()
+        tab_bar = self.sender().tabBar()
+        tab_rect = tab_bar.tabRect(current_index)
+        changed_pos = tab_bar.mapFrom(self.sender(), pos)
+        if tab_rect.contains(changed_pos):
+            x = tab_bar.mapToGlobal(tab_rect.topLeft()).x()
+            y = tab_bar.mapToGlobal(tab_rect.topLeft()).y() - self.tab_link_menu.sizeHint().height()
+            adjusted_pos = QPoint(x, y)
+            self.tab_link_menu.exec(adjusted_pos)
+
+    def __refresh_tab_link_target(self):
+        current_index = self.sender().currentIndex()
+        tab_name = self.sender().tabText(current_index)
+        self.signal_recipient.tab_link_index = tab_name
+
+    def page_signal_received(self, right: bool = False):
+        where_from = self.sender().objectName()
+        index = int(where_from.split('_')[1])
+        if 'pixmap' in where_from and not right:
+            self.controller.request_reception((index,), 'view')
+        elif 'pixmap' in where_from and right:
+            pass
+        elif 'fav' in where_from:
+            result = self.controller.request_reception((index,), 'add')
+            if result:
+                self.signal_recipient.toast.init_toast('Added!', 1000)
+        elif 'mov' in where_from:
+            result = self.controller.request_reception((index,), 'move')
+            if result:
+                self.signal_recipient.toast.init_toast('Moved!', 1000)
+        elif 'del' in where_from:
+            result = self.controller.request_reception((index,), 'delete')
+            if result:
+                self.signal_recipient.toast.init_toast('Deleted!', 1000)
+
+    def toggle_tab_link(self):
+        if self.signal_recipient.tab_link:
+            self.signal_recipient.tab_link = False
+        else:
+            index = self.extension_tab.currentIndex()
+            tab_name = self.extension_tab.tabText(index)
+            self.signal_recipient.tab_link = True
+            self.signal_recipient.tab_link_index = tab_name
+
+    def apply_tab_link(self, tab_name):
+        for index in range(self.extension_tab.count()):
+            if self.extension_tab.tabText(index) == tab_name:
+                self.extension_tab.setCurrentIndex(index)
+                break
+
+    def update_filepath(self, filepath):
+        filepath = os.path.dirname(filepath)
+        filename = os.path.basename(filepath)
+        self.filepath = filepath
+        self.filename = filename
+        self.filepath_label.setText(filepath)
+
+        if FILE_MANAGEMENT:
+            self.__check_filepath()
+
+    def tab_page_image_moved(self):
+        stylesheet = custom_stylesheet('colour', 'moved')
+        self.filepath_label.setStyleSheet(stylesheet)
+
+    def tab_page_image_deleted(self):
+        stylesheet = custom_stylesheet('colour', 'deleted')
+        self.filepath_label.setStyleSheet(stylesheet)
+
+    def tab_page_image_matched(self):
+        pass
+
+    def hide_tab_page(self):
+        pass
+
+    def update_tab_index(self):
+        pass
 
 
 class InterrogateTab(QStackedWidget):
