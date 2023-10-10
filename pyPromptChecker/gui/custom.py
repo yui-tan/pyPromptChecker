@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import os
-import sys
 from PyQt6.QtGui import QKeySequence, QShortcut, QColor
 
 from . import config
@@ -108,20 +107,17 @@ def custom_color(purpose: str):
 
 
 def custom_keybindings(parent):
-    if parent.parent() is not None:
-        parent = parent.parent()
-
     toggle_theme_shortcut = QShortcut(QKeySequence('Ctrl+D'), parent)
     toggle_tab_bar_shortcut = QShortcut(QKeySequence('Ctrl+B'), parent)
     add_tab_shortcut = QShortcut(QKeySequence('Ctrl+O'), parent)
     replace_tab_shortcut = QShortcut(QKeySequence('Ctrl+N'), parent)
     quit_shortcut = QShortcut(QKeySequence('Ctrl+Q'), parent)
 
-    toggle_tab_bar_shortcut.activated.connect(parent.bar_toggle)
-    toggle_theme_shortcut.activated.connect(parent.change_themes)
-    add_tab_shortcut.activated.connect(parent.reselect_files_append)
-    replace_tab_shortcut.activated.connect(parent.reselect_files)
-    quit_shortcut.activated.connect(lambda: sys.exit())
+    toggle_tab_bar_shortcut.activated.connect(lambda: parent.key_binds_send('bar'))
+    toggle_theme_shortcut.activated.connect(lambda: parent.key_binds_send('change'))
+    add_tab_shortcut.activated.connect(lambda: parent.key_binds_send('append'))
+    replace_tab_shortcut.activated.connect(lambda: parent.key_binds_send('replace'))
+    quit_shortcut.activated.connect(lambda: parent.key_binds_send('exit'))
 
 
 def custom_filename(filepath: str, category: str):

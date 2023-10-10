@@ -2,18 +2,24 @@
 
 from .dialog import *
 from .widget import *
-from .menu import FooterButtonMenu
 from .custom import *
 from . import config
 
 import os
-from PyQt6.QtCore import Qt, QPoint
-from PyQt6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QScrollArea
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QScrollArea
 from PyQt6.QtWidgets import QWidget
 
 THUMBNAIL_PIXMAP = config.get('ThumbnailPixmapSize', 150)
 MOVE_DELETE = config.get('MoveDelete', False)
 HIDE_NOT_MATCH = config.get('HideNotMatchedTabs', False)
+BUTTONS = (('Select all', 'Select all'),
+           ('Search', 'Search'),
+           ('Listview', 'Listview'),
+           ('Tabview', 'Tabview'),
+           ('Diff', 'Diff'),
+           ('Add favourite', 'Add favourite'),
+           ('▲M&enu', '▲Menu'))
 
 
 class ThumbnailView(QMainWindow):
@@ -25,8 +31,9 @@ class ThumbnailView(QMainWindow):
         self.estimated_height = self.size + 67
         self.estimated_width = self.size + 40
         self.setWindowTitle('Thumbnail View')
-        self.menu = FooterButtonMenu(self)
+        custom_keybindings(self)
 
+        self.footer = None
         self.borders = []
         self.pos_x = 0
         self.pos_y = 0
@@ -81,9 +88,10 @@ class ThumbnailView(QMainWindow):
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setWidgetResizable(True)
-
         central_widget_layout.addWidget(scroll_area)
-        central_widget_layout.addLayout(self.__footer_buttons())
+
+        self.footer = FooterButtons(BUTTONS, self, self.controller)
+        central_widget_layout.addWidget(self.footer)
         central_widget.setLayout(central_widget_layout)
 
         if self.centralWidget():
@@ -103,7 +111,21 @@ class ThumbnailView(QMainWindow):
 
         scroll_area.setMinimumWidth(0)
 
-    def signal_received(self):
+    def key_binds_send(self, request):
+        if request == 'append':
+            result = self.controller.request_reception(('files',), request, sender=self)
+            if result:
+                self.toast.init_toast('Added!', 1000)
+        elif request == 'replace':
+            result = self.controller.request_reception(('files',), request, sender=self)
+            if result:
+                self.toast.init_toast('Replaced!', 1000)
+        elif request == 'exit':
+            self.controller.request_reception(None, request, sender=self)
+        elif request == 'change':
+            self.controller.change_themes()
+
+    def signal_received(self, right: bool = False):
         where_from = self.sender().objectName()
         selected_index = set()
 
@@ -111,13 +133,7 @@ class ThumbnailView(QMainWindow):
             if border.selected:
                 selected_index.add(border.index)
 
-        if where_from == '▲Menu':
-            x = self.sender().mapToGlobal(self.sender().rect().topLeft()).x()
-            y = self.sender().mapToGlobal(self.sender().rect().topLeft()).y() - self.controller.main_menu.sizeHint().height()
-            adjusted_pos = QPoint(x, y)
-            self.controller.main_menu.present_check(self)
-            self.controller.main_menu.exec(adjusted_pos)
-        elif where_from == 'Add favourite':
+        if where_from == 'Add favourite':
             result = self.controller.request_reception(selected_index, 'add')
             if result:
                 self.toast.init_toast('Added!', 1000)
@@ -163,9 +179,9 @@ class ThumbnailView(QMainWindow):
             self.controller.request_reception(selected_index, 'diff')
         elif where_from == 'Search':
             self.controller.request_reception(selected_index, 'search')
-        elif where_from == 'List':
+        elif where_from == 'Listview':
             self.controller.request_reception(selected_index, 'list')
-        elif where_from == 'Tab':
+        elif where_from == 'Tabview':
             self.controller.request_reception(selected_index, 'tab')
         elif where_from == 'Select all':
             self.__select_all_toggle(len(selected_index))
@@ -176,6 +192,7 @@ class ThumbnailView(QMainWindow):
 
     def thumbnail_add_images(self, param_list: list):
         progress = None
+
         if self.isActiveWindow():
             progress = ProgressDialog()
             progress.setLabelText('Loading...')
@@ -237,32 +254,6 @@ class ThumbnailView(QMainWindow):
             elif not selected:
                 result.append(border.index)
         return result
-
-    def __footer_buttons(self):
-        management = MOVE_DELETE
-        button_layout = QHBoxLayout()
-        buttons = ('Select all', 'Search', 'Diff', 'Interrogate', 'Export JSON', '▲Menu')
-
-        if management:
-            buttons = ('Select all', 'List', 'Tab', 'Diff', 'Search', 'Restore', 'Add favourite', '▲Menu')
-
-        for button_text in buttons:
-            button = ButtonWithMenu()
-            button.setText(button_text)
-            button.setObjectName(button_text)
-            button_layout.addWidget(button)
-            button.clicked.connect(self.signal_received)
-
-            if button_text == 'Add favourite':
-                button.rightClicked.connect(self.__footer_submenu)
-
-        return button_layout
-
-    def __footer_submenu(self):
-        x = self.sender().mapToGlobal(self.sender().rect().topLeft()).x()
-        y = self.sender().mapToGlobal(self.sender().rect().topLeft()).y() - self.menu.sizeHint().height()
-        adjusted_pos = QPoint(x, y)
-        self.menu.exec(adjusted_pos)
 
     def __select_all_toggle(self, count):
         if count == len(self.borders):

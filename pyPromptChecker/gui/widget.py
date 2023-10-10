@@ -5,8 +5,9 @@ from functools import lru_cache
 from PyQt6.QtWidgets import QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QTextEdit, QSizePolicy
 from PyQt6.QtWidgets import QApplication, QGroupBox, QTabWidget, QScrollArea, QSplitter, QGridLayout, QWidget
 from PyQt6.QtGui import QPixmap, QPainter, QImageReader
-from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal, QPoint
 
+from .menu import *
 from .custom import *
 from . import config
 
@@ -95,63 +96,110 @@ class HoverLabel(QLabel):
 
 
 class FooterButtons(QWidget):
-    def __init__(self, button_layout: tuple, parent=None):
+    def __init__(self, button_layout: tuple, parent=None, controller=None):
         super().__init__()
+        self.controller = controller
         self.caller = parent
         self.shortened = SHORTENED
-        self.buttons = button_layout
-        self.__init_footer()
-        self.__establish_connection()
-        self.setContentsMargins(0, 0, 0, 0)
+        self.buttons = {}
+        self.menus = {}
 
-    def __init_footer(self):
+        self.__init_buttons(button_layout)
+        self.__init_submenu()
+        self.__establish_connection()
+
+    def __init_buttons(self, buttons):
         layout = QHBoxLayout()
-        for text, name in self.buttons:
-            button = ButtonWithMenu()
-            button.setText(text)
+        layout.setContentsMargins(0, 0, 0, 0)
+        for text, name in buttons:
+            if '&' in text:
+                button = QPushButton(text)
+            else:
+                button = ButtonWithMenu(text)
+            if name == 'bar_toggle' or name == 'Shrink':
+                self.buttons[name] = button
+            else:
+                self.buttons[text] = button
             button.setObjectName(name)
             layout.addWidget(button)
         self.setLayout(layout)
 
     def __establish_connection(self):
-        if hasattr(self.caller, 'tab_signal_received'):
-            for _, name in self.buttons:
-                button = self.findChild(ButtonWithMenu, name)
-                button.clicked.connect(self.caller.tab_signal_received)
-                if name == 'Shrink':
+        for text, button in self.buttons.items():
+            if hasattr(self.caller, 'signal_received'):
+                if text == '▲M&enu':
+                    button.clicked.connect(self.__show_submenu)
+                else:
+                    button.clicked.connect(self.caller.signal_received)
+
+                if '&' not in text:
+                    button.rightClicked.connect(self.__show_submenu)
+
+            elif hasattr(self.caller, 'tab_signal_received'):
+                if text == 'Shrink':
+                    button.clicked.connect(self.caller.tab_signal_received)
                     button.setShortcut(QKeySequence('Ctrl+Tab'))
                     if self.shortened:
                         button.setText('Expand')
-        elif hasattr(self.caller, 'thumbnail_signal_received'):
-            for _, name in self.buttons:
-                button = self.findChild(ButtonWithMenu, name)
-                button.clicked.connect(self.caller.thumbnail_signal_received)
-        elif hasattr(self.caller, 'listview_signal_received'):
-            for _, name in self.buttons:
-                button = self.findChild(ButtonWithMenu, name)
-                button.clicked.connect(self.caller.listview_signal_received)
+                elif text == '▲M&enu':
+                    button.clicked.connect(self.__show_submenu)
+                else:
+                    button.clicked.connect(self.caller.tab_signal_received)
+
+                if '&' not in text:
+                    button.rightClicked.connect(self.__show_submenu)
+
+    def __init_submenu(self):
+        if 'Add favourite' in self.buttons:
+            manage_menu = FileManageMenu(self.caller)
+            self.menus['Add favourite'] = manage_menu
+        if 'Search' in self.buttons:
+            search_menu = SearchMenu(self.caller)
+            self.menus['Search'] = search_menu
+        if '▲M&enu' in self.buttons:
+            main_menu = MainMenu(self.caller, self.controller)
+            self.menus['▲M&enu'] = main_menu
+
+    def __show_submenu(self):
+        where_from = self.sender().objectName()
+        menu = None
+
+        if where_from == 'Add favourite':
+            menu = self.menus.get(where_from)
+        elif where_from == 'Search':
+            menu = self.menus.get(where_from)
+        elif where_from == '▲Menu':
+            menu = self.menus.get('▲M&enu')
+
+        if menu is not None:
+            x = self.sender().mapToGlobal(self.sender().rect().topLeft()).x()
+            y = self.sender().mapToGlobal(self.sender().rect().topLeft()).y() - menu.sizeHint().height()
+            adjusted_pos = QPoint(x, y)
+            menu.exec(adjusted_pos)
 
     def shrink_button_change(self, is_shrink):
-        button = self.findChild(ButtonWithMenu, 'Shrink')
-        if is_shrink:
-            self.shortened = True
-            button.setText('Expand')
-            button.setShortcut(QKeySequence('Ctrl+Tab'))
-        else:
-            self.shortened = False
-            button.setText('Shrink')
+        button = self.buttons.get('Shrink')
+        if button is not None:
+            if is_shrink:
+                self.shortened = True
+                button.setText('Expand')
+            else:
+                self.shortened = False
+                button.setText('Shrink')
             button.setShortcut(QKeySequence('Ctrl+Tab'))
 
-    def fixed_size_button(self, name, size):
-        button = self.findChild(ButtonWithMenu, name)
-        button.setFixedSize(size, size)
+    def fixed_size_button(self, name, width, height):
+        button = self.buttons.get(name)
+        if button is not None:
+            button.setFixedSize(width, height)
 
-    def remove_button(self, name, remove=True):
-        button = self.findChild(ButtonWithMenu, name)
-        if remove:
-            button.hide()
-        else:
-            button.show()
+    def toggle_button(self, name, remove=True):
+        button = self.buttons.get(name)
+        if button is not None:
+            if remove:
+                button.hide()
+            else:
+                button.show()
 
 
 def make_pixmap_section(page, scale):

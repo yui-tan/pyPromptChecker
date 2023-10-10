@@ -3,17 +3,24 @@
 from .widget import *
 from .dialog import *
 from .custom import *
-from .menu import FooterButtonMenu
+from .menu import FileManageMenu
 from . import config
 
 import os
 from PyQt6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QScrollArea
 from PyQt6.QtWidgets import QWidget, QComboBox, QLabel
-from PyQt6.QtCore import Qt, QTimer, QPoint
+from PyQt6.QtCore import Qt, QTimer
 
 LISTVIEW_PIXMAP = config.get('ListViewPixmapSize', 200)
 MOVE_DELETE = config.get('MoveDelete', False)
 HIDE_NOT_MATCH = config.get('HideNotMatchedTabs', False)
+BUTTONS = (('Select all', 'Select all'),
+           ('Search', 'Search'),
+           ('Thumbnail', 'Thumbnail'),
+           ('Tabview', 'Tabview'),
+           ('Diff', 'Diff'),
+           ('Add favourite', 'Add favourite'),
+           ('▲M&enu', '▲Menu'))
 
 
 class Listview(QMainWindow):
@@ -24,8 +31,9 @@ class Listview(QMainWindow):
         self.controller = controller
         self.size = LISTVIEW_PIXMAP
         self.setWindowTitle('Listview')
-        self.menu = FooterButtonMenu(self)
+        self.menu = FileManageMenu(self)
 
+        self.footer = None
         self.borders = []
 
     def init_listview(self, param_list: list, moved: set = None, deleted: set = None):
@@ -70,9 +78,11 @@ class Listview(QMainWindow):
         scroll_area.setWidgetResizable(True)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
+        self.footer = FooterButtons(BUTTONS, self, self.controller)
+
         central_widget_layout.addLayout(self.__header_section())
         central_widget_layout.addWidget(scroll_area)
-        central_widget_layout.addLayout(self.__footer_section())
+        central_widget_layout.addWidget(self.footer)
 
         central_widget.setLayout(central_widget_layout)
 
@@ -216,26 +226,6 @@ class Listview(QMainWindow):
 
         return header_layout
 
-    def __footer_section(self):
-        management = MOVE_DELETE
-        button_layout = QHBoxLayout()
-        buttons = ('Select all', 'Search', 'Diff', 'Interrogate', 'Export JSON', 'Close')
-
-        if management:
-            buttons = ('Select all', 'Search', 'Restore', 'Interrogate', 'Export JSON', 'Add favourite', 'Close')
-
-        for button_text in buttons:
-            button = ButtonWithMenu()
-            button.setText(button_text)
-            button.setObjectName(button_text)
-            button_layout.addWidget(button)
-            button.clicked.connect(self.signal_received)
-
-            if button_text == 'Add favourite':
-                button.rightClicked.connect(self.__footer_submenu)
-
-        return button_layout
-
     def __status_changed(self):
         if self.centralWidget():
             status_number = self.sender().objectName().split('_')[1]
@@ -259,12 +249,6 @@ class Listview(QMainWindow):
 
                 title_label.setText(status_str)
                 value_label.setText(value)
-
-    def __footer_submenu(self):
-        x = self.sender().mapToGlobal(self.sender().rect().topLeft()).x()
-        y = self.sender().mapToGlobal(self.sender().rect().topLeft()).y() - self.menu.sizeHint().height()
-        adjusted_pos = QPoint(x, y)
-        self.menu.exec(adjusted_pos)
 
     def __select_all_toggle(self, count):
         if count == len(self.borders):

@@ -4,7 +4,7 @@ from PyQt6.QtWidgets import QMenu
 from PyQt6.QtGui import QAction
 
 
-class FooterButtonMenu(QMenu):
+class FileManageMenu(QMenu):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.main = parent
@@ -33,6 +33,26 @@ class FooterButtonMenu(QMenu):
         self.delete.triggered.connect(lambda: self.main.signal_received())
         self.move_to.triggered.connect(lambda: self.main.signal_received())
         self.add_favourite.triggered.connect(lambda: self.main.signal_received())
+
+
+class SearchMenu(QMenu):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.main = parent
+
+        self.restore = QAction('Restore', self)
+        self.search = QAction('Search', self)
+        self.init_search = QAction('Search initial image', self)
+
+        self.__menu_position()
+
+    def __menu_position(self):
+        self.addAction(self.restore)
+
+        self.addSeparator()
+
+        self.addAction(self.init_search)
+        self.addAction(self.search)
 
 
 class TabMenu(QMenu):

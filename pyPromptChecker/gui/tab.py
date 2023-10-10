@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
+import sys
+
 from PyQt6.QtWidgets import QMainWindow, QStackedWidget, QLineEdit
-from PyQt6.QtCore import QPoint
 from PyQt6.QtGui import QPalette
 
 from .dialog import *
-from .menu import *
 from .widget import *
 from . import config
 
@@ -24,7 +24,7 @@ BUTTONS = (('Copy &positive', 'Copy positive'),
            ('Copy &negative', 'Copy negative'),
            ('Copy &seed', 'Copy seed'),
            ('Shrink', 'Shrink'),
-           ('▲Menu', '▲Menu'),
+           ('▲M&enu', '▲Menu'),
            ('<', 'bar_toggle'))
 
 
@@ -77,8 +77,8 @@ class Tabview(QMainWindow):
         middle_section.setLayout(middle_section_layout)
         root_layout.addWidget(middle_section)
 
-        self.footer = FooterButtons(BUTTONS, self)
-        self.footer.fixed_size_button('bar_toggle', 25)
+        self.footer = FooterButtons(BUTTONS, self, self.controller)
+        self.footer.fixed_size_button('bar_toggle', 25, 25)
         root_layout.addWidget(self.footer)
         central_widget.setLayout(root_layout)
 
@@ -134,7 +134,7 @@ class Tabview(QMainWindow):
                 progress.update_value()
 
         total = self.root_tab.count()
-        self.footer.remove_button('bar_toggle', False)
+        self.footer.toggle_button('bar_toggle', False)
 
         if all([THUMBNAIL_TAB_BAR, HIDE_NORMAL_TAB_BAR]) or total == 1:
             self.root_tab.tabBar().hide()
@@ -144,7 +144,7 @@ class Tabview(QMainWindow):
 
         if not all([THUMBNAIL_TAB_BAR, TAB_MINIMUMS < total]):
             self.tab_bar.hide()
-            self.footer.remove_button('bar_toggle')
+            self.footer.toggle_button('bar_toggle')
 
         if moved:
             for i in list(moved):

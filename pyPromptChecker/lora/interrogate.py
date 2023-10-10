@@ -2,6 +2,7 @@
 
 from PIL import Image
 from onnxruntime import InferenceSession
+from huggingface_hub.file_download import hf_hub_download
 
 import csv
 import sys
@@ -9,7 +10,6 @@ import PIL.Image
 import cv2
 import functools
 import os
-import huggingface_hub
 import numpy as np
 
 
@@ -41,8 +41,8 @@ def smart_resize(img, size):
 def model_downloads(repository, filename, label_file, model_name):
     model_path = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.models/' + model_name)
     os.makedirs(model_path, exist_ok=True)
-    huggingface_hub.hf_hub_download(repository, filename, local_dir=model_path, local_dir_use_symlinks=False, use_auth_token=False)
-    huggingface_hub.hf_hub_download(repository, label_file, local_dir=model_path, local_dir_use_symlinks=False, use_auth_token=False)
+    hf_hub_download(repository, filename, local_dir=model_path, local_dir_use_symlinks=False, use_auth_token=False)
+    hf_hub_download(repository, label_file, local_dir=model_path, local_dir_use_symlinks=False, use_auth_token=False)
 
 
 def model_loads(model_name, filename):

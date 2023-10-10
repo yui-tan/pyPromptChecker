@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import sys
 import random
 import qdarktheme
 from PyQt6.QtCore import QObject
@@ -7,7 +8,6 @@ from PyQt6.QtCore import QObject
 from gui.custom import *
 from gui.dialog import *
 from gui.listview import Listview
-from gui.menu import MainMenu
 from gui.search import SearchWindow
 from gui.tab import Tabview, InterrogateTab
 from gui.thumbnail import ThumbnailView
@@ -37,7 +37,6 @@ class ImageController(QObject):
         self.dark = DARK_THEME
 
         self.main_window = None
-        self.main_menu = None
         self.thumbnail = None
         self.listview = None
         self.tabview = None
@@ -160,7 +159,6 @@ class ImageController(QObject):
         self.thumbnail.init_thumbnail(indexes, self.moved_indexes, self.deleted_indexes)
         if not self.main_window:
             self.main_window = self.thumbnail
-            self.main_menu = MainMenu(self.main_window, self)
 
     def __open_thumbnail_window(self):
         if not self.thumbnail:
@@ -176,7 +174,6 @@ class ImageController(QObject):
         self.listview.init_listview(indexes, self.moved_indexes, self.deleted_indexes)
         if not self.main_window:
             self.main_window = self.listview
-            self.main_menu = MainMenu(self.main_window, self)
 
     def __open_listview_window(self):
         if not self.listview:
@@ -191,7 +188,6 @@ class ImageController(QObject):
         self.tabview.init_tabview(self.loaded_images, self.moved_indexes, self.deleted_indexes)
         if not self.main_window:
             self.main_window = self.tabview
-            self.main_menu = MainMenu(self.main_window, self)
 
     def __open_tab_window(self):
         if not self.tabview:
@@ -237,6 +233,9 @@ class ImageController(QObject):
                     answer = MessageBox(text, 'pyPromptChecker', 'okcancel', 'question', self.main_window)
                 if answer.success or not ASK_CLEAR:
                     io.clear_trash_bin(trash_bin)
+
+    def check_main_window(self, sender):
+        return sender == self.main_window
 
     def get_data_by_index(self, index):
         for image_index, image_data in self.loaded_images:
@@ -296,7 +295,10 @@ class ImageController(QObject):
         elif request == 'thumbnail':
             self.__open_thumbnail_window()
         elif request == 'exit':
-            QApplication.quit()
+            if sender == self.main_window:
+                QApplication.quit()
+            else:
+                sender.close()
         return result
 
     def open_image_view(self, index: int):
