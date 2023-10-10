@@ -633,11 +633,21 @@ class ImageController(QObject):
         if self.dark:
             qdarktheme.setup_theme('light')
             self.dark = False
-            self.main_menu.theme_check()
+            if self.thumbnail:
+                self.thumbnail.footer.theme_menu_check()
+            if self.listview:
+                self.listview.footer.theme_menu_check()
+            if self.tabview:
+                self.tabview.footer.theme_menu_check()
         else:
             qdarktheme.setup_theme('dark', additional_qss=custom_stylesheet('theme', 'dark'))
             self.dark = True
-            self.main_menu.theme_check()
+            if self.thumbnail:
+                self.thumbnail.footer.theme_menu_check()
+            if self.listview:
+                self.listview.footer.theme_menu_check()
+            if self.tabview:
+                self.tabview.footer.theme_menu_check()
 
 
 def from_main(purpose, filepaths=None):

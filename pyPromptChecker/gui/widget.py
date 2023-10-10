@@ -201,6 +201,11 @@ class FooterButtons(QWidget):
             else:
                 button.show()
 
+    def theme_menu_check(self):
+        menu = self.menus.get('▲M&enu')
+        if menu is not None:
+            menu.theme_check()
+
 
 def make_pixmap_section(page, scale):
     pixmap_section = QWidget()
