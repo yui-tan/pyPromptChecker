@@ -204,8 +204,10 @@ class DiffWindow(QMainWindow):
         self.show()
 
     def __make_textbox(self, key: str):
-        original_source_words = self.params[0].get(key, 'None').replace('-', '<hyphen>').replace('@', '<atmark>')
-        original_target_words = self.params[1].get(key, 'None').replace('-', '<hyphen>').replace('@', '<atmark>')
+        original_source_words = self.params[0].get(key, 'None').replace('<', '&lt;').replace('>', '&gt;')
+        original_target_words = self.params[1].get(key, 'None').replace('<', '&lt;').replace('>', '&gt;')
+        original_source_words = original_source_words.replace('-', '<hyphen>').replace('@', '<atmark>')
+        original_target_words = original_target_words.replace('-', '<hyphen>').replace('@', '<atmark>')
         source_words = original_source_words
         target_words = original_target_words
         common_words_source = []
