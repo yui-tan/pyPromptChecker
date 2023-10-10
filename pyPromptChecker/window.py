@@ -28,7 +28,7 @@ USE_MOVE = config.get('UseCopyInsteadOfMove', True)
 SUBDIRECTORY_DEPTH = config.get('SubDirectoryDepth', 0)
 
 
-class ImageController(QObject):
+class WindowController(QObject):
     def __init__(self, app: QApplication, filepaths: list):
         super().__init__()
         self.app = app
@@ -593,7 +593,7 @@ class ImageController(QObject):
                 self.tabview.activateWindow()
 
             if len(indexes) > 1:
-                progress = ProgressDialog(self)
+                progress = ProgressDialog()
                 progress.setRange(0, len(indexes))
                 progress.setLabelText('Interrogating......')
 
@@ -675,7 +675,7 @@ def from_main(purpose: str, filepaths: list = None):
         app = QApplication.instance()
         if app is None:
             app = QApplication(sys.argv)
-        ImageController(app, filepaths)
+        WindowController(app, filepaths)
         sys.exit(app.exec())
 
 

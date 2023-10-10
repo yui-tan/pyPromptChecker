@@ -32,6 +32,7 @@ class Listview(QMainWindow):
         self.size = LISTVIEW_PIXMAP
         self.setWindowTitle('Listview')
         self.menu = FileManageMenu(self)
+        custom_keybindings(self)
 
         self.footer = None
         self.borders = []
@@ -91,6 +92,20 @@ class Listview(QMainWindow):
         self.show()
         self.resize(estimated_width, estimated_height)
         move_centre(self)
+
+    def key_binds_send(self, request: str):
+        if request == 'append':
+            result = self.controller.request_reception(('files',), request, sender=self)
+            if result:
+                self.toast.init_toast('Added!', 1000)
+        elif request == 'replace':
+            result = self.controller.request_reception(('files',), request, sender=self)
+            if result:
+                self.toast.init_toast('Replaced!', 1000)
+        elif request == 'exit':
+            self.controller.request_reception(None, request, sender=self)
+        elif request == 'change':
+            self.controller.change_themes()
 
     def signal_received(self, right_click: bool = False):
         where_from = self.sender().objectName()

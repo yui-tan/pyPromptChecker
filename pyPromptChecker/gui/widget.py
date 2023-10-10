@@ -168,6 +168,7 @@ class FooterButtons(QWidget):
             x = self.sender().mapToGlobal(self.sender().rect().topLeft()).x()
             y = self.sender().mapToGlobal(self.sender().rect().topLeft()).y() - menu.sizeHint().height()
             adjusted_pos = QPoint(x, y)
+            menu.present_check(self.caller)
             menu.exec(adjusted_pos)
 
     def shrink_button_change(self, is_shrink: bool):

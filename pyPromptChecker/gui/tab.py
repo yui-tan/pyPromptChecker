@@ -213,13 +213,6 @@ class Tabview(QMainWindow):
         elif where_from == 'Shrink':
             self.__change_window()
 
-        elif where_from == '▲Menu':
-            x = self.sender().mapToGlobal(self.sender().rect().topLeft()).x()
-            y = self.sender().mapToGlobal(self.sender().rect().topLeft()).y() - self.controller.main_menu.sizeHint().height()
-            adjusted_pos = QPoint(x, y)
-            self.controller.main_menu.present_check(self)
-            self.controller.main_menu.exec(adjusted_pos)
-
         elif where_from == 'bar_toggle':
             if self.tab_bar.isHidden():
                 self.tab_bar.show()

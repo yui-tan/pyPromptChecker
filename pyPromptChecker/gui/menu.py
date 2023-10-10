@@ -165,6 +165,7 @@ class MainMenu(QMenu):
         self.json_export_selected.triggered.connect(lambda: self.__json_export('select'))
         self.interrogate_this.triggered.connect(self.__interrogate_request)
         self.interrogate_all.triggered.connect(lambda: self.__interrogate_request('all'))
+        self.interrogate_selected.triggered.connect(lambda: self.__interrogate_request('selected'))
 
     def __exit_app(self):
         self.main.request_reception(None, 'exit', self.window)
@@ -196,12 +197,22 @@ class MainMenu(QMenu):
                 self.window.interrogate_emit('entire')
             else:
                 self.window.interrogate_emit()
+        elif hasattr(self.window, 'get_selected_images'):
+            indexes = None
+            if which == 'selected':
+                indexes = self.window.get_selected_images()
+            elif which == 'all':
+                indexes = self.window.get_selected_images(False)
+            if indexes:
+                self.main.request_reception(indexes, 'interrogate', sender=self.window)
 
     def present_check(self, destination):
         if not hasattr(destination, 'root_tab'):
             self.json_export_single.setDisabled(True)
+            self.interrogate_this.setDisabled(True)
         else:
             self.json_export_single.setDisabled(False)
+            self.interrogate_this.setDisabled(False)
 
     def theme_check(self):
         if self.main.dark:
