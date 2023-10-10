@@ -296,13 +296,16 @@ class Tabview(QMainWindow):
             list_indexes = sorted(tuple(indexes))
             result = self.controller.request_reception(list_indexes, 'interrogate', self)
             if result:
-                self.root_tab.setCurrentIndex(list_indexes[0])
-                page = self.root_tab.widget(list_indexes[0])
-                for i in range(page.extension_tab.count()):
-                    if page.extension_tab.tabText(i) == 'Interrogate':
-                        page.extension_tab.setCurrentIndex(i)
-                        break
-                self.toast.init_toast('Interrogated!', 1000)
+                self.post_process_of_interrogate(list_indexes[0])
+
+    def post_process_of_interrogate(self, index: int):
+        self.root_tab.setCurrentIndex(index)
+        page = self.root_tab.widget(index)
+        for i in range(page.extension_tab.count()):
+            if page.extension_tab.tabText(i) == 'Interrogate':
+                page.extension_tab.setCurrentIndex(i)
+                break
+        self.toast.init_toast('Interrogated!', 1000)
 
     def __change_window(self):
         flag = True

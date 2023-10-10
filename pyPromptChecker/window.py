@@ -274,7 +274,7 @@ class WindowController(QObject):
                 result = self.__export_json(tuple(indexes))
         elif request == 'interrogate':
             if len(indexes) > 0:
-                result = self.__add_interrogate_wd14(indexes)
+                result = self.__add_interrogate_wd14(indexes, sender)
         elif request == 'add' or request == 'move' or request == 'delete':
             if len(indexes) > 0:
                 result = self.__manage_image_files(indexes, request)
@@ -577,7 +577,7 @@ class WindowController(QObject):
             return True
         return
 
-    def __add_interrogate_wd14(self, indexes: tuple = None):
+    def __add_interrogate_wd14(self, indexes: tuple = None, sender=None):
         progress = None
         dialog = InterrogateSelectDialog(self.main_window)
         result = dialog.exec()
@@ -605,6 +605,8 @@ class WindowController(QObject):
                         self.tabview.manage_subordinates(image_index, 'interrogated', result=interrogate_result)
                 if progress:
                     progress.update_value()
+            if sender != self.tabview:
+                self.tabview.post_process_of_interrogate(indexes[0])
             if progress:
                 progress.close()
             return True
