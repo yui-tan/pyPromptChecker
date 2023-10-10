@@ -93,6 +93,8 @@ class Listview(QMainWindow):
         self.resize(estimated_width, estimated_height)
         move_centre(self)
 
+        self.toast = Toast(self)
+
     def key_binds_send(self, request: str):
         if request == 'append':
             result = self.controller.request_reception(('files',), request, sender=self)

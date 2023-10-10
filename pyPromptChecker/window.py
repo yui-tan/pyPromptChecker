@@ -54,12 +54,12 @@ class WindowController(QObject):
         self.matched_indexes = set()
 
         self.__init_class()
-        self.__init_main_window()
         self.app.aboutToQuit.connect(self.__obliterate)
 
     def __init_class(self):
         self.models = io.import_model_list(MODEL_LIST)
         self.__load_images()
+        self.__init_main_window()
 
     def __clear_class(self):
         self.filepaths = []
@@ -120,14 +120,14 @@ class WindowController(QObject):
             if progress_bar:
                 progress_bar.update_value()
 
-        if progress_bar:
-            progress_bar.close()
-
         if len(self.loaded_images) == 0:
             MessageBox('There is no data to parse.\nExiting...', 'Oops!', parent=self.main_window)
             sys.exit()
         elif valid_total == 0:
             MessageBox('There is no data to parse.', 'Oops!', parent=self.main_window)
+
+        if progress_bar:
+            progress_bar.close()
 
     def __init_main_window(self):
         if MAIN_WINDOW == 'thumbnail':
@@ -241,7 +241,6 @@ class WindowController(QObject):
         for image_index, image_data in self.loaded_images:
             if image_index == index:
                 return image_data
-        return None
 
     def get_dictionary_by_index(self, index: int):
         for image_index, image_data in self.loaded_images:
@@ -252,7 +251,6 @@ class WindowController(QObject):
         for image_index, image_data in self.loaded_images:
             if image_index == index:
                 return image_data.params.get(key)
-        return None
 
     def get_all_dictionary(self):
         dictionaries = []

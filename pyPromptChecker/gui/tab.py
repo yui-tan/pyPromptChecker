@@ -46,6 +46,10 @@ class Tabview(QMainWindow):
         self.tab_link_index = 'Prompt'
 
     def init_tabview(self, loaded_images: list, moved: set = None, deleted: set = None):
+        progress = ProgressDialog(self)
+        progress.setLabelText('Formatting...')
+        progress.setRange(0, len(loaded_images) + 1)
+
         self.root_tab = None
         self.tab_pages = []
 
@@ -86,20 +90,23 @@ class Tabview(QMainWindow):
             self.centralWidget().deleteLater()
         self.setCentralWidget(central_widget)
 
-        self.init_root_tab(loaded_images, moved, deleted)
+        progress.update_value()
+
+        self.init_root_tab(loaded_images, moved, deleted, progress)
         self.toast = Toast(self)
 
         self.show()
         move_centre(self)
 
-    def init_root_tab(self, loaded_images: list, moved: set = None, deleted: set = None):
+    def init_root_tab(self, loaded_images: list, moved: set = None, deleted: set = None, progress=None):
         shown_tab = self.root_tab.count()
         total = shown_tab + len(loaded_images)
         image_count = 0
 
-        progress = ProgressDialog()
-        progress.setLabelText('Formatting...')
-        progress.setRange(0, len(loaded_images))
+        if not progress:
+            progress = ProgressDialog()
+            progress.setLabelText('Formatting...')
+            progress.setRange(0, len(loaded_images))
 
         for index, image in loaded_images:
             title = image.params.get('Filename', '---')
