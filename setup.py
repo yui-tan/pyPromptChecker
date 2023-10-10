@@ -8,7 +8,11 @@ setup(
         'pyQt6',
         'pypng',
         'pillow',
-        'pyqtdarktheme'
+        'pyqtdarktheme',
+        'onnxruntime',
+        'numpy',
+        'opencv-python',
+        'huggingface_hub'
     ],
     entry_points={
         'console_scripts': [

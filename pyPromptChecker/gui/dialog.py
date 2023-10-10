@@ -1,32 +1,10 @@
 # -*- coding: utf-8 -*-
 
 import os
-from PyQt6.QtWidgets import QFileDialog, QProgressDialog, QMessageBox, QLabel, QWidget, QVBoxLayout, QApplication
-from PyQt6.QtWidgets import QDialog, QRadioButton, QPushButton, QHBoxLayout
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
-
-
-class PixmapLabel(QLabel):
-    clicked = pyqtSignal()
-    rightClicked = pyqtSignal()
-    ctrl_clicked = pyqtSignal()
-    shift_clicked = pyqtSignal()
-
-    def __init__(self, parent=None):
-        super(PixmapLabel, self).__init__(parent)
-        self.setStyleSheet("border: none;")
-#        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton and event.modifiers() == Qt.KeyboardModifier.ControlModifier:
-            self.ctrl_clicked.emit()
-        elif event.button() == Qt.MouseButton.LeftButton and event.modifiers() == Qt.KeyboardModifier.ShiftModifier:
-            self.shift_clicked.emit()
-        elif event.button() == Qt.MouseButton.LeftButton:
-            self.clicked.emit()
-        elif event.button() == Qt.MouseButton.RightButton:
-            self.rightClicked.emit()
-        return QLabel.mousePressEvent(self, event)
+from PyQt6.QtWidgets import QFileDialog, QProgressDialog, QMessageBox, QLabel, QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QDialog, QRadioButton, QPushButton, QHBoxLayout, QComboBox, QSlider, QGridLayout
+from PyQt6.QtCore import Qt, QTimer
+from .widget import move_centre
 
 
 class SelectDialog(QDialog):
@@ -36,10 +14,10 @@ class SelectDialog(QDialog):
         self.selected = 0
         self.model = None
         self.lora = None
-        self.init_select_dialog()
+        self.__init_select_dialog()
         self.resize(200, 80)
 
-    def init_select_dialog(self):
+    def __init_select_dialog(self):
         layout = QVBoxLayout()
         button_layout = QHBoxLayout()
 
@@ -52,40 +30,104 @@ class SelectDialog(QDialog):
 
         self.model = QRadioButton('Model / VAE hash')
         self.model.setChecked(True)
-        self.model.toggled.connect(self.toggle_radio_button)
+        self.model.toggled.connect(self.__toggle_radio_button)
         self.lora = QRadioButton('LoRa / Textual inversion hash')
-        self.lora.toggled.connect(self.toggle_radio_button)
+        self.lora.toggled.connect(self.__toggle_radio_button)
         layout.addWidget(self.model)
         layout.addWidget(self.lora)
         layout.addLayout(button_layout)
 
         self.setLayout(layout)
 
-    def toggle_radio_button(self):
+    def __toggle_radio_button(self):
         if self.model.isChecked():
             self.selected = 0
         elif self.lora.isChecked():
             self.selected = 1
 
 
-class FileDialog(QFileDialog):
-
+class InterrogateSelectDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.result = None
-        self.setDirectory(os.path.expanduser('~'))
-        self.file_filter = 'All files(*.*)'
+        self.setWindowTitle('Interrogate Settings')
+        self.selected_model = 'moat'
+        self.tag_threshold = 0.35
+        self.tag_label = QLabel()
+        self.chara_threshold = 0.85
+        self.chara_label = QLabel()
 
-    def init_dialog(self, category, title, filename=None, file_filter=None):
+        self.__init_interrogate_dialog()
+
+    def __init_interrogate_dialog(self):
+        root_layout = QGridLayout()
+
+        for index, name in enumerate(('Model', 'Tag threshold', 'Character threshold')):
+            label = QLabel(name + ' :')
+            label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            root_layout.addWidget(label, index, 0)
+
+            if index == 0:
+                value = QComboBox()
+                value.addItems(('MOAT', 'Swin', 'ConvNext', 'ConvNextV2', 'ViT'))
+                value.currentIndexChanged.connect(self.__model_change)
+                root_layout.addWidget(value, index, 1, 1, 2)
+
+            else:
+                value = self.tag_threshold if index == 1 else self.chara_threshold
+                int_value = self.tag_label if index == 1 else self.chara_label
+                int_value.setText(str(value))
+                int_value.setFixedSize(40, 25)
+                root_layout.addWidget(int_value, index, 1)
+
+                slider = QSlider()
+                slider.setObjectName(name)
+                slider.setRange(0, 100)
+                slider.setMinimumWidth(200)
+                slider.setValue(int(value * 100))
+                slider.setOrientation(Qt.Orientation.Horizontal)
+                slider.valueChanged.connect(self.__threshold_change)
+                root_layout.addWidget(slider, index, 2)
+
+        button_layout = QHBoxLayout()
+        ok_button = QPushButton('OK')
+        ok_button.clicked.connect(self.accept)
+        cancel_button = QPushButton('Cancel')
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addWidget(ok_button)
+        button_layout.addWidget(cancel_button)
+        root_layout.addLayout(button_layout, 3, 0, 1, 3)
+
+        self.setLayout(root_layout)
+
+    def __model_change(self):
+        self.selected_model = self.sender().currentText()
+
+    def __threshold_change(self):
+        value = float(self.sender().value() / 100)
+        if self.sender().objectName() == 'Tag threshold':
+            self.tag_threshold = value
+            self.tag_label.setText(str(value))
+        else:
+            self.chara_threshold = value
+            self.chara_label.setText(str(value))
+
+
+class FileDialog(QFileDialog):
+
+    def __init__(self, category: str, title: str, parent=None, file_filter: str = None, filename: str = None):
+        super().__init__(parent)
         self.result = None
+        self.file_filter = ''
         self.setWindowTitle(title)
-        self.set_filter(file_filter)
-        self.set_category(category, filename)
+        self.__set_filter(file_filter)
+        self.setDirectory(os.path.expanduser('~'))
+        self.category = category
+        self.__set_category(self.category, filename)
 
         if self.exec():
             self.result = self.selectedFiles()
 
-    def set_category(self, category, filename):
+    def __set_category(self, category: str, filename: str):
         if category == 'save-file':
             self.setFileMode(QFileDialog.FileMode.AnyFile)
             self.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
@@ -93,17 +135,15 @@ class FileDialog(QFileDialog):
             self.setOption(QFileDialog.Option.ShowDirsOnly, False)
             self.selectFile(filename)
         elif category == 'choose-files':
-            self.selectFile('*')
             self.setFileMode(QFileDialog.FileMode.ExistingFiles)
             self.setAcceptMode(QFileDialog.AcceptMode.AcceptOpen)
             self.setNameFilter(self.file_filter)
             self.setOption(QFileDialog.Option.ShowDirsOnly, False)
         elif category == 'choose-directory':
-            self.selectFile('*')
             self.setFileMode(QFileDialog.FileMode.Directory)
             self.setOption(QFileDialog.Option.ShowDirsOnly, True)
 
-    def set_filter(self, str_filter):
+    def __set_filter(self, str_filter: str):
         if str_filter == 'JSON':
             self.file_filter = 'JSON Files(*.json)'
         elif str_filter == 'PNG':
@@ -120,38 +160,29 @@ class ProgressDialog(QProgressDialog):
         self.setMinimumDuration(0)
         self.setValue(0)
         self.now = 0
-        self.move_centre(parent)
+        move_centre(self)
 
     def update_value(self):
         now = self.now + 1
         self.setValue(now)
         self.now = now
 
-    def move_centre(self, parent=None):
-        if not parent or not parent.isVisible():
-            screen_center = QApplication.primaryScreen().geometry().center()
-        else:
-            screen_center = parent.geometry().center()
-        frame_geometry = self.frameGeometry()
-        frame_geometry.moveCenter(screen_center)
-        self.move(frame_geometry.topLeft())
-
 
 class MessageBox(QMessageBox):
-    def __init__(self, text, title='pyPromptChecker', style='ok', icon='info', parent=None):
+    def __init__(self, text: str, title: str = 'pyPromptChecker', style: str = 'ok', icon: str = 'info', parent=None):
         super().__init__(parent)
         self.success = False
         self.setText(text)
         self.setWindowTitle(title)
-        self.set_style(style)
-        self.add_icon(icon)
+        self.__set_style(style)
+        self.__add_icon(icon)
 
         self.result = self.exec()
 
         if self.result == QMessageBox.StandardButton.Ok:
             self.success = True
 
-    def set_style(self, style):
+    def __set_style(self, style: str):
         if 'ok' in style:
             self.addButton(QMessageBox.StandardButton.Ok)
         if 'no' in style:
@@ -159,7 +190,7 @@ class MessageBox(QMessageBox):
         if 'cancel' in style:
             self.addButton(QMessageBox.StandardButton.Cancel)
 
-    def add_icon(self, icon):
+    def __add_icon(self, icon: str):
         if icon == 'critical':
             self.setIcon(QMessageBox.Icon.Critical)
         elif icon == 'warning':
@@ -178,8 +209,7 @@ class Toast(QWidget):
         self.timer = None
         self.message_label = QLabel()
         self.setWindowTitle("Toast")
-        self.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowDoesNotAcceptFocus)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.WindowDoesNotAcceptFocus)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setStyleSheet("background-color: rgba(50, 50, 50, 150); color: white; padding: 10px; border-radius: 5px;")
         self.hide()
@@ -188,7 +218,7 @@ class Toast(QWidget):
         toast_layout.addWidget(self.message_label)
         self.setLayout(toast_layout)
 
-    def init_toast(self, message, duration=2000):
+    def init_toast(self, message: str, duration: int = 2000):
         self.message_label.setText(message)
         self.show()
         self.adjustSize()
@@ -201,9 +231,9 @@ class Toast(QWidget):
         self.move(x - adjust_x, y - adjust_y)
 
         self.timer = QTimer()
-        self.timer.timeout.connect(self.close_toast)
+        self.timer.timeout.connect(self.__close_toast)
         self.timer.start(duration)
 
-    def close_toast(self):
+    def __close_toast(self):
         self.timer.stop()
         self.close()

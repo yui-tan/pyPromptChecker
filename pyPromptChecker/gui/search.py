@@ -1,20 +1,23 @@
 # -*- coding: utf-8 -*-
 
 import re
-from .dialog import MessageBox
 from PyQt6.QtWidgets import QDialog, QGridLayout, QGroupBox, QCheckBox, QSlider
 from PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QLineEdit, QComboBox
 from PyQt6.QtWidgets import QRadioButton
 from PyQt6.QtGui import QRegularExpressionValidator
 from PyQt6.QtCore import Qt, QRegularExpression
 
+from .dialog import MessageBox
+
 
 class SearchWindow(QDialog):
-    def __init__(self, model_list, parent=None):
+    def __init__(self, model_list: list, controller, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Search")
+        self.controller = controller
         self.conditions = {}
         self.result = 'Tabs'
+        self.caller = None
         self.prompt = None
         self.status = None
         self.extension = None
@@ -24,15 +27,15 @@ class SearchWindow(QDialog):
         self.search_cfg_label = None
         self.search_button = None
         self.central_widget = None
-        self.init_search_window(model_list)
+        self.__init_search_window(model_list)
 
-    def init_search_window(self, model_list):
+    def __init_search_window(self, model_list: list):
         layout = QGridLayout()
 
         result_label = QLabel('Result shows: ')
         result_box = QComboBox()
         result_box.addItems(['Tabs', 'Listview', 'Thumbnails'])
-        result_box.currentIndexChanged.connect(self.result_change)
+        result_box.currentIndexChanged.connect(self.__result_change)
 
         prompt_group = QGroupBox()
         prompt_group.setTitle('Search Keywords')
@@ -88,7 +91,7 @@ class SearchWindow(QDialog):
         search_cfg.setOrientation(Qt.Orientation.Horizontal)
         search_cfg.setTickInterval(1)
         search_cfg.setRange(0, 40)
-        search_cfg.valueChanged.connect(self.value_change)
+        search_cfg.valueChanged.connect(self.__value_change)
 
         for i, tmp in enumerate(['Less than', 'Equal to', 'Greater than']):
             radio_button = QRadioButton(tmp)
@@ -125,7 +128,7 @@ class SearchWindow(QDialog):
         self.extension = extension_group
 
         search_button = QPushButton("Search", self)
-        search_button.clicked.connect(self.search)
+        search_button.clicked.connect(self.__do_search)
         close_button = QPushButton('Close', self)
         close_button.clicked.connect(self.window_close)
 
@@ -141,20 +144,13 @@ class SearchWindow(QDialog):
         central_widget.setLayout(layout)
         self.setLayout(layout)
 
-    def show_dialog(self):
-        self.show()
-        self.search_box.setFocus()
-
-    def result_change(self):
+    def __result_change(self):
         self.result = self.sender().currentText()
 
-    def value_change(self):
+    def __value_change(self):
         self.search_cfg_label.setText('CFG : ' + str(self.sender().value() * 0.5))
 
-    def window_close(self):
-        self.close()
-
-    def search(self):
+    def __do_search(self):
         self.conditions['Result'] = self.result
         if self.prompt.isChecked():
             self.conditions['Search'] = self.search_box.text()
@@ -185,30 +181,16 @@ class SearchWindow(QDialog):
                 self.conditions[tmp.objectName()] = tmp.isChecked()
         self.conditions['Extension'] = self.extension.isChecked()
 
-        if self.validation():
-            result = self.conditions.get('Result', 'Tabs')
-            params = [value.params for value in self.parent().params]
-
-            self.parent().tab_tweak()
-            target_tabs = list(search_images(self.conditions, params))
-
-            if len(target_tabs) > 0:
-                if result == 'Tabs':
-                    self.parent().tab_tweak(target_tabs)
-                elif result == 'Listview':
-                    if self.parent().listview.isVisible():
-                        self.parent().listview.close()
-                    self.parent().open_listview(target_tabs)
-                elif result == 'Thumbnails':
-                    if self.parent().thumbnail.isVisible():
-                        self.parent().thumbnail.close()
-                    self.parent().open_thumbnail(target_tabs)
-                text = str(len(target_tabs)) + ' image(s) found !'
-                MessageBox(text, 'Search result', 'ok', 'info', self)
+        if self.__validation():
+            params = self.controller.get_all_dictionary()
+            matched = search_images(self.conditions, params)
+            if len(matched) > 0:
+                match_text = str(len(matched)) + ' image(s) found !'
             else:
-                MessageBox('There is no match to show.', 'Search result', 'ok', 'info', self)
+                match_text = 'There is no match to show.'
+            self.controller.request_reception((matched, match_text), 'apply', sender=self.caller)
 
-    def validation(self):
+    def __validation(self):
         words = self.conditions.get('Search', 'None')
         count = words.count('"')
 
@@ -224,8 +206,21 @@ class SearchWindow(QDialog):
 
         return True
 
+    def show_dialog(self, caller):
+        self.caller = caller
+        self.search_box.setFocus()
+        self.show()
 
-def cfg_checks(cfg_keywords, relation, targets):
+    def update_model_list(self, model_list: list):
+        self.search_model.clear()
+        self.search_model.addItems(model_list)
+
+    def window_close(self):
+        self.caller = None
+        self.close()
+
+
+def cfg_checks(cfg_keywords: str, relation: str, targets: list):
     result = []
     for target in targets:
         if relation == 'Less than' and float(cfg_keywords) > float(target):
@@ -239,7 +234,7 @@ def cfg_checks(cfg_keywords, relation, targets):
     return result
 
 
-def status_checks(keyword, targets):
+def status_checks(keyword: str, targets: list):
     result = []
     for target in targets:
         if keyword == target:
@@ -249,7 +244,7 @@ def status_checks(keyword, targets):
     return result
 
 
-def parse_search_query(input_string):
+def parse_search_query(input_string: str):
     phrases = re.findall(r'"([^"]*)"', input_string)
     tmp_string = re.sub(r'"[^"]*"', 'REPLACEMENT_STRING', input_string)
     and_parts = tmp_string.split()
@@ -268,7 +263,7 @@ def parse_search_query(input_string):
     return result
 
 
-def target_string_adjust(positive, negative, region, target):
+def target_string_adjust(positive: bool, negative: bool, region: bool, target: list):
     positive_target = []
     negative_target = []
     region_target = []
@@ -305,7 +300,7 @@ def target_string_adjust(positive, negative, region, target):
     return result
 
 
-def search_prompt_string(query, target_text, case):
+def search_prompt_string(query: list, target_text: str, case: bool):
     if len(query) > 1 and isinstance(query, list):
         return any(search_prompt_string(query_value, target_text, case) for query_value in query)
     else:
@@ -317,7 +312,7 @@ def search_prompt_string(query, target_text, case):
             return query in target_text
 
 
-def search_images(condition_list, target_list):
+def search_images(condition_list: dict, target_list: list):
     result = []
     prompt_result = []
     status_result = []

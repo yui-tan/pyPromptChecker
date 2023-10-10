@@ -1,77 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import os
 import sys
 import argparse
 
-from lib import decoder
-from gui import window
 from gui import config
-
-
-def find_target(root, depth):
-    filepaths = []
-
-    def _directory_search(current_dir, current_depth):
-        if current_depth <= depth and os.path.exists(current_dir):
-            for filename in os.listdir(current_dir):
-                fullpath = os.path.join(current_dir, filename)
-                if os.path.isfile(fullpath):
-                    filepaths.append(fullpath)
-                elif os.path.isdir(fullpath):
-                    _directory_search(fullpath, current_depth + 1)
-        else:
-            return
-
-    for path in root:
-        if os.path.isfile(path):
-            filepaths.append(path)
-        else:
-            _directory_search(path, 0)
-
-    return filepaths
-
-
-def check_files(target_list):
-    file_counts = len(target_list) if target_list else 0
-    progress_bar = None
-    file_is_not_found_list = []
-    this_is_directory_list = []
-    this_file_is_not_image_file_list = []
-    valid_file_list = []
-
-    if file_counts > 5:
-        app, progress_bar = window.from_main('progress')
-        progress_bar.setLabelText("Checking files...")
-        progress_bar.setRange(0, file_counts)
-
-    for filepath in target_list:
-        if not os.path.exists(filepath):
-            file_is_not_found_list.append(filepath)
-            if progress_bar:
-                progress_bar.update_value()
-            continue
-
-        elif not os.path.isfile(filepath):
-            this_is_directory_list.append(filepath)
-            if progress_bar:
-                progress_bar.update_value()
-            continue
-
-        result = decoder.image_format_identifier(filepath)
-
-        if not result:
-            this_file_is_not_image_file_list.append(filepath)
-        else:
-            valid_file_list.append(result)
-
-        if progress_bar:
-            progress_bar.update_value()
-
-    if progress_bar:
-        progress_bar.close()
-
-    return valid_file_list, file_is_not_found_list, this_is_directory_list, this_file_is_not_image_file_list
+from window import from_main, check_files, find_target
 
 
 def main():
@@ -81,22 +14,16 @@ def main():
     parser = argparse.ArgumentParser(description=description_text, formatter_class=argparse.RawTextHelpFormatter)
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-a', '--ask', action='store_true', help='Open directory choose dialog.')
-    group.add_argument('-f', '--filepath', nargs='*', type=str, help='Send path to the file.')
-    group.add_argument('-d', '--directory', type=str, help='Send path to the directory.')
     parser.add_argument('filepaths', metavar='Filepath', type=str, nargs='*', help='Send path to files and directories.')
     args = parser.parse_args()
     filepaths = []
 
-    if args.filepath:
-        parameters = args.filepath
-    elif args.filepaths:
+    if args.filepaths:
         parameters = args.filepaths
-    elif args.directory:
-        parameters = [args.directory]
     elif args.ask:
-        parameters = window.from_main('directory')
+        parameters = from_main('directory')
     else:
-        parameters = window.from_main('files')
+        parameters = from_main('files')
 
     if parameters:
         depth = config.get('SubDirectoryDepth', 0)
@@ -118,7 +45,9 @@ def main():
             sys.exit()
         print('a hoy!!!!')
         valid_filepath.sort()
-        window.from_main('result', valid_filepath)
+
+        from_main('window', valid_filepath)
+
     else:
         print('Cancelled!')
 

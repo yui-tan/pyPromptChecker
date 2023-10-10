@@ -35,31 +35,19 @@ pip install --upgrade pip
 echo "Installing pyPromptChecker..."
 pip3 install -e.
 
-
 # Making .sh file and .desktop file
 echo "Making files..."
-mkdir "sh"
+mkdir sh
 
 path_to_venv=$(pwd)"/venv/bin/activate"
-path_to_sh=$(pwd)"/sh"
 path_to_icon=$(pwd)"/icon/icon.png"
-
-echo -e "#!/bin/bash\nsource ${path_to_venv}\nmikkumiku --filepath \$*" >> "${path_to_sh}/drop_files.sh"
-echo -e "#!/bin/bash\nsource ${path_to_venv}\nmikkumiku --directory \$*" >> "${path_to_sh}/drop_directory.sh"
-
-chmod +x sh/*
 
 command[0]="/bin/bash -c \"source $path_to_venv && mikkumiku\""
 command[1]="/bin/bash -c \"source $path_to_venv && mikkumiku --ask\""
-command[2]="${path_to_sh}/drop_files.sh"
-command[3]="${path_to_sh}/drop_directory.sh"
-
 command_name[0]="mikkumiku"
 command_name[1]="folder_picker"
-command_name[2]="drop_files"
-command_name[3]="drop_directory"
 
-for i in 0 1 2 3
+for i in 0 1
 do
   {
     echo -e "[Desktop Entry]"
@@ -75,8 +63,8 @@ done
 
 # Explanation
 echo "Now Installation is finished."
-echo "In a new directory 'PyPromptChecker/sh', six files have been created."
-echo "The following are the six files:"
+echo "In a new directory 'PyPromptChecker/sh', two files have been created."
+echo "The following are the two files:"
 echo
 echo "mikkumiku.desktop:"
 echo "When you run this file, a file selection dialog will appear,"
@@ -87,20 +75,6 @@ echo "folder_picker.desktop:"
 echo "When you run this file, a directory selection dialog will appear,"
 echo "and once a directory is selected, processing will begin."
 echo "This is same as running command 'mikkumiku --ask'"
-echo
-echo "drop_files.desktop:"
-echo "you can start the processing by dragging and dropping a file onto this file."
-echo "This is same as running command 'mikkumiku --filepath ...'"
-echo
-echo "drop_directories.desktop:"
-echo "you can start the processing by dragging and dropping a directory onto this file."
-echo "This is same as running command 'mikkumiku --directory ...'"
-echo
-echo "drop_files.sh"
-echo "drop_directory.sh"
-echo
-echo "You can relocate those .desktop files"
-echo "But DO NOT move or edit .sh files"
 echo
 
 exit 0

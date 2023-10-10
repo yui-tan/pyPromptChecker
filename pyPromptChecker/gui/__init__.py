@@ -13,7 +13,7 @@ if not os.path.exists(config_file):
 ini_config = configparser.ConfigParser()
 ini_config.read(config_file, encoding='utf-8')
 ini_section = [['Location', 'ModelList', 'Favourites'],
-               ['Window', 'MaxWindowWidth', 'MaxWindowHeight', 'AlwaysStartWithDarkMode'],
+               ['Window', 'MaxWindowWidth', 'MaxWindowHeight', 'AlwaysStartWithDarkMode', 'AlwaysOpenBy'],
                ['Pixmap', 'PixmapSize', 'RegionalPrompterPixmapSize', 'ThumbnailPixmapSize', 'ListViewPixmapSize'],
                ['Features', 'SubDirectoryDepth', 'OpenWithShortenedWindow', 'UsesNumberAsTabName'],
                ['Features', 'ModelListSearchApplyLora', 'ModelListSearchApplyTi'],
@@ -38,6 +38,9 @@ for ini in ini_section:
                     value = value.replace('\\\\', '\\')
                 if os.path.exists(value):
                     config[option] = value
+            elif section == 'Window' and option == 'AlwaysOpenBy':
+                value = ini_config[section].get(option)
+                config[option] = value
             elif (section == 'Window' and not option == 'AlwaysStartWithDarkMode') or section == 'Pixmap':
                 try:
                     value = ini_config[section].getint(option)

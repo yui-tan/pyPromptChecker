@@ -1,109 +1,235 @@
 # -*- coding: utf-8 -*-
 
-import os
-import sys
-from . import config
-from .dialog import PixmapLabel
+import importlib
 from functools import lru_cache
-from PyQt6.QtWidgets import QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QComboBox, QTextEdit, QSizePolicy
-from PyQt6.QtWidgets import QGroupBox, QTabWidget, QScrollArea, QSplitter, QGridLayout, QWidget
-from PyQt6.QtGui import QPixmap, QPainter, QColor, QKeySequence, QShortcut, QImageReader
-from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QTextEdit, QSizePolicy
+from PyQt6.QtWidgets import QApplication, QGroupBox, QTabWidget, QScrollArea, QSplitter, QGridLayout, QWidget
+from PyQt6.QtGui import QPixmap, QPainter, QImageReader
+from PyQt6.QtCore import Qt, pyqtSignal, QPoint
+
+from .menu import *
+from .custom import *
+from . import config
+
+SHORTENED = config.get('OpenWithShortenedWindow', False)
 
 
-def make_footer_area(parent):
-    json_export_enable = config.get('JsonExport', False)
-    shortened_window = config.get('OpenWithShortenedWindow', False)
-    now_shortened = parent.hide_tab
-    footer_layout = QHBoxLayout()
-    button_text = ['Copy positive', 'Copy negative', 'Copy seed']
+class PixmapLabel(QLabel):
+    clicked = pyqtSignal()
+    rightClicked = pyqtSignal()
+    ctrl_clicked = pyqtSignal()
+    shift_clicked = pyqtSignal()
 
-    if json_export_enable:
-        button_text.extend(['Export JSON (This)', 'Export JSON (All)'])
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setStyleSheet("border: none;")
 
-    button_text.extend(['Shrink', '▲Menu'])
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton and event.modifiers() == Qt.KeyboardModifier.ControlModifier:
+            self.ctrl_clicked.emit()
+        elif event.button() == Qt.MouseButton.LeftButton and event.modifiers() == Qt.KeyboardModifier.ShiftModifier:
+            self.shift_clicked.emit()
+        elif event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        elif event.button() == Qt.MouseButton.RightButton:
+            self.rightClicked.emit()
+        return QLabel.mousePressEvent(self, event)
 
-    for button_name in button_text:
-        footer_button = QPushButton()
-        footer_button.setObjectName(button_name)
-        footer_button.clicked.connect(parent.button_clicked)
-        footer_layout.addWidget(footer_button)
 
-        if button_name == 'Copy positive':
-            footer_button.setText('Copy &positive')
-        elif button_name == 'Copy negative':
-            footer_button.setText('Copy &negative')
-        elif button_name == 'Export JSON (This)':
-            footer_button.setText('Export JSON (&This)')
-        elif button_name == 'Export JSON (All)':
-            footer_button.setText('Export JSON (&All)')
-        elif button_name == 'Copy seed':
-            footer_button.setText('Copy &seed')
-        elif button_name == '▲Menu':
-            footer_button.setText('▲M&enu')
-        elif button_name == 'Shrink':
-            if shortened_window or now_shortened:
-                footer_button.setText('Expand')
+class ClickableGroup(QGroupBox):
+    clicked = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        return QGroupBox.mousePressEvent(self, event)
+
+
+class ButtonWithMenu(QPushButton):
+    clicked = pyqtSignal()
+    rightClicked = pyqtSignal()
+
+    def __init__(self, text: str = None, parent=None):
+        super().__init__(parent)
+        self.setText(text)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        elif event.button() == Qt.MouseButton.RightButton:
+            self.rightClicked.emit()
+
+
+class HoverLabel(QLabel):
+    def __init__(self):
+        super().__init__()
+        self.setStyleSheet(custom_stylesheet('label', 'leave'))
+
+    def enterEvent(self, event):
+        stylesheet = custom_stylesheet('label', 'hover')
+        current_style = self.styleSheet()
+
+        if current_style:
+            current_style += ';' + stylesheet
+
+        self.setStyleSheet(current_style)
+
+    def leaveEvent(self, event):
+        stylesheet = custom_stylesheet('label', 'leave')
+        target_part = custom_stylesheet('label', 'hover')
+        current_style = self.styleSheet()
+
+        if current_style:
+            current_style = current_style.replace(target_part, stylesheet)
+
+        self.setStyleSheet(current_style)
+
+
+class FooterButtons(QWidget):
+    def __init__(self, button_layout: tuple, parent=None, controller=None):
+        super().__init__()
+        self.controller = controller
+        self.caller = parent
+        self.shortened = SHORTENED
+        self.buttons = {}
+        self.menus = {}
+
+        self.__init_buttons(button_layout)
+        self.__init_submenu()
+        self.__establish_connection()
+
+    def __init_buttons(self, buttons: tuple):
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        for text, name in buttons:
+            if '&' in text:
+                button = QPushButton(text)
             else:
-                footer_button.setText('Shrink')
-            footer_button.setShortcut(QKeySequence('Ctrl+Tab'))
+                button = ButtonWithMenu(text)
+            if name == 'bar_toggle' or name == 'Shrink':
+                self.buttons[name] = button
+            else:
+                self.buttons[text] = button
+            button.setObjectName(name)
+            layout.addWidget(button)
+        self.setLayout(layout)
 
-    return footer_layout
+    def __establish_connection(self):
+        for text, button in self.buttons.items():
+            if hasattr(self.caller, 'signal_received'):
+                if text == '▲M&enu':
+                    button.clicked.connect(self.__show_submenu)
+                else:
+                    button.clicked.connect(self.caller.signal_received)
+
+                if '&' not in text:
+                    button.rightClicked.connect(self.__show_submenu)
+
+            elif hasattr(self.caller, 'tab_signal_received'):
+                if text == 'Shrink':
+                    button.clicked.connect(self.caller.tab_signal_received)
+                    button.setShortcut(QKeySequence('Ctrl+Tab'))
+                    if self.shortened:
+                        button.setText('Expand')
+                elif text == '▲M&enu':
+                    button.clicked.connect(self.__show_submenu)
+                else:
+                    button.clicked.connect(self.caller.tab_signal_received)
+
+                if '&' not in text:
+                    button.rightClicked.connect(self.__show_submenu)
+
+    def __init_submenu(self):
+        if 'Add favourite' in self.buttons:
+            manage_menu = FileManageMenu(self.caller)
+            self.menus['Add favourite'] = manage_menu
+        if 'Search' in self.buttons:
+            search_menu = SearchMenu(self.caller)
+            self.menus['Search'] = search_menu
+        if '▲M&enu' in self.buttons:
+            main_menu = MainMenu(self.caller, self.controller)
+            self.menus['▲M&enu'] = main_menu
+
+    def __show_submenu(self):
+        where_from = self.sender().objectName()
+        menu = None
+
+        if where_from == 'Add favourite':
+            menu = self.menus.get(where_from)
+        elif where_from == 'Search':
+            menu = self.menus.get(where_from)
+        elif where_from == '▲Menu':
+            menu = self.menus.get('▲M&enu')
+
+        if menu is not None:
+            x = self.sender().mapToGlobal(self.sender().rect().topLeft()).x()
+            y = self.sender().mapToGlobal(self.sender().rect().topLeft()).y() - menu.sizeHint().height()
+            adjusted_pos = QPoint(x, y)
+            menu.present_check(self.caller)
+            menu.exec(adjusted_pos)
+
+    def shrink_button_change(self, is_shrink: bool):
+        button = self.buttons.get('Shrink')
+        if button is not None:
+            if is_shrink:
+                self.shortened = True
+                button.setText('Expand')
+            else:
+                self.shortened = False
+                button.setText('Shrink')
+            button.setShortcut(QKeySequence('Ctrl+Tab'))
+
+    def fixed_size_button(self, name: str, width: int, height: int):
+        button = self.buttons.get(name)
+        if button is not None:
+            button.setFixedSize(width, height)
+
+    def toggle_button(self, name: str, remove: bool = True):
+        button = self.buttons.get(name)
+        if button is not None:
+            if remove:
+                button.hide()
+            else:
+                button.show()
+
+    def theme_menu_check(self):
+        menu = self.menus.get('▲M&enu')
+        if menu is not None:
+            menu.theme_check()
 
 
-def tab_navigation(parent):
-    tab_search = config.get('TabSearch', True)
-    thumbnails = config.get('TabNavigationWithThumbnails', True)
-    listview = config.get('TabNavigationWithListview', True)
-    filename_list = [value.params.get('Filename') for value in parent.params]
+def make_pixmap_section(page, scale: int):
+    pixmap_section = QWidget()
+    pixmap_section_layout = QVBoxLayout()
+    pixmap_section_layout.setContentsMargins(0, 5, 0, 0)
 
-    header_layout = QHBoxLayout()
+    filepath = page.filepath
+    index = page.image_index
 
-    dropdown_box = QComboBox()
-    dropdown_box.addItems(filename_list)
-    dropdown_box.setEditable(True)
-    dropdown_box.setObjectName('Combo')
-    dropdown_box.currentIndexChanged.connect(parent.header_button_clicked)
+    if os.path.exists(filepath):
+        pixmap = portrait_generator(filepath, scale)
+        label = PixmapLabel()
+        label.setPixmap(pixmap)
+    else:
+        label = QLabel("Couldn't load image")
 
-    if tab_search:
-        search_button = QPushButton('Search')
-        search_button.setObjectName('Search')
-        search_button.clicked.connect(parent.header_button_clicked)
-        header_layout.addWidget(search_button, 1)
-        search_shortcut = QShortcut(QKeySequence('Ctrl+F'), parent)
-        search_shortcut.activated.connect(parent.tab_search_window)
+    label.setObjectName(f'pixmap_{index}')
+    label.setFixedSize(scale, scale)
+    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    label.clicked.connect(page.page_signal_received)
+    label.rightClicked.connect(lambda: page.page_signal_received(right=True))
 
-        restore_button = QPushButton('Restore')
-        restore_button.setObjectName('Restore')
-        restore_button.clicked.connect(parent.header_button_clicked)
-        header_layout.addWidget(restore_button, 1)
-        restore_shortcut = QShortcut(QKeySequence('Ctrl+R'), parent)
-        restore_shortcut.activated.connect(parent.tab_tweak)
-        if not parent.retracted:
-            restore_button.setDisabled(True)
+    pixmap_section_layout.addWidget(label, alignment=Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop)
+    pixmap_section_layout.setContentsMargins(0, 0, 0, 0)
+    pixmap_section.setLayout(pixmap_section_layout)
 
-    header_layout.addWidget(dropdown_box, 5)
-
-    if listview:
-        listview_button = QPushButton('Listview')
-        listview_button.setObjectName('Listview')
-        listview_button.clicked.connect(parent.header_button_clicked)
-        header_layout.addWidget(listview_button, 1)
-        listview_shortcut = QShortcut(QKeySequence('Ctrl+L'), parent)
-        listview_shortcut.activated.connect(parent.open_listview)
-
-    if thumbnails:
-        thumbnail_button = QPushButton('Thumbnail')
-        thumbnail_button.setObjectName('Thumbnail')
-        thumbnail_button.clicked.connect(parent.header_button_clicked)
-        header_layout.addWidget(thumbnail_button, 1)
-        thumbnail_shortcut = QShortcut(QKeySequence('Ctrl+T'), parent)
-        thumbnail_shortcut.activated.connect(parent.open_thumbnail)
-
-    return header_layout
+    return pixmap_section
 
 
-def make_main_section(target):
+def make_label_section(page, scale: int):
     status = [['File count', 'Number'],
               'Extensions',
               'Filepath',
@@ -135,79 +261,32 @@ def make_main_section(target):
               'ENSD',
               'Version'
               ]
-    max_height = config.get('PixmapSize', 350)
-    filepath = target.params.get('Filepath')
 
-    if target.params.get('Hires upscaler'):
+    if page.params.get('Hires upscaler'):
         status = [value for value in status if not isinstance(value, list) or value[0] != 'Denoising strength']
 
-    main_section_layout = QHBoxLayout()
-    pixmap_label = make_pixmap_label(filepath)
-    label_layout = label_maker(status, target, 1, 1, True, True, 20, 95)
-    label_layout.setSpacing(5)
+    label_layout = label_maker(status, page, 1, 1, True, True, 20, 95)
+    label_layout.setContentsMargins(0, 0, 0, 0)
 
     for i in range(label_layout.count()):
         label_layout.itemAt(i).widget().setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
     scroll_area = QScrollArea()
     scroll_area.setMinimumWidth(350)
-    scroll_area.setMaximumHeight(max_height + 50)
-    scroll_area.setStyleSheet('border: 0px; padding 0px; ')
+    scroll_area.setMaximumHeight(scale)
+    scroll_area.setStyleSheet('border: 0px; padding 0px;')
 
     scroll_contents = QWidget()
-    scroll_contents.setContentsMargins(0, 0, 0, 0)
     scroll_contents.setLayout(label_layout)
     scroll_area.setWidget(scroll_contents)
 
-    main_section_layout.addWidget(pixmap_label, 1)
-    main_section_layout.addWidget(scroll_area, 1)
-    main_section_layout.setContentsMargins(0, 0, 0, 0)
+    label_area = QWidget()
+    label_area_layout = QVBoxLayout()
+    label_area_layout.setContentsMargins(0, 0, 0, 0)
+    label_area_layout.addWidget(scroll_area, alignment=Qt.AlignmentFlag.AlignTop)
+    label_area.setLayout(label_area_layout)
 
-    return main_section_layout
-
-
-def make_pixmap_label(filepath):
-    scale = config.get('PixmapSize', 350)
-    move_delete_enable = config.get('MoveDelete', True)
-    pixmap_section = QWidget()
-    pixmap_layout = QVBoxLayout()
-    button_layout = QHBoxLayout()
-
-    if os.path.exists(filepath):
-        pixmap = QPixmap(filepath)
-        pixmap = pixmap.scaled(scale, scale, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
-        pixmap_label = PixmapLabel()
-        pixmap_label.setPixmap(pixmap)
-    else:
-        pixmap_label = QLabel("Couldn't load image")
-
-    pixmap_label.setObjectName('Pixmap')
-    pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    pixmap_label.setMinimumSize(scale, scale)
-    pixmap_label.setMaximumSize(scale, scale)
-    pixmap_label.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-    pixmap_layout.addWidget(pixmap_label, alignment=Qt.AlignmentFlag.AlignCenter)
-
-    if move_delete_enable:
-        for tmp in ['Favourite', 'Move to', 'Delete']:
-            button = QPushButton()
-            button.setObjectName(tmp)
-            button.setMinimumSize(int(scale / 3), 25)
-            button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-            button_layout.addWidget(button)
-            if tmp == 'Favourite':
-                button.setText('&Favourite')
-            elif tmp == 'Move to':
-                button.setText('&Move to')
-            elif tmp == 'Delete':
-                button.setText('Delete')
-                button.setShortcut(QKeySequence('Delete'))
-        pixmap_layout.addLayout(button_layout)
-
-    pixmap_section.setLayout(pixmap_layout)
-    pixmap_layout.setContentsMargins(0, 5, 0, 0)
-
-    return pixmap_section
+    return label_area
 
 
 # Todo: Make Tokenize functionality
@@ -366,9 +445,9 @@ def dynamic_thresholding_section(target):
 def make_lora_addnet_tab(target):
     tab_layout = QHBoxLayout()
     lora_group = make_lora_section(target)
-    tab_layout.addWidget(lora_group, 2)
+    tab_layout.addWidget(lora_group)
     addnet_group = make_addnet_section(target)
-    tab_layout.addWidget(addnet_group, 4)
+    tab_layout.addWidget(addnet_group)
     return tab_layout
 
 
@@ -532,7 +611,7 @@ def region_control_section(target):
     return region_control_tab
 
 
-def make_control_net_tab(target, starts):
+def make_control_net_tab(target, starts: int):
     control_tab = QScrollArea()
     controlnet_widget = QWidget()
     page_layout = QHBoxLayout()
@@ -579,10 +658,11 @@ def make_control_net_tab(target, starts):
 def make_regional_prompter_tab(target):
     filepath = target.params.get('Filepath')
     scale = config.get('RegionalPrompterPixmapSize', 350)
+    pixmap = None
+
     if os.path.exists(filepath):
         pixmap = QPixmap(filepath)
-        pixmap = pixmap.scaled(scale, int(scale * 0.7), Qt.AspectRatioMode.KeepAspectRatio,
-                               Qt.TransformationMode.FastTransformation)
+        pixmap = pixmap.scaled(scale, int(scale * 0.7), Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
 
     regional_prompter_group = QHBoxLayout()
     regional_prompter_group.addWidget(make_regional_prompter_status_section(target), 1)
@@ -647,7 +727,7 @@ def make_regional_prompter_status_section(target):
     return status_section
 
 
-def make_regional_prompter_pixmap(pixmap, divide_mode, main_ratio, sub_ratio):
+def make_regional_prompter_pixmap(pixmap: QPixmap, divide_mode: str, main_ratio: str, sub_ratio: str):
     divide_sum = sum(main_ratio)
 
     paint_area = QPainter()
@@ -692,7 +772,7 @@ def make_regional_prompter_pixmap(pixmap, divide_mode, main_ratio, sub_ratio):
     return pixmap
 
 
-def regional_prompter_ratio_check(str_ratio, divide_mode):
+def regional_prompter_ratio_check(str_ratio: str, divide_mode: str):
     result = True
     main_ratio = []
     sub_ratio = []
@@ -723,15 +803,15 @@ def regional_prompter_ratio_check(str_ratio, divide_mode):
         return main_ratio, sub_ratio
 
 
-def make_error_tab(target, parameter):
-    error_list = target.error_list
+def make_error_tab(target, image, parameter: int):
+    error_list = image.error_list
     difference = set(target.params.keys() - target.used_params.keys())
     if error_list or difference or parameter == 2:
         diff_text = 'Diff: ' + ','.join(difference)
         error_text = 'Error: ' + ','.join(error_list)
         inner_page = QWidget()
         inner_page_layout = QVBoxLayout()
-        original_data = target.original_data
+        original_data = image.original_data
         error = QTextEdit()
         error.setPlainText(diff_text + '\n\n' + error_text)
         original = QTextEdit()
@@ -743,16 +823,17 @@ def make_error_tab(target, parameter):
         inner_page_layout.addWidget(description)
         inner_page.setLayout(inner_page_layout)
         return inner_page
+    return None
 
 
-def label_maker(status,
+def label_maker(status: list,
                 target,
-                stretch_title,
-                stretch_value,
-                selectable=False,
-                remove_if_none=False,
-                minimums=99,
-                restriction=0):
+                stretch_title: int,
+                stretch_value: int,
+                selectable: bool = False,
+                remove_if_none: bool = False,
+                minimums: int = 99,
+                restriction: int = 0):
     label_count = 0
     section_layout = QGridLayout()
     for tmp in status:
@@ -823,7 +904,7 @@ def label_maker(status,
             value.setObjectName(name + '_value')
         if name == 'Filepath' or name == 'Filename':
             value.setToolTip(item)
-            value.setMaximumWidth(250)
+            value.setMaximumWidth(300)
         size_policy_title = title.sizePolicy()
         size_policy_value = value.sizePolicy()
         size_policy_title.setHorizontalStretch(stretch_title)
@@ -845,24 +926,6 @@ def label_maker(status,
     return section_layout
 
 
-def make_keybindings(parent=None):
-    toggle_theme_shortcut = QShortcut(QKeySequence('Ctrl+D'), parent)
-    toggle_tab_bar_shortcut = QShortcut(QKeySequence('Ctrl+B'), parent)
-    add_tab_shortcut = QShortcut(QKeySequence('Ctrl+O'), parent)
-    replace_tab_shortcut = QShortcut(QKeySequence('Ctrl+N'), parent)
-    quit_shortcut = QShortcut(QKeySequence('Ctrl+Q'), parent)
-
-    tab = parent
-    if parent.parent() is not None:
-        tab = parent.parent()
-
-    toggle_tab_bar_shortcut.activated.connect(tab.bar_toggle)
-    toggle_theme_shortcut.activated.connect(tab.change_themes)
-    add_tab_shortcut.activated.connect(tab.reselect_files_append)
-    replace_tab_shortcut.activated.connect(tab.reselect_files)
-    quit_shortcut.activated.connect(lambda: sys.exit())
-
-
 @lru_cache(maxsize=1000)
 def portrait_generator(filepath, size):
     if not os.path.exists(filepath):
@@ -871,3 +934,22 @@ def portrait_generator(filepath, size):
     pixmap = QPixmap.fromImageReader(image_reader)
     pixmap = pixmap.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation)
     return pixmap
+
+
+def move_centre(target=None):
+    if not target.parent() or not target.parent().isVisible():
+        screen_center = QApplication.primaryScreen().geometry().center()
+    else:
+        screen_center = target.parent().geometry().center()
+
+    frame_geometry = target.frameGeometry()
+    frame_geometry.moveCenter(screen_center)
+    target.move(frame_geometry.topLeft())
+
+
+def module_checker(module_name: str):
+    try:
+        importlib.import_module(module_name)
+        return True
+    except ImportError:
+        return False

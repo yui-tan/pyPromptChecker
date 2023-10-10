@@ -1,73 +1,82 @@
 # -*- coding: utf-8 -*-
 
+from .dialog import *
+from .widget import *
+from .custom import *
 from . import config
-from .dialog import ProgressDialog
-from .dialog import PixmapLabel
-from .viewer import DiffWindow
-from .widget import portrait_generator
-from .widget import make_keybindings
+
+import os
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QApplication, QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QGroupBox, QScrollArea
-from PyQt6.QtWidgets import QWidget, QPushButton, QCheckBox
+from PyQt6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QScrollArea
+from PyQt6.QtWidgets import QWidget
+
+THUMBNAIL_PIXMAP = config.get('ThumbnailPixmapSize', 150)
+MOVE_DELETE = config.get('MoveDelete', False)
+HIDE_NOT_MATCH = config.get('HideNotMatchedTabs', False)
+BUTTONS = (('Select all', 'Select all'),
+           ('Search', 'Search'),
+           ('Listview', 'Listview'),
+           ('Tabview', 'Tabview'),
+           ('Diff', 'Diff'),
+           ('Add favourite', 'Add favourite'),
+           ('▲M&enu', '▲Menu'))
 
 
 class ThumbnailView(QMainWindow):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, controller=None):
         super().__init__(parent)
-        self.size = config.get('ThumbnailPixmapSize', 150)
+        self.toast = None
+        self.controller = controller
+        self.size = THUMBNAIL_PIXMAP
+        self.estimated_height = self.size + 67
+        self.estimated_width = self.size + 40
         self.setWindowTitle('Thumbnail View')
-        self.params = []
-        make_keybindings(self)
+        custom_keybindings(self)
 
-    def init_thumbnail(self, param_list):
-        self.setCentralWidget(None)
-        self.params = param_list
+        self.footer = None
+        self.borders = []
+        self.pos_x = 0
+        self.pos_y = 0
+        self.max_x = 0
+        self.max_y = 0
 
+    def init_thumbnail(self, param_list: list, moved: set = None, deleted: set = None):
         progress = ProgressDialog()
         progress.setLabelText('Loading...')
         progress.setRange(0, len(param_list))
 
-        base_layout = QGridLayout()
-        row = col = width = 0
+        thumbnails = QWidget()
+        thumbnails.setObjectName('thumbnail_view')
+        thumbnails_layout = QGridLayout()
 
-        for index, param in enumerate(param_list):
-            filepath = param.get('Filepath')
-            filename = param.get('Filename')
+        self.borders = []
+        self.pos_x = 0
+        self.pos_y = 0
+        self.max_x = 0
+        self.max_y = 0
 
-            portrait_border = QGroupBox()
-            portrait_layout = QVBoxLayout()
-            portrait_border.setMaximumWidth(self.size + 40)
-            portrait_border.setMinimumWidth(self.size + 40)
-            portrait_border.setLayout(portrait_layout)
+        for index, param in param_list:
+            self.max_y = self.pos_y + 1
+            self.max_x = max(self.pos_x + 1, self.max_x)
+            portrait_border = ThumbnailBorder(index, param, self.size, self.controller, self)
+            self.borders.append(portrait_border)
+            thumbnails_layout.addWidget(portrait_border, self.pos_y, self.pos_x)
 
-            pixmap = portrait_generator(filepath, self.size)
-            pixmap_label = PixmapLabel()
-            pixmap_label.setMinimumSize(self.size, self.size)
-            pixmap_label.setPixmap(pixmap)
-            pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
-            pixmap_label.setToolTip(filename)
-            pixmap_label.setObjectName(str(index))
-            pixmap_label.clicked.connect(self.pixmap_clicked)
+            if moved and index in moved:
+                portrait_border.set_moved()
 
-            check_box = QCheckBox(filename)
-            check_box.setObjectName(str(index))
-            check_box.toggled.connect(self.check_box_changed)
+            if deleted and index in deleted:
+                portrait_border.set_deleted()
 
-            portrait_layout.addWidget(pixmap_label)
-            portrait_layout.addWidget(check_box)
-            base_layout.addWidget(portrait_border, row, col)
-
-            width += (self.size + 40)
-            col += 1
-
-            if width > 900:
-                col = width = 0
-                row = row + 1
+            if self.pos_x * self.estimated_width < 900:
+                self.pos_x += 1
+            else:
+                self.pos_x = 0
+                self.pos_y += 1
 
             progress.update_value()
 
-        thumbnails = QWidget()
-        thumbnails.setLayout(base_layout)
+        thumbnails.setLayout(thumbnails_layout)
 
         scroll_area = QScrollArea()
         scroll_area.setWidget(thumbnails)
@@ -75,85 +84,291 @@ class ThumbnailView(QMainWindow):
         central_widget = QWidget()
         central_widget_layout = QVBoxLayout()
 
-        button_layout = QHBoxLayout()
-
-        json_button = QPushButton('Export selected images JSON')
-        json_button.clicked.connect(self.json_button_clicked)
-        button_layout.addWidget(json_button)
-
-        diff_button = QPushButton('Diff')
-        diff_button.clicked.connect(self.diff_button_clicked)
-        button_layout.addWidget(diff_button)
-
-        close_button = QPushButton('Close')
-        close_button.clicked.connect(self.close_button_clicked)
-        button_layout.addWidget(close_button)
-
-        central_widget_layout.addWidget(scroll_area)
-        central_widget_layout.addLayout(button_layout)
-        central_widget.setLayout(central_widget_layout)
-
-        self.setCentralWidget(central_widget)
-
         scroll_area.setMinimumWidth(thumbnails.sizeHint().width() + 25)
-
-        estimated_height = portrait_layout.sizeHint().height()
-
-        if row > 2:
-            if estimated_height < 300:
-                scroll_area.setMinimumHeight(estimated_height * 3)
-            else:
-                scroll_area.setMaximumHeight(estimated_height + 25)
-
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         scroll_area.setWidgetResizable(True)
+        central_widget_layout.addWidget(scroll_area)
+
+        self.footer = FooterButtons(BUTTONS, self, self.controller)
+        central_widget_layout.addWidget(self.footer)
+        central_widget.setLayout(central_widget_layout)
+
+        if self.centralWidget():
+            self.centralWidget().deleteLater()
+        self.setCentralWidget(central_widget)
+
+        estimated_height = min(self.estimated_height * self.max_y + 70, 1000)
+        estimated_width = self.estimated_width * self.max_x + 210
+
+        self.show()
+        self.resize(estimated_width, estimated_height)
+        move_centre(self)
+
+        self.toast = Toast(self)
 
         progress.close()
 
-        self.show()
-        self.move_centre()
+        scroll_area.setMinimumWidth(0)
 
-    def check_box_changed(self):
-        if self.sender().isChecked():
-            self.sender().parent().setStyleSheet("QGroupBox {border: 2px solid #86cecb; padding : 1px 0 0 0; }")
-        else:
-            self.sender().parent().setStyleSheet("")
+    def key_binds_send(self, request: str):
+        if request == 'append':
+            result = self.controller.request_reception(('files',), request, sender=self)
+            if result:
+                self.toast.init_toast('Added!', 1000)
+        elif request == 'replace':
+            result = self.controller.request_reception(('files',), request, sender=self)
+            if result:
+                self.toast.init_toast('Replaced!', 1000)
+        elif request == 'exit':
+            self.controller.request_reception(None, request, sender=self)
+        elif request == 'change':
+            self.controller.change_themes()
 
-    def pixmap_clicked(self):
-        target_tab = self.sender().objectName()
-        self.parent().root_tab.setCurrentIndex(int(target_tab))
-        self.parent().activateWindow()
+    def signal_received(self, right: bool = False):
+        where_from = self.sender().objectName()
+        selected_index = set()
 
-    def json_button_clicked(self):
-        indexes = []
-        for widget in self.centralWidget().findChildren(QCheckBox):
-            if widget.isChecked():
-                index = widget.objectName()
-                indexes.append(int(index))
+        for border in self.borders:
+            if border.selected:
+                selected_index.add(border.index)
+
+        if where_from == 'Add favourite':
+            result = self.controller.request_reception(selected_index, 'add')
+            if result:
+                self.toast.init_toast('Added!', 1000)
+        elif where_from == 'Delete':
+            result = self.controller.request_reception(selected_index, 'delete')
+            if result:
+                self.toast.init_toast('Deleted!', 1000)
+        elif where_from == 'Move':
+            result = self.controller.request_reception(selected_index, 'move')
+            if result:
+                self.toast.init_toast('Moved!', 1000)
+        elif where_from == 'Export JSON':
+            result = self.controller.request_reception(selected_index, 'json')
+            if result:
+                self.toast.init_toast('Exported!', 1000)
+        elif where_from == 'Import Json file replace':
+            result = self.controller.request_reception(('files', False), 'import')
+            if result:
+                self.toast.init_toast('Imported!', 1000)
+        elif where_from == 'Import Json dir replace':
+            result = self.controller.request_reception(('dir', False), 'import')
+            if result:
+                self.toast.init_toast('Imported!', 1000)
+        elif where_from == 'Append file':
+            result = self.controller.request_reception(('files',), 'append', sender=self)
+            if result:
+                self.toast.init_toast('Added!', 1000)
+        elif where_from == 'Append dir':
+            result = self.controller.request_reception(('directory',), 'append', sender=self)
+            if result:
+                self.toast.init_toast('Added!', 1000)
+        elif where_from == 'Replace file':
+            result = self.controller.request_reception(('files',), 'replace', sender=self)
+            if result:
+                self.toast.init_toast('Replaced!', 1000)
+        elif where_from == 'Replace dir':
+            result = self.controller.request_reception(('directory',), 'replace', sender=self)
+            if result:
+                self.toast.init_toast('Replaced!', 1000)
+        elif where_from == 'Interrogate':
+            self.controller.request_reception(selected_index, 'interrogate')
+        elif where_from == 'Diff':
+            self.controller.request_reception(selected_index, 'diff')
+        elif where_from == 'Search':
+            self.controller.request_reception(selected_index, 'search')
+        elif where_from == 'Listview':
+            self.controller.request_reception(selected_index, 'list')
+        elif where_from == 'Tabview':
+            self.controller.request_reception(selected_index, 'tab')
+        elif where_from == 'Select all':
+            self.__select_all_toggle(len(selected_index))
+        elif where_from == 'Restore':
+            self.search_process(None)
+        elif where_from == 'Close':
+            self.close()
+
+    def thumbnail_add_images(self, param_list: list):
+        progress = None
+
+        if self.isActiveWindow():
+            progress = ProgressDialog()
+            progress.setLabelText('Loading...')
+            progress.setRange(0, len(param_list))
+
+        layout = self.centralWidget().findChild(QWidget, 'thumbnail_view').layout()
+
+        for index, param in param_list:
+            self.max_y = self.pos_y + 1
+            self.max_x = max(self.pos_x + 1, self.max_x)
+            portrait_border = ThumbnailBorder(index, param, self.size, self.controller, self)
+            self.borders.append(portrait_border)
+            layout.addWidget(portrait_border, self.pos_y, self.pos_x)
+
+            if self.pos_x * self.estimated_width < 900:
+                self.pos_x += 1
+            else:
+                self.pos_x = 0
+                self.pos_y += 1
+
+            if progress:
+                progress.update_value()
+
+    def search_process(self, indexes: tuple = None):
         if indexes:
-            self.parent().export_json_selected(indexes)
-
-    def diff_button_clicked(self):
-        indexes = []
-        for widget in self.centralWidget().findChildren(QCheckBox):
-            if widget.isChecked():
-                index = widget.objectName()
-                indexes.append(int(index))
-        if len(indexes) == 2:
-            result = [self.params[i] for i in indexes]
-            diff = DiffWindow(result, self)
-            diff.show()
-            diff.move_centre()
-
-    def close_button_clicked(self):
-        self.close()
-
-    def move_centre(self):
-        if not self.parent() or not self.parent().isVisible():
-            screen_center = QApplication.primaryScreen().geometry().center()
+            for border in self.borders:
+                if border.index in indexes:
+                    border.show()
+                    border.set_matched()
+                else:
+                    border.clear_matched()
+                    if HIDE_NOT_MATCH:
+                        border.hide()
         else:
-            screen_center = self.parent().geometry().center()
-        frame_geometry = self.frameGeometry()
-        frame_geometry.moveCenter(screen_center)
-        self.move(frame_geometry.topLeft())
+            for border in self.borders:
+                border.show()
+                border.clear_matched()
+
+    def manage_subordinates(self, index: int, detail: str, remarks=None):
+        for border in self.borders:
+            if border.index == index:
+                if detail == 'moved':
+                    border.set_moved()
+                    if remarks:
+                        border.label_change(remarks)
+                if detail == 'deleted':
+                    border.set_deleted()
+                    if remarks:
+                        border.label_change(remarks)
+                if border.selected:
+                    border.set_deselected()
+                break
+
+    def get_selected_images(self, selected=True):
+        result = []
+        for border in self.borders:
+            if border.selected and selected:
+                result.append(border.index)
+            elif not selected:
+                result.append(border.index)
+        return result
+
+    def __select_all_toggle(self, count: int):
+        if count == len(self.borders):
+            for border in self.borders:
+                border.set_deselected()
+        else:
+            for border in self.borders:
+                border.set_selected()
+
+
+class ThumbnailBorder(ClickableGroup):
+    def __init__(self, index: int, params: dict, size: int = 150, controller=None, parent=None):
+        super().__init__(parent)
+        self.parent_window = parent
+        self.controller = controller
+        self.size = size
+        self.index = index
+        self.params = params
+        self.label = None
+        self.pixmap_label = None
+        self.selected = False
+        self.moved = False
+        self.deleted = False
+        self.matched = False
+        self.__init_class()
+
+        self.setObjectName(f'group_{self.index}')
+        self.clicked.connect(self.__toggle_selected)
+
+    def __init_class(self):
+        layout = QVBoxLayout()
+        self.setFixedSize(self.size + 60, self.size + 60)
+
+        self.__pixmap_label()
+        self.__filename_label()
+
+        filename = self.params.get('Filename')
+        self.pixmap_label.setToolTip(self.__tooltip())
+        self.label.setText(filename)
+
+        layout.addWidget(self.pixmap_label, alignment=Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
+        layout.addWidget(self.label, alignment=Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignBottom)
+        self.setLayout(layout)
+
+    def __pixmap_label(self):
+        filepath = self.params.get('Filepath')
+        pixmap = portrait_generator(filepath, self.size)
+        pixmap_label = PixmapLabel()
+        pixmap_label.setFixedSize(self.size, self.size)
+        pixmap_label.setPixmap(pixmap)
+        pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
+        pixmap_label.setObjectName(f'pixmap_{self.index}')
+        pixmap_label.rightClicked.connect(self.__pixmap_clicked)
+        self.pixmap_label = pixmap_label
+
+    def __tooltip(self):
+        result = ''
+        for key in ('Filename', 'Timestamp', 'Seed', 'Sampler', 'Steps', 'CFG scale', 'Model', 'VAE', 'Version'):
+            status = self.params.get(key, 'None')
+            result += f'{key} : {status}\n'
+        result = result.rstrip('\n')
+        return result
+
+    def __filename_label(self):
+        label = HoverLabel()
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
+        label.setFixedHeight(30)
+        self.label = label
+
+    def __pixmap_clicked(self):
+        if self.parent_window.isActiveWindow():
+            self.controller.request_reception((self.index,), 'view')
+
+    def __toggle_selected(self):
+        if self.parent_window.isActiveWindow():
+            if self.selected:
+                self.set_deselected()
+            else:
+                self.set_selected()
+
+    def set_selected(self):
+        self.selected = True
+        self.setStyleSheet(custom_stylesheet('groupbox', 'current'))
+
+    def set_deselected(self):
+        self.selected = False
+        self.setStyleSheet('')
+
+    def set_moved(self):
+        self.label.setStyleSheet(custom_stylesheet('colour', 'moved'))
+        self.moved = True
+        self.deleted = False
+
+    def set_deleted(self):
+        self.label.setStyleSheet(custom_stylesheet('colour', 'deleted'))
+        self.moved = False
+        self.deleted = True
+
+    def set_matched(self):
+        self.label.setStyleSheet(custom_stylesheet('colour', 'matched'))
+        self.matched = True
+
+    def clear_matched(self):
+        if self.moved:
+            self.set_moved()
+        elif self.deleted:
+            self.set_deleted()
+        else:
+            self.label.setStyleSheet(custom_stylesheet('label', 'leave'))
+
+    def label_change(self, filepath: str):
+        current_filepath = self.params.get('Filepath')
+        if filepath != current_filepath:
+            filename = os.path.basename(filepath)
+            self.params['Filepath'] = filepath
+            self.params['Filename'] = filename
+            self.label.setText(filename)
+            self.pixmap_label.setToolTip(self.__tooltip())

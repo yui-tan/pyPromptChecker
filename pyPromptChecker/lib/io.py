@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
 
+import uuid
 import csv
 import json
 import os
 import shutil
 import hashlib
 
-from PyQt6.QtWidgets import QApplication
 
-
-def export_json(target_json, filepath):
+def io_export_json(json_data, filepath):
     try:
         with open(filepath, 'w') as f:
-            json.dump(target_json, f, sort_keys=True, indent=4, ensure_ascii=False)
+            json.dump(json_data, f, sort_keys=True, indent=4, ensure_ascii=False)
             return True, None
+
     except Exception as e:
         return 'Error occurred during writing JSON.', e
 
@@ -23,9 +23,11 @@ def import_json(filepath):
         with open(filepath) as j:
             json_data = json.load(j)
             return json_data, None
+
     except json.JSONDecodeError as e:
         print('This is invalid JSON\n' + str(e) + '\n {}'.format(filepath))
         return None, e
+
     except Exception as e:
         return 'Error occurred during loading JSON.', e
 
@@ -40,29 +42,39 @@ def import_model_list(filepath):
         return None
 
 
-def image_copy_to(source, destination, is_move=False):
+def image_copy_to(source, destination, use_copy=True):
     destination_path = os.path.join(destination, os.path.basename(source))
-    if not os.path.exists(destination_path):
+
+    if os.path.exists(destination_path):
+        base, ext = os.path.splitext(destination_path)
+        unique_suffix = str(uuid.uuid4())[:8]
+        destination_path = os.path.join(destination, f"{base}-{unique_suffix}{ext}")
+
+    if os.path.exists(source):
         try:
-            shutil.copy(source, destination)
-            if os.path.exists(destination) and is_move:
+            shutil.copy(source, destination_path)
+            if os.path.exists(destination_path) and not use_copy:
                 os.remove(source)
-                return True, None
-            return True, None
+                return destination_path, None
+            return destination_path, None
+
         except Exception as e:
             return 'Error occurred moving/copying files.', e
     else:
-        return 'The same files already exists in destination.', 'AlreadyExistsError'
+        return "The source file doesn't exists.", 'FileNotFoundError'
 
 
 def clear_trash_bin(directory_path):
     file_list = os.listdir(directory_path)
+
     for filename in file_list:
         filepath = os.path.join(directory_path, filename)
         try:
             os.remove(filepath)
+
         except Exception as e:
             return False, e
+
     return True
 
 
@@ -73,23 +85,27 @@ def is_directory_empty(directory_path):
 
 def model_hash_maker(file_list, progress, method):
     model_hash_data = []
-    for tmp in file_list:
-        model_name = os.path.basename(tmp)
+
+    for filepath in file_list:
+        model_name = os.path.basename(filepath)
         filename, extension = os.path.splitext(model_name)
         extension = extension.replace('.', '')
+
         if method == 0:
-            data_hash = extract_model_hash(tmp)
+            data_hash = extract_model_hash(filepath)
         else:
-            data_hash = extract_lora_hash(tmp)
+            data_hash = extract_lora_hash(filepath)
+
         model_hash = data_hash[:12]
         model_hash_data.append([filename, model_hash, data_hash, filename, extension])
         progress.update_value()
-        QApplication.processEvents()
+
     progress.setLabelText('Writing collected data......')
-    QApplication.processEvents()
+
     with open('model_list.csv', 'a') as w:
         writer = csv.writer(w, lineterminator='\n')
         writer.writerows(model_hash_data)
+
     progress.update_value()
     progress.close()
 
