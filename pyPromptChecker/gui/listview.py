@@ -92,7 +92,7 @@ class Listview(QMainWindow):
         self.resize(estimated_width, estimated_height)
         move_centre(self)
 
-    def signal_received(self):
+    def signal_received(self, right_click: bool = False):
         where_from = self.sender().objectName()
         selected_index = set()
 
@@ -176,7 +176,7 @@ class Listview(QMainWindow):
                     border.set_deselected()
                 break
 
-    def get_selected_images(self, selected=True):
+    def get_selected_images(self, selected: bool = True):
         result = []
         for border in self.borders:
             if border.selected and selected:
@@ -250,7 +250,7 @@ class Listview(QMainWindow):
                 title_label.setText(status_str)
                 value_label.setText(value)
 
-    def __select_all_toggle(self, count):
+    def __select_all_toggle(self, count: int):
         if count == len(self.borders):
             for border in self.borders:
                 border.set_deselected()

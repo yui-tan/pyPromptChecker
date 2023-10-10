@@ -211,7 +211,7 @@ class SearchWindow(QDialog):
         self.search_box.setFocus()
         self.show()
 
-    def update_model_list(self, model_list):
+    def update_model_list(self, model_list: list):
         self.search_model.clear()
         self.search_model.addItems(model_list)
 
@@ -220,7 +220,7 @@ class SearchWindow(QDialog):
         self.close()
 
 
-def cfg_checks(cfg_keywords, relation, targets):
+def cfg_checks(cfg_keywords: str, relation: str, targets: list):
     result = []
     for target in targets:
         if relation == 'Less than' and float(cfg_keywords) > float(target):
@@ -234,7 +234,7 @@ def cfg_checks(cfg_keywords, relation, targets):
     return result
 
 
-def status_checks(keyword, targets):
+def status_checks(keyword: str, targets: list):
     result = []
     for target in targets:
         if keyword == target:
@@ -244,7 +244,7 @@ def status_checks(keyword, targets):
     return result
 
 
-def parse_search_query(input_string):
+def parse_search_query(input_string: str):
     phrases = re.findall(r'"([^"]*)"', input_string)
     tmp_string = re.sub(r'"[^"]*"', 'REPLACEMENT_STRING', input_string)
     and_parts = tmp_string.split()
@@ -263,7 +263,7 @@ def parse_search_query(input_string):
     return result
 
 
-def target_string_adjust(positive, negative, region, target):
+def target_string_adjust(positive: bool, negative: bool, region: bool, target: list):
     positive_target = []
     negative_target = []
     region_target = []
@@ -300,7 +300,7 @@ def target_string_adjust(positive, negative, region, target):
     return result
 
 
-def search_prompt_string(query, target_text, case):
+def search_prompt_string(query: list, target_text: str, case: bool):
     if len(query) > 1 and isinstance(query, list):
         return any(search_prompt_string(query_value, target_text, case) for query_value in query)
     else:
@@ -312,7 +312,7 @@ def search_prompt_string(query, target_text, case):
             return query in target_text
 
 
-def search_images(condition_list, target_list):
+def search_images(condition_list: dict, target_list: list):
     result = []
     prompt_result = []
     status_result = []

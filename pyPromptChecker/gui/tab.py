@@ -45,7 +45,7 @@ class Tabview(QMainWindow):
         self.tab_link = False
         self.tab_link_index = 'Prompt'
 
-    def init_tabview(self, loaded_images, moved=None, deleted=None):
+    def init_tabview(self, loaded_images: list, moved: set = None, deleted: set = None):
         self.root_tab = None
         self.tab_pages = []
 
@@ -92,7 +92,7 @@ class Tabview(QMainWindow):
         self.show()
         move_centre(self)
 
-    def init_root_tab(self, loaded_images, moved=None, deleted=None):
+    def init_root_tab(self, loaded_images: list, moved: set = None, deleted: set = None):
         shown_tab = self.root_tab.count()
         total = shown_tab + len(loaded_images)
         image_count = 0
@@ -159,7 +159,7 @@ class Tabview(QMainWindow):
         if progress:
             progress.close()
 
-    def tabview_add_images(self, loaded_images):
+    def tabview_add_images(self, loaded_images: list):
         total = self.root_tab.count()
         if total < 2:
             self.init_tabview(loaded_images)
@@ -337,7 +337,7 @@ class Tabview(QMainWindow):
 
 
 class TabNavigation(QWidget):
-    def __init__(self, parent, controller, filelist):
+    def __init__(self, parent, controller, filelist: list):
         super().__init__(parent)
         self.tab = parent
         self.controller = controller
@@ -537,7 +537,7 @@ class TabBar(QWidget):
                     index = self.__image_index_to_tab_index(number)
                     self.tab.root_tab.setCurrentIndex(index)
 
-    def __image_index_to_tab_index(self, index):
+    def __image_index_to_tab_index(self, index: int):
         for i in range(self.tab.root_tab.count()):
             widget = self.tab.root_tab.widget(i)
             if widget.image_index == index:
@@ -684,7 +684,7 @@ class RootTabPage(QWidget):
 
         self.filepath_label = self.main_section.findChild(QLabel, 'Filepath_value')
 
-    def __init_move_delete(self, pixmap_section, label_section):
+    def __init_move_delete(self, pixmap_section: QWidget, label_section: QWidget):
         button_text = (('&Favourite', 'fav'), ('&Move to', 'mov'), ('Delete', 'del'))
         pixmap_layout = pixmap_section.layout()
         label_layout = label_section.layout()
@@ -833,13 +833,13 @@ class RootTabPage(QWidget):
             self.signal_recipient.tab_link = True
             self.signal_recipient.tab_link_index = tab_name
 
-    def apply_tab_link(self, tab_name):
+    def apply_tab_link(self, tab_name: str):
         for index in range(self.extension_tab.count()):
             if self.extension_tab.tabText(index) == tab_name:
                 self.extension_tab.setCurrentIndex(index)
                 break
 
-    def update_filepath(self, filepath):
+    def update_filepath(self, filepath: str):
         filepath = os.path.dirname(filepath)
         filename = os.path.basename(filepath)
         self.filepath = filepath
@@ -849,7 +849,7 @@ class RootTabPage(QWidget):
         if FILE_MANAGEMENT:
             self.__check_filepath()
 
-    def add_interrogate(self, result):
+    def add_interrogate(self, result: list):
         for i in range(self.extension_tab.count()):
             if self.extension_tab.tabText(i) == 'Interrogate':
                 self.extension_tab.removeTab(i)
@@ -1097,7 +1097,7 @@ class InterrogateTab(QStackedWidget):
 
         return tag_section_group
 
-    def _footer_button(self, where_from=1):
+    def _footer_button(self, where_from: int = 1):
         footer_button_layout = QHBoxLayout()
         for button_text in ('Export text', 'Export all text', 'Re-interrogate', 'Tag confidence'):
             if where_from == 2 and button_text == 'Tag confidence':
@@ -1153,7 +1153,7 @@ class InterrogateTab(QStackedWidget):
         elif where_from == 'Main status':
             self.setCurrentIndex(1)
 
-    def export_text(self, external=False):
+    def export_text(self, external: bool = False):
         destination_dir = os.path.dirname(self.filepath)
         destination_filename = os.path.splitext(os.path.basename(self.filepath))[0] + '.txt'
         destination = os.path.join(destination_dir, destination_filename)

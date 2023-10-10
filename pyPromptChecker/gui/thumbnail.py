@@ -111,7 +111,7 @@ class ThumbnailView(QMainWindow):
 
         scroll_area.setMinimumWidth(0)
 
-    def key_binds_send(self, request):
+    def key_binds_send(self, request: str):
         if request == 'append':
             result = self.controller.request_reception(('files',), request, sender=self)
             if result:
@@ -255,7 +255,7 @@ class ThumbnailView(QMainWindow):
                 result.append(border.index)
         return result
 
-    def __select_all_toggle(self, count):
+    def __select_all_toggle(self, count: int):
         if count == len(self.borders):
             for border in self.borders:
                 border.set_deselected()

@@ -9,7 +9,7 @@ from gui.custom import *
 from gui.dialog import *
 from gui.listview import Listview
 from gui.search import SearchWindow
-from gui.tab import Tabview, InterrogateTab
+from gui.tab import Tabview
 from gui.thumbnail import ThumbnailView
 from gui.viewer import *
 from lib import *
@@ -29,7 +29,7 @@ SUBDIRECTORY_DEPTH = config.get('SubDirectoryDepth', 0)
 
 
 class ImageController(QObject):
-    def __init__(self, app, filepaths):
+    def __init__(self, app: QApplication, filepaths: list):
         super().__init__()
         self.app = app
         self.filepaths = filepaths
@@ -197,7 +197,7 @@ class ImageController(QObject):
         elif not self.tabview.isActiveWindow():
             self.tabview.activateWindow()
 
-    def __moved_image(self, index: int, remarks=None):
+    def __moved_image(self, index: int, remarks: str = None):
         self.moved_indexes.add(index)
         if self.thumbnail:
             self.thumbnail.manage_subordinates(index, 'moved', remarks)
@@ -206,7 +206,7 @@ class ImageController(QObject):
         if self.tabview:
             self.tabview.manage_subordinates(index, 'moved', remarks)
 
-    def __deleted_image(self, index: int, remarks=None):
+    def __deleted_image(self, index: int, remarks: str = None):
         self.deleted_indexes.add(index)
         if self.thumbnail:
             self.thumbnail.manage_subordinates(index, 'deleted', remarks)
@@ -237,13 +237,13 @@ class ImageController(QObject):
     def check_main_window(self, sender):
         return sender == self.main_window
 
-    def get_data_by_index(self, index):
+    def get_data_by_index(self, index: int):
         for image_index, image_data in self.loaded_images:
             if image_index == index:
                 return image_data
         return None
 
-    def get_dictionary_by_index(self, index):
+    def get_dictionary_by_index(self, index: int):
         for image_index, image_data in self.loaded_images:
             if image_index == index:
                 return image_data.params
@@ -650,7 +650,7 @@ class ImageController(QObject):
                 self.tabview.footer.theme_menu_check()
 
 
-def from_main(purpose, filepaths=None):
+def from_main(purpose: str, filepaths: list = None):
     if purpose == 'directory':
         app = QApplication(sys.argv)
         if DARK_THEME:
@@ -679,7 +679,7 @@ def from_main(purpose, filepaths=None):
         sys.exit(app.exec())
 
 
-def find_target(root, depth):
+def find_target(root: str, depth: int):
     filepaths = []
 
     def _directory_search(current_dir, current_depth):
@@ -701,7 +701,7 @@ def find_target(root, depth):
     return filepaths
 
 
-def check_files(target_list):
+def check_files(target_list: list):
     app = QApplication.instance()
     if app is None:
         app = QApplication(sys.argv)

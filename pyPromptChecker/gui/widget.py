@@ -36,13 +36,6 @@ class PixmapLabel(QLabel):
         return QLabel.mousePressEvent(self, event)
 
 
-class ThumbnailLabel(PixmapLabel):
-    def __init__(self, index, image_index):
-        super().__init__()
-        self.index = index
-        self.image_index = image_index
-
-
 class ClickableGroup(QGroupBox):
     clicked = pyqtSignal()
 
@@ -108,7 +101,7 @@ class FooterButtons(QWidget):
         self.__init_submenu()
         self.__establish_connection()
 
-    def __init_buttons(self, buttons):
+    def __init_buttons(self, buttons: tuple):
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         for text, name in buttons:
@@ -177,7 +170,7 @@ class FooterButtons(QWidget):
             adjusted_pos = QPoint(x, y)
             menu.exec(adjusted_pos)
 
-    def shrink_button_change(self, is_shrink):
+    def shrink_button_change(self, is_shrink: bool):
         button = self.buttons.get('Shrink')
         if button is not None:
             if is_shrink:
@@ -188,12 +181,12 @@ class FooterButtons(QWidget):
                 button.setText('Shrink')
             button.setShortcut(QKeySequence('Ctrl+Tab'))
 
-    def fixed_size_button(self, name, width, height):
+    def fixed_size_button(self, name: str, width: int, height: int):
         button = self.buttons.get(name)
         if button is not None:
             button.setFixedSize(width, height)
 
-    def toggle_button(self, name, remove=True):
+    def toggle_button(self, name: str, remove: bool = True):
         button = self.buttons.get(name)
         if button is not None:
             if remove:
@@ -207,7 +200,7 @@ class FooterButtons(QWidget):
             menu.theme_check()
 
 
-def make_pixmap_section(page, scale):
+def make_pixmap_section(page, scale: int):
     pixmap_section = QWidget()
     pixmap_section_layout = QVBoxLayout()
     pixmap_section_layout.setContentsMargins(0, 5, 0, 0)
@@ -235,7 +228,7 @@ def make_pixmap_section(page, scale):
     return pixmap_section
 
 
-def make_label_section(page, scale):
+def make_label_section(page, scale: int):
     status = [['File count', 'Number'],
               'Extensions',
               'Filepath',
@@ -617,7 +610,7 @@ def region_control_section(target):
     return region_control_tab
 
 
-def make_control_net_tab(target, starts):
+def make_control_net_tab(target, starts: int):
     control_tab = QScrollArea()
     controlnet_widget = QWidget()
     page_layout = QHBoxLayout()
@@ -733,7 +726,7 @@ def make_regional_prompter_status_section(target):
     return status_section
 
 
-def make_regional_prompter_pixmap(pixmap, divide_mode, main_ratio, sub_ratio):
+def make_regional_prompter_pixmap(pixmap: QPixmap, divide_mode: str, main_ratio: str, sub_ratio: str):
     divide_sum = sum(main_ratio)
 
     paint_area = QPainter()
@@ -778,7 +771,7 @@ def make_regional_prompter_pixmap(pixmap, divide_mode, main_ratio, sub_ratio):
     return pixmap
 
 
-def regional_prompter_ratio_check(str_ratio, divide_mode):
+def regional_prompter_ratio_check(str_ratio: str, divide_mode: str):
     result = True
     main_ratio = []
     sub_ratio = []
@@ -809,7 +802,7 @@ def regional_prompter_ratio_check(str_ratio, divide_mode):
         return main_ratio, sub_ratio
 
 
-def make_error_tab(target, image, parameter):
+def make_error_tab(target, image, parameter: int):
     error_list = image.error_list
     difference = set(target.params.keys() - target.used_params.keys())
     if error_list or difference or parameter == 2:
@@ -832,14 +825,14 @@ def make_error_tab(target, image, parameter):
     return None
 
 
-def label_maker(status,
+def label_maker(status: list,
                 target,
-                stretch_title,
-                stretch_value,
-                selectable=False,
-                remove_if_none=False,
-                minimums=99,
-                restriction=0):
+                stretch_title: int,
+                stretch_value: int,
+                selectable: bool = False,
+                remove_if_none: bool = False,
+                minimums: int = 99,
+                restriction: int = 0):
     label_count = 0
     section_layout = QGridLayout()
     for tmp in status:
@@ -953,7 +946,7 @@ def move_centre(target=None):
     target.move(frame_geometry.topLeft())
 
 
-def module_checker(module_name):
+def module_checker(module_name: str):
     try:
         importlib.import_module(module_name)
         return True
