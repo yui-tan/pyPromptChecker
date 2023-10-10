@@ -143,8 +143,8 @@ class MainMenu(QMenu):
         self.json_export_single.triggered.connect(lambda: self.__json_export('single'))
         self.json_export_all.triggered.connect(lambda: self.__json_export('all'))
         self.json_export_selected.triggered.connect(lambda: self.__json_export('select'))
-#        self.interrogate_this.triggered.connect(self.main.add_interrogate_tab)
-#        self.interrogate_all.triggered.connect(lambda: self.main.add_interrogate_tab(1))
+        self.interrogate_this.triggered.connect(self.__interrogate_request)
+        self.interrogate_all.triggered.connect(lambda: self.__interrogate_request('all'))
 
     def __exit_app(self):
         self.main.request_reception(None, 'exit', self.window)
@@ -167,6 +167,15 @@ class MainMenu(QMenu):
                     result = (self.window.root_tab.currentIndex(),)
             if result:
                 self.main.request_reception(result, 'json')
+
+    def __interrogate_request(self, which: str):
+        if hasattr(self.window, 'interrogate_emit'):
+            if which == 'select':
+                self.window.interrogate_emit('selected')
+            elif which == 'all':
+                self.window.interrogate_emit('entire')
+            else:
+                self.window.interrogate_emit()
 
     def present_check(self, destination):
         if not hasattr(destination, 'root_tab'):

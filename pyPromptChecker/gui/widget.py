@@ -398,9 +398,9 @@ def dynamic_thresholding_section(target):
 def make_lora_addnet_tab(target):
     tab_layout = QHBoxLayout()
     lora_group = make_lora_section(target)
-    tab_layout.addWidget(lora_group, 2)
+    tab_layout.addWidget(lora_group)
     addnet_group = make_addnet_section(target)
-    tab_layout.addWidget(addnet_group, 4)
+    tab_layout.addWidget(addnet_group)
     return tab_layout
 
 
@@ -756,15 +756,15 @@ def regional_prompter_ratio_check(str_ratio, divide_mode):
         return main_ratio, sub_ratio
 
 
-def make_error_tab(target, parameter):
-    error_list = target.error_list
+def make_error_tab(target, image, parameter):
+    error_list = image.error_list
     difference = set(target.params.keys() - target.used_params.keys())
     if error_list or difference or parameter == 2:
         diff_text = 'Diff: ' + ','.join(difference)
         error_text = 'Error: ' + ','.join(error_list)
         inner_page = QWidget()
         inner_page_layout = QVBoxLayout()
-        original_data = target.original_data
+        original_data = image.original_data
         error = QTextEdit()
         error.setPlainText(diff_text + '\n\n' + error_text)
         original = QTextEdit()

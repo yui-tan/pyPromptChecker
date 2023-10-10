@@ -273,6 +273,9 @@ class ImageController(QObject):
         elif request == 'json':
             if len(indexes) > 0:
                 result = self.__export_json(tuple(indexes))
+        elif request == 'interrogate':
+            if len(indexes) > 0:
+                result = self.__add_interrogate_wd14(indexes)
         elif request == 'add' or request == 'move' or request == 'delete':
             if len(indexes) > 0:
                 result = self.__manage_image_files(indexes, request)
@@ -582,6 +585,11 @@ class ImageController(QObject):
             tag = dialog.tag_threshold
             chara = dialog.chara_threshold
 
+            if not self.tabview:
+                self.__initialize_tab_window()
+            elif not self.tabview.isActiveWindow():
+                self.tabview.activateWindow()
+
             if len(indexes) > 1:
                 progress = ProgressDialog(self)
                 progress.setRange(0, len(indexes))
@@ -592,10 +600,12 @@ class ImageController(QObject):
                     if image_index == index:
                         filepath = image_data.params.get('Filepath')
                         interrogate_result = interrogate(model, filepath, tag, chara)
+                        self.tabview.manage_subordinates(image_index, 'interrogated', result=interrogate_result)
                 if progress:
                     progress.update_value()
             if progress:
                 progress.close()
+            return True
 
     def model_hash_extractor(self):
         which_mode = SelectDialog(self.main_window)

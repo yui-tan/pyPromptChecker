@@ -12,8 +12,6 @@ import os
 import huggingface_hub
 import numpy as np
 
-HF_TOKEN = os.environ.get("HF_TOKEN", "cpu")
-
 
 def make_square(img, target_size):
     old_size = img.shape[:2]
@@ -43,8 +41,8 @@ def smart_resize(img, size):
 def model_downloads(repository, filename, label_file, model_name):
     model_path = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.models/' + model_name)
     os.makedirs(model_path, exist_ok=True)
-    huggingface_hub.hf_hub_download(repository, filename, local_dir=model_path, local_dir_use_symlinks=False, use_auth_token=HF_TOKEN)
-    huggingface_hub.hf_hub_download(repository, label_file, local_dir=model_path, local_dir_use_symlinks=False, use_auth_token=HF_TOKEN)
+    huggingface_hub.hf_hub_download(repository, filename, local_dir=model_path, local_dir_use_symlinks=False, use_auth_token=False)
+    huggingface_hub.hf_hub_download(repository, label_file, local_dir=model_path, local_dir_use_symlinks=False, use_auth_token=False)
 
 
 def model_loads(model_name, filename):

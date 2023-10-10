@@ -247,7 +247,6 @@ class Tabview(QMainWindow):
                     self.tab_bar.image_matched(indexes)
                     if HIDE_NOT_MATCH:
                         self.tab_bar.pixmap_hide()
-
         else:
             palette = self.root_tab.palette()
             text_color = palette.color(QPalette.ColorRole.Text)
@@ -263,7 +262,7 @@ class Tabview(QMainWindow):
             if self.tab_bar:
                 self.tab_bar.result_clear()
 
-    def manage_subordinates(self, index: int, detail: str, remarks=None):
+    def manage_subordinates(self, index: int, detail: str, remarks=None, result: list = None):
         for tab_index in range(self.root_tab.count()):
             tab_page = self.root_tab.widget(tab_index)
             if index == tab_page.image_index:
@@ -282,6 +281,35 @@ class Tabview(QMainWindow):
                     self.root_tab.tabBar().setTabTextColor(tab_index, custom_color('Q_deleted'))
                     self.tab_bar.image_deleted((index,))
                     break
+                if detail == 'interrogated':
+                    tab_page.add_interrogate(result)
+
+    def interrogate_emit(self, selected: bool = False, entire: bool = False):
+        indexes = set()
+
+        if entire:
+            for i in range(self.root_tab.count()):
+                page = self.root_tab.widget(i)
+                indexes.add(page.image_index)
+        elif selected:
+            if self.tab_bar.selected:
+                indexes = self.tab_bar.selected
+        else:
+            result_tab_index = self.root_tab.currentIndex()
+            page = self.root_tab.widget(result_tab_index)
+            indexes.add(page.image_index)
+
+        if indexes:
+            list_indexes = sorted(tuple(indexes))
+            result = self.controller.request_reception(list_indexes, 'interrogate', self)
+            if result:
+                self.root_tab.setCurrentIndex(list_indexes[0])
+                page = self.root_tab.widget(list_indexes[0])
+                for i in range(page.extension_tab.count()):
+                    if page.extension_tab.tabText(i) == 'Interrogate':
+                        page.extension_tab.setCurrentIndex(i)
+                        break
+                self.toast.init_toast('Interrogated!', 1000)
 
     def __change_window(self):
         flag = True
@@ -590,9 +618,9 @@ class RootTabPage(QWidget):
         self.tab_index = image_index
         self.image_index = image_index
         self.params = image.params
+        self.used_params = image.used_params
         self.filename = ''
         self.filepath = ''
-        self.used_params = {}
 
         self.tab_link_menu = TabMenu(self)
         self.main_section = None
@@ -629,6 +657,7 @@ class RootTabPage(QWidget):
     def __init_main_section(self):
         self.filename = self.params.get('Filename', 'None')
         self.filepath = self.params.get('Filepath', 'None')
+        self.used_params['Filename'] = True
 
         main_section = QGroupBox()
         main_section.setObjectName('main_section')
@@ -746,7 +775,7 @@ class RootTabPage(QWidget):
                 if i == 6:
                     inner_page = make_regional_prompter_tab(self)
                 if i == 7:
-                    inner_page = make_error_tab(image, ERROR_LIST_PARAMETER)
+                    inner_page = make_error_tab(self, image, ERROR_LIST_PARAMETER)
 
                 if inner_page:
                     extension_tab.addTab(inner_page, tab[0])
@@ -820,6 +849,14 @@ class RootTabPage(QWidget):
         if FILE_MANAGEMENT:
             self.__check_filepath()
 
+    def add_interrogate(self, result):
+        for i in range(self.extension_tab.count()):
+            if self.extension_tab.tabText(i) == 'Interrogate':
+                self.extension_tab.removeTab(i)
+                break
+        interrogate_tab = InterrogateTab(result, self.signal_recipient, self.signal_recipient.root_tab)
+        self.extension_tab.addTab(interrogate_tab, 'Interrogate')
+
     def tab_page_image_moved(self):
         stylesheet = custom_stylesheet('colour', 'moved')
         self.filepath_label.setStyleSheet(stylesheet)
@@ -829,9 +866,6 @@ class RootTabPage(QWidget):
         self.filepath_label.setStyleSheet(stylesheet)
 
     def tab_page_image_matched(self):
-        pass
-
-    def hide_tab_page(self):
         pass
 
     def update_tab_index(self):
