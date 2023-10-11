@@ -259,6 +259,9 @@ class WindowController(QObject):
             dictionaries.append(image_data.params)
         return dictionaries
 
+    def __search_init_image(self):
+        pass
+
     def __import_json(self, which, sender, is_append=False):
         index_start = len(self.loaded_images) if is_append else 0
 

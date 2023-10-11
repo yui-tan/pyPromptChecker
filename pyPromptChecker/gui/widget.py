@@ -244,6 +244,7 @@ def make_label_section(page, scale: int):
               'Timestamp',
               ['Image size', 'Size'],
               ['Size', 'Initial Size'],
+              'Init image hash',
               'Seed',
               'Sampler',
               'Eta',
