@@ -114,7 +114,7 @@ def custom_keybindings(parent):
     quit_shortcut = QShortcut(QKeySequence('Ctrl+Q'), parent)
 
     toggle_tab_bar_shortcut.activated.connect(lambda: parent.key_binds_send('bar'))
-    toggle_theme_shortcut.activated.connect(lambda: parent.key_binds_send('change'))
+    toggle_theme_shortcut.activated.connect(lambda: parent.key_binds_send('theme'))
     add_tab_shortcut.activated.connect(lambda: parent.key_binds_send('append'))
     replace_tab_shortcut.activated.connect(lambda: parent.key_binds_send('replace'))
     quit_shortcut.activated.connect(lambda: parent.key_binds_send('exit'))

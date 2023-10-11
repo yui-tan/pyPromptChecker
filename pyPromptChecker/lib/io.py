@@ -8,6 +8,23 @@ import shutil
 import hashlib
 
 
+def export_file(data, kind, filepath):
+    try:
+        if kind == 'csv':
+            with open(filepath, 'a') as f:
+                writer = csv.writer(f, lineterminator='\n')
+                writer.writerows(data)
+        elif kind == 'text':
+            with open(filepath, 'w') as f:
+                f.write(data)
+        elif kind == 'json':
+            with open(filepath, 'w') as f:
+                json.dump(data, f, sort_keys=True, indent=4, ensure_ascii=False)
+        return True, None
+    except Exception as e:
+        return 'Error occurred during writing file.', e
+
+
 def io_export_json(json_data, filepath):
     try:
         with open(filepath, 'w') as f:
@@ -83,33 +100,6 @@ def is_directory_empty(directory_path):
     return len(file_list) == 0
 
 
-def model_hash_maker(file_list, progress, method):
-    model_hash_data = []
-
-    for filepath in file_list:
-        model_name = os.path.basename(filepath)
-        filename, extension = os.path.splitext(model_name)
-        extension = extension.replace('.', '')
-
-        if method == 0:
-            data_hash = extract_model_hash(filepath)
-        else:
-            data_hash = extract_lora_hash(filepath)
-
-        model_hash = data_hash[:12]
-        model_hash_data.append([filename, model_hash, data_hash, filename, extension])
-        progress.update_value()
-
-    progress.setLabelText('Writing collected data......')
-
-    with open('model_list.csv', 'a') as w:
-        writer = csv.writer(w, lineterminator='\n')
-        writer.writerows(model_hash_data)
-
-    progress.update_value()
-    progress.close()
-
-
 def extract_lora_hash(filename):
     lora_hash = hashlib.sha256()
     block = 1024 * 1024
@@ -136,3 +126,7 @@ def extract_model_hash(filename):
             model_hash.update(chunk)
 
     return model_hash.hexdigest()
+
+
+def extract_image_hash(filename):
+    pass

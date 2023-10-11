@@ -14,10 +14,11 @@ THUMBNAIL_PIXMAP = config.get('ThumbnailPixmapSize', 150)
 MOVE_DELETE = config.get('MoveDelete', False)
 HIDE_NOT_MATCH = config.get('HideNotMatchedTabs', False)
 BUTTONS = (('Select all', 'Select all'),
-           ('Search', 'Search'),
-           ('Listview', 'Listview'),
+           ('Thumbnail', 'Thumbnail'),
            ('Tabview', 'Tabview'),
            ('Diff', 'Diff'),
+           ('Interrogate', 'Interrogate'),
+           ('Search', 'Search'),
            ('Add favourite', 'Add favourite'),
            ('▲M&enu', '▲Menu'))
 
@@ -113,17 +114,17 @@ class ThumbnailView(QMainWindow):
 
     def key_binds_send(self, request: str):
         if request == 'append':
-            result = self.controller.request_reception(('files',), request, sender=self)
+            result = self.controller.request_reception(request, sender=self, conditions='files')
             if result:
                 self.toast.init_toast('Added!', 1000)
         elif request == 'replace':
-            result = self.controller.request_reception(('files',), request, sender=self)
+            result = self.controller.request_reception(request, sender=self, conditions='files')
             if result:
                 self.toast.init_toast('Replaced!', 1000)
         elif request == 'exit':
-            self.controller.request_reception(None, request, sender=self)
-        elif request == 'change':
-            self.controller.change_themes()
+            self.controller.request_reception(request, sender=self)
+        elif request == 'theme':
+            self.controller.request_reception(request, sender=self)
 
     def signal_received(self, right: bool = False):
         where_from = self.sender().objectName()
@@ -132,59 +133,62 @@ class ThumbnailView(QMainWindow):
         for border in self.borders:
             if border.selected:
                 selected_index.add(border.index)
+        selected_index = tuple(selected_index)
 
         if where_from == 'Add favourite':
-            result = self.controller.request_reception(selected_index, 'add')
+            result = self.controller.request_reception('add', self, selected_index)
             if result:
                 self.toast.init_toast('Added!', 1000)
         elif where_from == 'Delete':
-            result = self.controller.request_reception(selected_index, 'delete')
+            result = self.controller.request_reception('delete', self, selected_index)
             if result:
-                self.toast.init_toast('Deleted!', 1000)
+                self.toast.init_toast('Added!', 1000)
         elif where_from == 'Move':
-            result = self.controller.request_reception(selected_index, 'move')
+            result = self.controller.request_reception('move', self, selected_index)
             if result:
                 self.toast.init_toast('Moved!', 1000)
         elif where_from == 'Export JSON':
-            result = self.controller.request_reception(selected_index, 'json')
+            result = self.controller.request_reception('json', self, selected_index)
             if result:
                 self.toast.init_toast('Exported!', 1000)
         elif where_from == 'Import Json file replace':
-            result = self.controller.request_reception(('files', False), 'import')
+            result = self.controller.request_reception('import', self, ('files', False))
             if result:
                 self.toast.init_toast('Imported!', 1000)
         elif where_from == 'Import Json dir replace':
-            result = self.controller.request_reception(('dir', False), 'import')
+            result = self.controller.request_reception('import', self, ('files', False))
             if result:
                 self.toast.init_toast('Imported!', 1000)
         elif where_from == 'Append file':
-            result = self.controller.request_reception(('files',), 'append', sender=self)
+            result = self.controller.request_reception('append', self, conditions='files')
             if result:
                 self.toast.init_toast('Added!', 1000)
         elif where_from == 'Append dir':
-            result = self.controller.request_reception(('directory',), 'append', sender=self)
+            result = self.controller.request_reception('append', self, conditions='directory')
             if result:
                 self.toast.init_toast('Added!', 1000)
         elif where_from == 'Replace file':
-            result = self.controller.request_reception(('files',), 'replace', sender=self)
+            result = self.controller.request_reception('replace', self, conditions='files')
             if result:
                 self.toast.init_toast('Replaced!', 1000)
         elif where_from == 'Replace dir':
-            result = self.controller.request_reception(('directory',), 'replace', sender=self)
+            result = self.controller.request_reception('replace', self, conditions='directory')
             if result:
                 self.toast.init_toast('Replaced!', 1000)
         elif where_from == 'Interrogate':
-            self.controller.request_reception(selected_index, 'interrogate')
+            result = self.controller.request_reception('interrogate', self, selected_index)
+            if result:
+                self.toast.init_toast('Interrogated!', 1000)
         elif where_from == 'Diff':
-            self.controller.request_reception(selected_index, 'diff')
+            self.controller.request_reception('diff', self, selected_index)
         elif where_from == 'Search':
-            self.controller.request_reception(selected_index, 'search')
+            self.controller.request_reception('search', self)
         elif where_from == 'Listview':
-            self.controller.request_reception(selected_index, 'list')
+            self.controller.request_reception('list', self)
         elif where_from == 'Tabview':
-            self.controller.request_reception(selected_index, 'tab')
+            self.controller.request_reception('tab', self)
         elif where_from == 'Select all':
-            self.__select_all_toggle(len(selected_index))
+            self.__select_all_toggle(selected_index)
         elif where_from == 'Restore':
             self.search_process(None)
         elif where_from == 'Close':
@@ -255,8 +259,8 @@ class ThumbnailView(QMainWindow):
                 result.append(border.index)
         return result
 
-    def __select_all_toggle(self, count: int):
-        if count == len(self.borders):
+    def __select_all_toggle(self, count: tuple):
+        if len(count) == len(self.borders):
             for border in self.borders:
                 border.set_deselected()
         else:
@@ -325,7 +329,7 @@ class ThumbnailBorder(ClickableGroup):
 
     def __pixmap_clicked(self):
         if self.parent_window.isActiveWindow():
-            self.controller.request_reception((self.index,), 'view')
+            self.controller.request_reception('view', self.parent_window, indexes=(self.index,))
 
     def __toggle_selected(self):
         if self.parent_window.isActiveWindow():

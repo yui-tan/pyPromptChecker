@@ -182,13 +182,13 @@ class SearchWindow(QDialog):
         self.conditions['Extension'] = self.extension.isChecked()
 
         if self.__validation():
-            params = self.controller.get_all_dictionary()
+            params = self.controller.request_reception('dictionary', self.caller)
             matched = search_images(self.conditions, params)
             if len(matched) > 0:
                 match_text = str(len(matched)) + ' image(s) found !'
             else:
                 match_text = 'There is no match to show.'
-            self.controller.request_reception((matched, match_text), 'apply', sender=self.caller)
+            self.controller.request_reception('apply', self.caller, indexes=(matched, match_text))
 
     def __validation(self):
         words = self.conditions.get('Search', 'None')

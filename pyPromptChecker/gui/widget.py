@@ -12,6 +12,7 @@ from .custom import *
 from . import config
 
 SHORTENED = config.get('OpenWithShortenedWindow', False)
+FILE_MANAGEMENT = config.get('MoveDelete', True)
 
 
 class PixmapLabel(QLabel):
@@ -100,6 +101,7 @@ class FooterButtons(QWidget):
         self.__init_buttons(button_layout)
         self.__init_submenu()
         self.__establish_connection()
+        self.__check_management()
 
     def __init_buttons(self, buttons: tuple):
         layout = QHBoxLayout()
@@ -152,6 +154,10 @@ class FooterButtons(QWidget):
         if '▲M&enu' in self.buttons:
             main_menu = MainMenu(self.caller, self.controller)
             self.menus['▲M&enu'] = main_menu
+
+    def __check_management(self):
+        if not FILE_MANAGEMENT:
+            self.toggle_button('Add favourite', True)
 
     def __show_submenu(self):
         where_from = self.sender().objectName()

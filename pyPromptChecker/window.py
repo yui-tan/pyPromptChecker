@@ -26,6 +26,7 @@ ASK_CLEAR = config.get('AskIfClearTrashBin')
 ASK_DELETE = config.get('AskIfDelete', True)
 USE_MOVE = config.get('UseCopyInsteadOfMove', True)
 SUBDIRECTORY_DEPTH = config.get('SubDirectoryDepth', 0)
+ASK_WHEN_QUIT = config.get('AskWhenQuit', True)
 
 
 class WindowController(QObject):
@@ -197,116 +198,14 @@ class WindowController(QObject):
         elif not self.tabview.isActiveWindow():
             self.tabview.activateWindow()
 
-    def __moved_image(self, index: int, remarks: str = None):
-        self.moved_indexes.add(index)
-        if self.thumbnail:
-            self.thumbnail.manage_subordinates(index, 'moved', remarks)
-        if self.listview:
-            self.listview.manage_subordinates(index, 'moved', remarks)
-        if self.tabview:
-            self.tabview.manage_subordinates(index, 'moved', remarks)
-
-    def __deleted_image(self, index: int, remarks: str = None):
-        self.deleted_indexes.add(index)
-        if self.thumbnail:
-            self.thumbnail.manage_subordinates(index, 'deleted', remarks)
-        if self.listview:
-            self.listview.manage_subordinates(index, 'deleted', remarks)
-        if self.tabview:
-            self.tabview.manage_subordinates(index, 'deleted', remarks)
-
-    def __matched_image(self, indexes: list):
-        self.matched_indexes.update(indexes)
-
-    def __update_tag_data_by_index(self, index: int, key: str, value: str):
-        for image_index, image in self.loaded_images:
-            if image_index == index:
-                image.params[key] = value
-
-    def __obliterate(self):
-        trash_bin = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.trash')
-        if os.path.exists(trash_bin):
-            if not io.is_directory_empty(trash_bin):
-                answer = None
-                if ASK_CLEAR:
-                    text = 'Do you want to obliterate files in the trash bin ?'
-                    answer = MessageBox(text, 'pyPromptChecker', 'okcancel', 'question', self.main_window)
-                if answer.success or not ASK_CLEAR:
-                    io.clear_trash_bin(trash_bin)
-
-    def check_main_window(self, sender):
-        return sender == self.main_window
-
-    def get_data_by_index(self, index: int):
-        for image_index, image_data in self.loaded_images:
-            if image_index == index:
-                return image_data
-
-    def get_dictionary_by_index(self, index: int):
-        for image_index, image_data in self.loaded_images:
-            if image_index == index:
-                return image_data.params
-
-    def get_tag_data_by_index(self, index: int, key: str):
-        for image_index, image_data in self.loaded_images:
-            if image_index == index:
-                return image_data.params.get(key)
-
-    def get_all_dictionary(self):
-        dictionaries = []
-        for image_index, image_data in self.loaded_images:
-            dictionaries.append(image_data.params)
-        return dictionaries
-
-    def request_reception(self, indexes: tuple, request: str, sender=None):
-        result = None
-
-        if request == 'view':
-            if len(indexes) == 1:
-                self.open_image_view(indexes[0])
-        elif request == 'diff':
-            if len(indexes) == 2:
-                self.open_diff_view(tuple(indexes))
-        elif request == 'json':
-            if len(indexes) > 0:
-                result = self.__export_json(tuple(indexes))
-        elif request == 'interrogate':
-            if len(indexes) > 0:
-                result = self.__add_interrogate_wd14(indexes, sender)
-        elif request == 'add' or request == 'move' or request == 'delete':
-            if len(indexes) > 0:
-                result = self.__manage_image_files(indexes, request)
-        elif request == 'search':
-            self.open_search_dialog(sender)
-        elif request == 'apply':
-            self.__searched_check_and_emit(indexes, sender)
-        elif request == 'append':
-            result = self.__add_images(indexes[0], sender)
-        elif request == 'replace':
-            result = self.__add_images(indexes[0], sender, True)
-        elif request == 'import':
-            result = self.__import_json(indexes[0], sender, indexes[1])
-        elif request == 'list':
-            self.__open_listview_window()
-        elif request == 'tab':
-            self.__open_tab_window()
-        elif request == 'thumbnail':
-            self.__open_thumbnail_window()
-        elif request == 'exit':
-            if sender == self.main_window:
-                QApplication.quit()
-            else:
-                sender.close()
-        return result
-
-    def open_image_view(self, index: int):
-        filepath = self.get_tag_data_by_index(index, 'Filepath')
+    def __open_image_view(self, index: int):
+        filepath = self.__get_tag_data_by_index(index, 'Filepath')
         if not self.image_view:
             self.image_view = ImageWindow(self.main_window)
         self.image_view.filepath = filepath
         self.image_view.init_image_window()
 
-    def open_search_dialog(self, sender):
+    def __open_search_dialog(self, sender):
         models = list(self.applied_model)
         models.sort()
         models.insert(0, '')
@@ -314,10 +213,51 @@ class WindowController(QObject):
             self.search_dialog = SearchWindow(models, self)
         self.search_dialog.show_dialog(sender)
 
-    def open_diff_view(self, indexes: tuple):
-        image_a = self.get_dictionary_by_index(indexes[0])
-        image_b = self.get_dictionary_by_index(indexes[1])
+    def __open_diff_view(self, indexes: tuple):
+        image_a = self.__get_dictionary_by_index(indexes[0])
+        image_b = self.__get_dictionary_by_index(indexes[1])
         DiffWindow((image_a, image_b), self.main_window)
+
+    def __image_state_changed(self, index: int, state: str, remarks: str = None):
+        if state == 'moved':
+            self.moved_indexes.add(index)
+        elif state == 'deleted':
+            self.deleted_indexes.add(index)
+        elif state == 'matched':
+            self.matched_indexes.add(index)
+
+        if self.thumbnail:
+            self.thumbnail.manage_subordinates(index, state, remarks)
+        if self.listview:
+            self.listview.manage_subordinates(index, state, remarks)
+        if self.tabview:
+            self.tabview.manage_subordinates(index, state, remarks)
+
+    def __update_tag_data_by_index(self, index: int, key: str, value: str):
+        for image_index, image in self.loaded_images:
+            if image_index == index:
+                image.params[key] = value
+
+    def __get_data_by_index(self, index: int):
+        for image_index, image_data in self.loaded_images:
+            if image_index == index:
+                return image_data
+
+    def __get_dictionary_by_index(self, index: int):
+        for image_index, image_data in self.loaded_images:
+            if image_index == index:
+                return image_data.params
+
+    def __get_tag_data_by_index(self, index: int, key: str):
+        for image_index, image_data in self.loaded_images:
+            if image_index == index:
+                return image_data.params.get(key)
+
+    def __get_all_dictionary(self):
+        dictionaries = []
+        for image_index, image_data in self.loaded_images:
+            dictionaries.append(image_data.params)
+        return dictionaries
 
     def __import_json(self, which, sender, is_append=False):
         index_start = len(self.loaded_images) if is_append else 0
@@ -385,7 +325,7 @@ class WindowController(QObject):
         elif len(indexes) == 1:
             category = 'single'
 
-        filepath = self.get_tag_data_by_index(indexes[0], 'Filepath')
+        filepath = self.__get_tag_data_by_index(indexes[0], 'Filepath')
         filename = custom_filename(filepath, category)
 
         dialog = FileDialog('save-file', 'Save JSON', self.main_window, 'JSON', filename)
@@ -394,7 +334,7 @@ class WindowController(QObject):
         if destination:
             dict_list = []
             for index in indexes:
-                dict_list.append(self.get_dictionary_by_index(index))
+                dict_list.append(self.__get_dictionary_by_index(index))
             result, e = io.io_export_json(dict_list, destination)
             if not e:
                 return True
@@ -406,8 +346,27 @@ class WindowController(QObject):
         use_copy = USE_MOVE
         destination = None
         succeed = []
-        changed = []
         errored = []
+
+        def result_check_and_emit(category, success: list = None, errors: list = None):
+            succeed_flag = False
+
+            if success:
+                for image_index, filepath in success:
+                    if category == 'add' or category == 'move':
+                        self.__image_state_changed(image_index, 'moved', filepath)
+                    elif category == 'delete':
+                        self.__image_state_changed(image_index, 'deleted', filepath)
+                    filename = os.path.basename(filepath)
+                    self.__update_tag_data_by_index(image_index, 'Filepath', filepath)
+                    self.__update_tag_data_by_index(image_index, 'Filename', filename)
+                succeed_flag = True
+
+            if errors:
+                error_text = '\n'.join(errors)
+                MessageBox(error_text, icon='critical', parent=self.main_window)
+
+            return succeed_flag
 
         if ASK_DELETE and request == 'delete':
             result = MessageBox('Really?', 'Confirm', 'okcancel', 'question', self.main_window)
@@ -430,15 +389,13 @@ class WindowController(QObject):
 
         if destination and os.path.exists(destination):
             for index in indexes:
-                source = self.get_tag_data_by_index(index, 'Filepath')
+                source = self.__get_tag_data_by_index(index, 'Filepath')
                 result, e = io.image_copy_to(source, destination, use_copy)
-                if not e and os.path.basename(source) == os.path.basename(result):
+                if not e:
                     succeed.append((index, result))
-                elif not e and os.path.basename(source) != os.path.basename(result):
-                    changed.append((index, result))
                 elif e:
                     errored.append(f'{source}\n{result}\n{e}')
-            flag = self.__result_check_and_emit(request, succeed, changed, errored)
+            flag = result_check_and_emit(request, succeed, errored)
             return flag
 
         elif destination and not os.path.exists(destination):
@@ -447,38 +404,6 @@ class WindowController(QObject):
 
         elif not destination:
             return
-
-    def __result_check_and_emit(self, category, success: list = None, name_changed: list = None, errors: list = None):
-        succeed_flag = False
-        print(success)
-
-        if success:
-            for index, filepath in success:
-                if category == 'add' or category == 'move':
-                    self.__moved_image(index, filepath)
-                elif category == 'delete':
-                    self.__deleted_image(index, filepath)
-                filename = os.path.basename(filepath)
-                self.__update_tag_data_by_index(index, 'Filepath', filepath)
-                self.__update_tag_data_by_index(index, 'Filename', filename)
-            succeed_flag = True
-
-        if name_changed:
-            for index, filepath in name_changed:
-                if category == 'add' or category == 'move':
-                    self.__moved_image(index, filepath)
-                elif category == 'delete':
-                    self.__deleted_image(index, filepath)
-                filename = os.path.basename(filepath)
-                self.__update_tag_data_by_index(index, 'Filepath', filepath)
-                self.__update_tag_data_by_index(index, 'Filename', filename)
-            succeed_flag = True
-
-        if errors:
-            error_text = '\n'.join(errors)
-            MessageBox(error_text, icon='critical', parent=self.main_window)
-
-        return succeed_flag
 
     def __searched_check_and_emit(self, result: tuple, caller):
         if not result[0]:
@@ -575,12 +500,12 @@ class WindowController(QObject):
             return True
         return
 
-    def __add_interrogate_wd14(self, indexes: tuple = None, sender=None):
+    def __add_interrogate_wd14(self, indexes: tuple, sender):
         progress = None
-        dialog = InterrogateSelectDialog(self.main_window)
+        dialog = InterrogateSelectDialog(sender)
         result = dialog.exec()
 
-        if result == QDialog.DialogCode.Accepted:
+        if indexes and result == QDialog.DialogCode.Accepted:
             model = dialog.selected_model
             tag = dialog.tag_threshold
             chara = dialog.chara_threshold
@@ -603,33 +528,14 @@ class WindowController(QObject):
                         self.tabview.manage_subordinates(image_index, 'interrogated', result=interrogate_result)
                 if progress:
                     progress.update_value()
+
             if sender != self.tabview:
                 self.tabview.post_process_of_interrogate(indexes[0])
             if progress:
                 progress.close()
             return True
 
-    def model_hash_extractor(self):
-        which_mode = SelectDialog(self.main_window)
-        result = which_mode.exec()
-        mode = which_mode.selected
-
-        if result == QDialog.DialogCode.Accepted:
-            select_directory = FileDialog('choose-directory', 'Select directory', parent=self.main_window)
-            directory = select_directory.result[0] if select_directory.result else None
-            if directory:
-                operation_progress = ProgressDialog(self)
-                file_list = os.listdir(directory)
-                file_list = [os.path.join(directory, v) for v in file_list if
-                             os.path.isfile(os.path.join(directory, v))]
-                file_list = [v for v in file_list if '.safetensors' in v or '.ckpt' in v or '.pt' in v]
-                file_list.sort()
-                operation_progress.setLabelText('Loading model file......')
-                operation_progress.setRange(0, len(file_list) + 1)
-                io.model_hash_maker(file_list, operation_progress, mode)
-                MessageBox('Finished', "I'm knackered", 'ok', 'info', self.main_window)
-
-    def change_themes(self):
+    def __change_themes(self):
         if self.dark:
             qdarktheme.setup_theme('light')
             self.dark = False
@@ -648,6 +554,119 @@ class WindowController(QObject):
                 self.listview.footer.theme_menu_check()
             if self.tabview:
                 self.tabview.footer.theme_menu_check()
+
+    def __exit_scripts(self, sender):
+        if sender == self.main_window:
+            if not ASK_WHEN_QUIT:
+                QApplication.quit()
+            else:
+                text = 'This is main window.\nQuit script?'
+                result = MessageBox(text, style='ok_cancel', icon='question', parent=sender)
+                if result.success:
+                    QApplication.quit()
+        else:
+            sender.close()
+
+    def __obliterate(self):
+        trash_bin = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.trash')
+        if os.path.exists(trash_bin):
+            if not io.is_directory_empty(trash_bin):
+                answer = None
+                if ASK_CLEAR:
+                    text = 'Do you want to obliterate files in the trash bin ?'
+                    answer = MessageBox(text, 'pyPromptChecker', 'okcancel', 'question', self.main_window)
+                if answer.success or not ASK_CLEAR:
+                    io.clear_trash_bin(trash_bin)
+
+    def request_reception(self, request: str, sender: QMainWindow, indexes: tuple = None, conditions: str = None):
+        result = None
+
+        if request == 'view' and len(indexes) == 1:
+            self.__open_image_view(indexes[0])
+        elif request == 'diff' and len(indexes) == 2:
+            self.__open_diff_view(indexes)
+        elif request == 'search':
+            self.__open_search_dialog(sender)
+        elif request == 'apply':
+            self.__searched_check_and_emit(indexes, sender)
+        elif request == 'list':
+            self.__open_listview_window()
+        elif request == 'tab':
+            self.__open_tab_window()
+        elif request == 'thumbnail':
+            self.__open_thumbnail_window()
+        elif request == 'theme':
+            self.__change_themes()
+        elif request == 'json' and len(indexes) > 0:
+            result = self.__export_json(indexes)
+        elif request == 'interrogate' and len(indexes) > 0:
+            result = self.__add_interrogate_wd14(indexes, sender)
+        elif (request == 'add' or request == 'move' or request == 'delete') and len(indexes) > 0:
+            result = self.__manage_image_files(indexes, request)
+        elif request == 'append':
+            result = self.__add_images(conditions, sender)
+        elif request == 'replace':
+            result = self.__add_images(conditions, sender, True)
+        elif request == 'import':
+            result = self.__import_json(indexes[0], sender, indexes[1])
+        elif request == 'dictionary':
+            result = self.__get_all_dictionary()
+        elif request == 'exit':
+            self.__exit_scripts(sender)
+        elif request == 'hash':
+            model_hash_extractor(sender)
+
+        return result
+
+
+def model_hash_extractor(window):
+    which_mode = SelectDialog(window)
+    result = which_mode.exec()
+    filelist = []
+    model_hash_data = []
+
+    def extract_hashes(filepath):
+        filename, extension = os.path.splitext(os.path.basename(filepath))
+        extension = extension.replace('.', '')
+
+        if which_mode.selected == 0:
+            data_hash = io.extract_model_hash(filepath)
+        else:
+            data_hash = io.extract_lora_hash(filepath)
+
+        model_hash = data_hash[:12]
+        model_hash_data.append([filename, model_hash, data_hash, filename, extension])
+
+    if result == QDialog.DialogCode.Accepted:
+        select_directory = FileDialog('choose-directory', 'Select directory', parent=window)
+        directory = select_directory.result[0] if select_directory.result else None
+
+        if directory:
+            files = os.listdir(directory)
+            for file in files:
+                path = os.path.join(directory, file)
+                if os.path.isfile(path):
+                    if '.pt' in file or 'ckpt' in file or 'safetensors' in file:
+                        filelist.append(path)
+            filelist.sort()
+
+            progress = ProgressDialog(window)
+            progress.setLabelText('Loading model file......')
+            progress.setRange(0, len(filelist))
+
+            for file in filelist:
+                extract_hashes(file)
+                progress.update_value()
+
+            if model_hash_data:
+                result, error = io.export_file(model_hash_data, 'csv', 'model_list.csv')
+                if error:
+                    MessageBox(f'{result}\n{error}', 'Error', 'ok', 'critical', window)
+                    return
+
+            progress.close()
+
+            MessageBox('Finished', "I'm knackered", 'ok', 'info', window)
 
 
 def from_main(purpose: str, filepaths: list = None):

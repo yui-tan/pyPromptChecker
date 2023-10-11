@@ -42,6 +42,7 @@ class SearchMenu(QMenu):
 
         self.restore = QAction('Restore', self)
         self.search = QAction('Search', self)
+        self.search_selected = QAction('Search in selected files', self)
         self.init_search = QAction('Search initial image', self)
 
         self.__menu_position()
@@ -52,6 +53,7 @@ class SearchMenu(QMenu):
         self.addSeparator()
 
         self.addAction(self.init_search)
+        self.addAction(self.search_selected)
         self.addAction(self.search)
 
 
@@ -152,8 +154,8 @@ class MainMenu(QMenu):
 
     def __menu_trigger(self):
         self.quit.triggered.connect(self.__exit_app)
-        self.dark_mode.triggered.connect(self.main.change_themes)
-        self.model_hash_extractor.triggered.connect(self.main.model_hash_extractor)
+        self.dark_mode.triggered.connect(lambda: self.main.request_reception('theme', sender=self.window))
+        self.model_hash_extractor.triggered.connect(lambda: self.main.request_reception('hash', sender=self.window))
         self.reselect_add_file.triggered.connect(lambda: self.__reselect_files('files', 'append'))
         self.reselect_renewal_file.triggered.connect(lambda: self.__reselect_files('files', 'replace'))
         self.reselect_add_dir.triggered.connect(lambda: self.__reselect_files('directory', 'append'))
@@ -168,13 +170,13 @@ class MainMenu(QMenu):
         self.interrogate_selected.triggered.connect(lambda: self.__interrogate_request('selected'))
 
     def __exit_app(self):
-        self.main.request_reception(None, 'exit', self.window)
+        self.main.request_reception('exit', self.window)
 
     def __reselect_files(self, which: str, replace_or_append: str):
-        self.main.request_reception((which, ), replace_or_append, self.window)
+        self.main.request_reception(replace_or_append, self.window, condition=which)
 
     def __json_import(self, which: str, is_replace: bool):
-        self.main.request_reception((which, is_replace), 'import', self.window)
+        self.main.request_reception('import', self.window, indexes=(which, is_replace))
 
     def __json_export(self, which: str):
         if hasattr(self.window, 'get_selected_images'):
@@ -187,7 +189,7 @@ class MainMenu(QMenu):
                 if hasattr(self.window, 'root_tab'):
                     result = (self.window.root_tab.currentIndex(),)
             if result:
-                self.main.request_reception(result, 'json')
+                self.main.request_reception('json', self.window, indexes=result)
 
     def __interrogate_request(self, which: str):
         if hasattr(self.window, 'interrogate_emit'):
@@ -204,7 +206,7 @@ class MainMenu(QMenu):
             elif which == 'all':
                 indexes = self.window.get_selected_images(False)
             if indexes:
-                self.main.request_reception(indexes, 'interrogate', sender=self.window)
+                self.main.request_reception('interrogate', self.window, indexes=indexes)
 
     def present_check(self, destination):
         if not hasattr(destination, 'root_tab'):

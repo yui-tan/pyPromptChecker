@@ -300,10 +300,10 @@ class Tabview(QMainWindow):
             indexes.add(page.image_index)
 
         if indexes:
-            list_indexes = sorted(tuple(indexes))
-            result = self.controller.request_reception(list_indexes, 'interrogate', self)
+            indexes = sorted(tuple(indexes))
+            result = self.controller.request_reception('interrogate', self, indexes=indexes)
             if result:
-                self.post_process_of_interrogate(list_indexes[0])
+                self.post_process_of_interrogate(indexes[0])
 
     def post_process_of_interrogate(self, index: int):
         self.root_tab.setCurrentIndex(index)
@@ -374,13 +374,13 @@ class TabNavigation(QWidget):
     def __navi_signal_received(self):
         where_from = self.sender().objectName()
         if where_from == 'Search':
-            self.controller.request_reception(None, 'search', self.tab)
+            self.controller.request_reception('search', self.tab)
         elif where_from == 'Restore':
             self.tab.search_process(None)
         elif where_from == 'Listview':
-            self.controller.request_reception(None, 'list', self.tab)
+            self.controller.request_reception('list', self.tab)
         elif where_from == 'Thumbnail':
-            self.controller.request_reception(None, 'thumbnail', self.tab)
+            self.controller.request_reception('thumbnail', self.tab)
         elif where_from == 'Dropdown':
             index = self.sender().currentIndex()
             self.tab.root_tab.setCurrentIndex(index)
@@ -509,7 +509,7 @@ class TabBar(QWidget):
         number = int(tmp.split('_')[1])
 
         if right:
-            self.controller.request_reception((number,), 'view', self.parent)
+            self.controller.request_reception('view', self.parent, indexes=(number,))
 
         elif ctrl:
             if number in self.selected:
@@ -549,16 +549,17 @@ class TabBar(QWidget):
 
     def __button_clicked(self):
         where_from = self.sender().objectName()
+        indexes = tuple(self.selected)
         if where_from == 'S':
-            self.controller.request_reception(tuple(self.selected), 'search', self.tab)
+            self.controller.request_reception('search', self.tab, indexes=indexes)
         elif where_from == 'R':
             self.tab.search_process(None)
         elif where_from == 'D':
-            self.controller.request_reception(tuple(self.selected), 'diff', self.tab)
+            self.controller.request_reception('diff', self.tab, indexes=indexes)
         elif where_from == 'L':
-            self.controller.request_reception(tuple(self.selected), 'list', self.tab)
+            self.controller.request_reception('list', self.tab, indexes=indexes)
         elif where_from == 'T':
-            self.controller.request_reception(tuple(self.selected), 'thumbnail', self.tab)
+            self.controller.request_reception('thumbnail', self.tab, indexes=indexes)
 
     def add_tab(self, filepaths: list):
         current_filepaths = [filepath for _, filepath in self.filepaths]
@@ -811,19 +812,19 @@ class RootTabPage(QWidget):
         where_from = self.sender().objectName()
         index = int(where_from.split('_')[1])
         if 'pixmap' in where_from and not right:
-            self.controller.request_reception((index,), 'view')
+            self.controller.request_reception('view', self.signal_recipient, indexes=(index,))
         elif 'pixmap' in where_from and right:
             pass
         elif 'fav' in where_from:
-            result = self.controller.request_reception((index,), 'add')
+            result = self.controller.request_reception('add', self.signal_recipient, indexes=(index,))
             if result:
                 self.signal_recipient.toast.init_toast('Added!', 1000)
         elif 'mov' in where_from:
-            result = self.controller.request_reception((index,), 'move')
+            result = self.controller.request_reception('move', self.signal_recipient, indexes=(index,))
             if result:
                 self.signal_recipient.toast.init_toast('Moved!', 1000)
         elif 'del' in where_from:
-            result = self.controller.request_reception((index,), 'delete')
+            result = self.controller.request_reception('delete', self.signal_recipient, indexes=(index,))
             if result:
                 self.signal_recipient.toast.init_toast('Deleted!', 1000)
 
