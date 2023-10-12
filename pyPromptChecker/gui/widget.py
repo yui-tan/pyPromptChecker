@@ -107,10 +107,10 @@ class FooterButtons(QWidget):
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         for text, name in buttons:
-            if '&' in text:
-                button = QPushButton(text)
+            if '&' in text or 'Shrink' in text:
+                button = QPushButton(text, self.caller)
             else:
-                button = ButtonWithMenu(text)
+                button = ButtonWithMenu(text, self.caller)
             if name == 'bar_toggle' or name == 'Shrink':
                 self.buttons[name] = button
             else:
@@ -141,7 +141,7 @@ class FooterButtons(QWidget):
                 else:
                     button.clicked.connect(self.caller.tab_signal_received)
 
-                if '&' not in text:
+                if '&' not in text and 'Shrink' not in text:
                     button.rightClicked.connect(self.__show_submenu)
 
     def __init_submenu(self):
@@ -189,6 +189,14 @@ class FooterButtons(QWidget):
                 self.shortened = False
                 button.setText('Shrink')
             button.setShortcut(QKeySequence('Ctrl+Tab'))
+
+    def button_change(self, name: str, text: str, is_visible: bool = True, is_disable: bool = False):
+        button = self.buttons.get(name)
+        if button is not None:
+            button.setText(text)
+            button.setDisabled(is_disable)
+            if not is_visible:
+                button.hide()
 
     def fixed_size_button(self, name: str, width: int, height: int):
         button = self.buttons.get(name)

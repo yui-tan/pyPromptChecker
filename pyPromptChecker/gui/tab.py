@@ -45,6 +45,8 @@ class Tabview(QMainWindow):
         self.tab_link = False
         self.tab_link_index = 'Prompt'
 
+        custom_keybindings(self)
+
     def init_tabview(self, loaded_images: list, moved: set = None, deleted: set = None):
         progress = ProgressDialog(self)
         progress.setLabelText('Formatting...')
@@ -233,18 +235,29 @@ class Tabview(QMainWindow):
         elif where_from == 'Shrink':
             self.__change_window()
 
+        elif where_from in ('list', 'thumbnail', 'search', 'change', 'exit'):
+            self.controller.request_reception(where_from, self)
+
+        elif where_from == 'append_file':
+            self.controller.request_reception('append', self, conditions='files')
+
+        elif where_from == 'replace_file':
+            self.controller.request_reception('replace', self, conditions='files')
+
         elif where_from == 'bar_toggle':
-            if self.tab_bar.isHidden():
-                self.tab_bar.tab_bar_availability = True
-                self.tab_bar.show()
-                self.sender().setText('<')
-            else:
-                self.tab_bar.tab_bar_availability = False
-                self.tab_bar.hide()
-                self.sender().setText('>')
-            timer = QTimer(self)
-            timer.timeout.connect(lambda: self.adjustSize())
-            timer.start(10)
+            if THUMBNAIL_TAB_BAR:
+                if self.tab_bar.isHidden():
+                    self.tab_bar.tab_bar_availability = True
+                    self.tab_bar.show()
+                    self.footer.button_change('bar_toggle', '<')
+                else:
+                    self.tab_bar.tab_bar_availability = False
+                    self.tab_bar.hide()
+                    self.footer.button_change('bar_toggle', '>')
+
+                timer = QTimer(self)
+                timer.timeout.connect(lambda: self.adjustSize())
+                timer.start(10)
 
     def search_process(self, indexes: tuple = None):
         if indexes:

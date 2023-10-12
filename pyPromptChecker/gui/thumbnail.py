@@ -112,20 +112,6 @@ class ThumbnailView(QMainWindow):
 
         scroll_area.setMinimumWidth(0)
 
-    def key_binds_send(self, request: str):
-        if request == 'append':
-            result = self.controller.request_reception(request, sender=self, conditions='files')
-            if result:
-                self.toast.init_toast('Added!', 1000)
-        elif request == 'replace':
-            result = self.controller.request_reception(request, sender=self, conditions='files')
-            if result:
-                self.toast.init_toast('Replaced!', 1000)
-        elif request == 'exit':
-            self.controller.request_reception(request, sender=self)
-        elif request == 'theme':
-            self.controller.request_reception(request, sender=self)
-
     def signal_received(self, right: bool = False):
         where_from = self.sender().objectName()
         selected_index = set()
@@ -159,7 +145,7 @@ class ThumbnailView(QMainWindow):
             result = self.controller.request_reception('import', self, ('files', False))
             if result:
                 self.toast.init_toast('Imported!', 1000)
-        elif where_from == 'Append file':
+        elif where_from == 'append_file':
             result = self.controller.request_reception('append', self, conditions='files')
             if result:
                 self.toast.init_toast('Added!', 1000)
@@ -167,7 +153,7 @@ class ThumbnailView(QMainWindow):
             result = self.controller.request_reception('append', self, conditions='directory')
             if result:
                 self.toast.init_toast('Added!', 1000)
-        elif where_from == 'Replace file':
+        elif where_from == 'replace_file':
             result = self.controller.request_reception('replace', self, conditions='files')
             if result:
                 self.toast.init_toast('Replaced!', 1000)

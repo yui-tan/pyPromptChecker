@@ -96,20 +96,6 @@ class Listview(QMainWindow):
 
         self.toast = Toast(self)
 
-    def key_binds_send(self, request: str):
-        if request == 'append':
-            result = self.controller.request_reception(request, sender=self, conditions='files')
-            if result:
-                self.toast.init_toast('Added!', 1000)
-        elif request == 'replace':
-            result = self.controller.request_reception(request, sender=self, conditions='files')
-            if result:
-                self.toast.init_toast('Replaced!', 1000)
-        elif request == 'exit':
-            self.controller.request_reception(request, sender=self)
-        elif request == 'theme':
-            self.controller.request_reception(request, sender=self)
-
     def signal_received(self, right_click: bool = False):
         where_from = self.sender().objectName()
         selected_index = set()

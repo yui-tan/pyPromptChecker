@@ -107,17 +107,43 @@ def custom_color(purpose: str):
 
 
 def custom_keybindings(parent):
+
+    list_shortcut = QShortcut(QKeySequence('Ctrl+L'), parent)
+    thumbnail_shortcut = QShortcut(QKeySequence('Ctrl+T'), parent)
+    search_shortcut = QShortcut(QKeySequence('Ctrl+F'), parent)
     toggle_theme_shortcut = QShortcut(QKeySequence('Ctrl+D'), parent)
     toggle_tab_bar_shortcut = QShortcut(QKeySequence('Ctrl+B'), parent)
     add_tab_shortcut = QShortcut(QKeySequence('Ctrl+O'), parent)
     replace_tab_shortcut = QShortcut(QKeySequence('Ctrl+N'), parent)
     quit_shortcut = QShortcut(QKeySequence('Ctrl+Q'), parent)
 
-    toggle_tab_bar_shortcut.activated.connect(lambda: parent.key_binds_send('bar'))
-    toggle_theme_shortcut.activated.connect(lambda: parent.key_binds_send('theme'))
-    add_tab_shortcut.activated.connect(lambda: parent.key_binds_send('append'))
-    replace_tab_shortcut.activated.connect(lambda: parent.key_binds_send('replace'))
-    quit_shortcut.activated.connect(lambda: parent.key_binds_send('exit'))
+    list_shortcut.setObjectName('list')
+    thumbnail_shortcut.setObjectName('thumbnail')
+    search_shortcut.setObjectName('search')
+    toggle_theme_shortcut.setObjectName('change')
+    toggle_tab_bar_shortcut.setObjectName('bar_toggle')
+    add_tab_shortcut.setObjectName('append_file')
+    replace_tab_shortcut.setObjectName('replace_file')
+    quit_shortcut.setObjectName('exit')
+
+    if hasattr(parent, 'tab_signal_received'):
+        list_shortcut.activated.connect(parent.tab_signal_received)
+        thumbnail_shortcut.activated.connect(parent.tab_signal_received)
+        search_shortcut.activated.connect(parent.tab_signal_received)
+        toggle_tab_bar_shortcut.activated.connect(parent.tab_signal_received)
+        toggle_theme_shortcut.activated.connect(parent.tab_signal_received)
+        add_tab_shortcut.activated.connect(parent.tab_signal_received)
+        replace_tab_shortcut.activated.connect(parent.tab_signal_received)
+        quit_shortcut.activated.connect(parent.tab_signal_received)
+    elif hasattr(parent, 'signal_received'):
+        list_shortcut.activated.connect(parent.signal_received)
+        thumbnail_shortcut.activated.connect(parent.signal_received)
+        search_shortcut.activated.connect(parent.signal_received)
+        toggle_tab_bar_shortcut.activated.connect(parent.signal_received)
+        toggle_theme_shortcut.activated.connect(parent.signal_received)
+        add_tab_shortcut.activated.connect(parent.signal_received)
+        replace_tab_shortcut.activated.connect(parent.signal_received)
+        quit_shortcut.activated.connect(parent.signal_received)
 
 
 def custom_filename(filepath: str, category: str):
