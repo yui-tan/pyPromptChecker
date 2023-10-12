@@ -104,6 +104,7 @@ class MainMenu(QMenu):
         self.json_import_directory = QAction("Select directory", self.json_import_menu)
 
         self.model_hash_extractor = QAction('Model hash extractor', self)
+        self.close = QAction('Close', self)
         self.quit = QAction('Quit', self)
         self.dark_mode = QAction('Dark mode', self)
         self.dark_mode.setCheckable(True)
@@ -209,12 +210,17 @@ class MainMenu(QMenu):
                 self.main.request_reception('interrogate', self.window, indexes=indexes)
 
     def present_check(self, destination):
+        if not self.main.request_reception('check', self.window):
+            self.quit.setText('Close')
+
         if not hasattr(destination, 'root_tab'):
             self.json_export_single.setDisabled(True)
             self.interrogate_this.setDisabled(True)
         else:
             self.json_export_single.setDisabled(False)
             self.interrogate_this.setDisabled(False)
+            if not destination.tab_bar.tab_bar_availability:
+                self.json_export_selected.setDisabled(True)
 
     def theme_check(self):
         if self.main.dark:

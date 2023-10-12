@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 import sys
 import random
 import qdarktheme
@@ -258,6 +257,9 @@ class WindowController(QObject):
         for image_index, image_data in self.loaded_images:
             dictionaries.append(image_data.params)
         return dictionaries
+
+    def __check_main_window(self, sender):
+        return self.main_window == sender
 
     def __search_init_image(self):
         pass
@@ -614,6 +616,8 @@ class WindowController(QObject):
             result = self.__import_json(indexes[0], sender, indexes[1])
         elif request == 'dictionary':
             result = self.__get_all_dictionary()
+        elif request == 'check':
+            result = self.__check_main_window(sender)
         elif request == 'exit':
             self.__exit_scripts(sender)
         elif request == 'hash':

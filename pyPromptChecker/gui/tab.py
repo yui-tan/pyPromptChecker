@@ -151,6 +151,7 @@ class Tabview(QMainWindow):
 
         if not all([THUMBNAIL_TAB_BAR, TAB_MINIMUMS < total]):
             self.tab_bar.hide()
+            self.tab_bar.tab_bar_availability = False
             self.footer.toggle_button('bar_toggle')
 
         if moved:
@@ -222,9 +223,11 @@ class Tabview(QMainWindow):
 
         elif where_from == 'bar_toggle':
             if self.tab_bar.isHidden():
+                self.tab_bar.tab_bar_availability = True
                 self.tab_bar.show()
                 self.sender().setText('<')
             else:
+                self.tab_bar.tab_bar_availability = False
                 self.tab_bar.hide()
                 self.sender().setText('>')
             timer = QTimer(self)
@@ -403,6 +406,8 @@ class TabBar(QWidget):
         super().__init__(parent)
         self.tab = parent
         self.controller = controller
+        self.tab_bar_availability = True
+
         self.scroll_contents = QWidget()
         self.filepaths = filepaths
         self.pixmap_label = []
