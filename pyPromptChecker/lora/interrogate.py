@@ -142,19 +142,6 @@ def interrogate(model_param: str, filepath: str, tag_threshold: float, chara_thr
     model_param = model_param.lower()
     model_filename = 'model.onnx'
     label_filename = "selected_tags.csv"
-    models = [['MOAT', 'SmilingWolf/wd-v1-4-moat-tagger-v2'],
-              ['Swin', 'SmilingWolf/wd-v1-4-swinv2-tagger-v2'],
-              ['ConvNext', 'SmilingWolf/wd-v1-4-convnext-tagger-v2'],
-              ['ConvNextV2', 'SmilingWolf/wd-v1-4-convnextv2-tagger-v2'],
-              ['ViT', 'SmilingWolf/wd-v1-4-vit-tagger-v2']]
-
-    for model in models:
-        model_base = '.models/' + model[0].lower() + '/' + model_filename
-        label_base = '.models/' + model[0].lower() + '/' + label_filename
-        model_path = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), model_base)
-        label_path = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), label_base)
-        if not os.path.exists(model_path) or not os.path.exists(label_path):
-            model_downloads(model[1], model_filename, label_filename, model[0].lower())
 
     tag_names, rating_indexes, general_indexes, character_indexes = label_loads(model_param, label_filename)
 

@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
 
-from .interrogate import interrogate
+from .interrogate import interrogate, model_downloads

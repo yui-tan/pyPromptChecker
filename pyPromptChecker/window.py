@@ -507,6 +507,40 @@ class WindowController(QObject):
 
     def __add_interrogate_wd14(self, indexes: tuple, sender):
         progress = None
+        model_filename = 'model.onnx'
+        label_filename = "selected_tags.csv"
+        models = (('MOAT', 'SmilingWolf/wd-v1-4-moat-tagger-v2'),
+                  ('Swin', 'SmilingWolf/wd-v1-4-swinv2-tagger-v2'),
+                  ('ConvNext', 'SmilingWolf/wd-v1-4-convnext-tagger-v2'),
+                  ('ConvNextV2', 'SmilingWolf/wd-v1-4-convnextv2-tagger-v2'),
+                  ('ViT', 'SmilingWolf/wd-v1-4-vit-tagger-v2'))
+
+        def model_checks():
+            flag = False
+            text = "The script couldn't locate the required files."
+            text += "\nWould you like to download them?"
+            text += "\nIf so, you'll need approximately 2 GiB of free space."
+
+            for model_setting in models:
+                model_base = '.models/' + model_setting[0].lower() + '/' + model_filename
+                label_base = '.models/' + model_setting[0].lower() + '/' + label_filename
+                model_path = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), model_base)
+                label_path = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), label_base)
+                if not os.path.exists(model_path) or not os.path.exists(label_path):
+                    flag = True
+                    break
+
+            if flag:
+                selected = MessageBox(text, 'Interrogate', 'ok_cancel', 'info', sender)
+                if selected.result:
+                    model_downloads(model[1], model_filename, label_filename, model[0].lower())
+                    return True
+            return True
+
+        model_enable = model_checks()
+        if not model_enable:
+            return
+
         dialog = InterrogateSelectDialog(sender)
         result = dialog.exec()
 
