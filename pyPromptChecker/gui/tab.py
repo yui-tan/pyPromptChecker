@@ -53,17 +53,20 @@ class Tabview(QMainWindow):
         self.root_tab = None
         self.tab_pages = []
 
-        central_widget = QWidget()
+        root_widget = QWidget()
         root_layout = QVBoxLayout()
         root_layout.setContentsMargins(5, 5, 5, 5)
 
         filelist = [value.params.get('Filename') for _, value in loaded_images]
         self.tab_navigation = TabNavigation(self, self.controller, filelist)
-        root_layout.addWidget(self.tab_navigation)
+        self.tab_navigation.hide()
 
         filepaths = [(image_index, image_data.params.get('Filepath')) for image_index, image_data in loaded_images]
         self.tab_bar = TabBar(filepaths, self.controller, self, TAB_BAR_ORIENTATION)
-        middle_section = QWidget()
+        self.tab_bar.hide()
+
+        self.footer = FooterButtons(BUTTONS, self, self.controller)
+        self.footer.fixed_size_button('bar_toggle', 25, 25)
 
         self.root_tab = QTabWidget()
         self.root_tab.setObjectName('root_tab')
@@ -77,18 +80,19 @@ class Tabview(QMainWindow):
             middle_section_layout.addWidget(self.tab_bar)
             middle_section_layout.addWidget(self.root_tab)
 
+        middle_section = QWidget()
         middle_section_layout.setContentsMargins(0, 0, 0, 0)
         middle_section.setLayout(middle_section_layout)
-        root_layout.addWidget(middle_section)
 
-        self.footer = FooterButtons(BUTTONS, self, self.controller)
-        self.footer.fixed_size_button('bar_toggle', 25, 25)
+        root_layout.addWidget(self.tab_navigation)
+        root_layout.addWidget(middle_section)
         root_layout.addWidget(self.footer)
-        central_widget.setLayout(root_layout)
+
+        root_widget.setLayout(root_layout)
 
         if self.centralWidget():
             self.centralWidget().deleteLater()
-        self.setCentralWidget(central_widget)
+        self.setCentralWidget(root_widget)
 
         progress.update_value()
 
@@ -140,26 +144,31 @@ class Tabview(QMainWindow):
             if progress:
                 progress.update_value()
 
-        total = self.root_tab.count()
-        self.footer.toggle_button('bar_toggle', False)
-
-        if all([THUMBNAIL_TAB_BAR, HIDE_NORMAL_TAB_BAR]) or total == 1:
-            self.root_tab.tabBar().hide()
-
-        if not all([TAB_NAVIGATION_ENABLE, TAB_MINIMUMS < total]):
-            self.tab_navigation.hide()
-
-        if not all([THUMBNAIL_TAB_BAR, TAB_MINIMUMS < total]):
-            self.tab_bar.hide()
-            self.tab_bar.tab_bar_availability = False
-            self.footer.toggle_button('bar_toggle')
-
         if moved:
             for i in list(moved):
                 self.manage_subordinates(i, 'moved')
         if deleted:
             for i in list(deleted):
                 self.manage_subordinates(i, 'deleted')
+
+        if all([THUMBNAIL_TAB_BAR, HIDE_NORMAL_TAB_BAR]) or total == 1:
+            self.root_tab.tabBar().hide()
+        else:
+            self.root_tab.tabBar().show()
+
+        if all([TAB_NAVIGATION_ENABLE, TAB_MINIMUMS < total]):
+            self.tab_navigation.show()
+        else:
+            self.tab_navigation.hide()
+
+        if all([THUMBNAIL_TAB_BAR, TAB_MINIMUMS < total]):
+            self.tab_bar.show()
+            self.tab_bar.tab_bar_availability = False
+            self.footer.toggle_button('bar_toggle', False)
+        else:
+            self.tab_bar.hide()
+            self.tab_bar.tab_bar_availability = False
+            self.footer.toggle_button('bar_toggle')
 
         self.tab_navigation.toggle_button_availability(True)
         self.root_tab.setMovable(True)
@@ -170,6 +179,9 @@ class Tabview(QMainWindow):
     def tabview_add_images(self, loaded_images: list):
         total = self.root_tab.count()
         if total < 2:
+            image_index = self.root_tab.widget(0).image_index
+            current_data = self.controller.request_reception('data', self, index=image_index)
+            loaded_images.insert(0, (image_index, current_data))
             self.init_tabview(loaded_images)
             return
         else:
@@ -421,7 +433,7 @@ class TabBar(QWidget):
 
         self.__init_bar(vertical)
 
-        self.image_current(0)
+        self.image_current(filepaths[0][0])
 
     def __init_bar(self, vertical: bool):
         root_layout = QVBoxLayout() if vertical else QHBoxLayout()

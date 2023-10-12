@@ -174,7 +174,7 @@ class MainMenu(QMenu):
         self.main.request_reception('exit', self.window)
 
     def __reselect_files(self, which: str, replace_or_append: str):
-        self.main.request_reception(replace_or_append, self.window, condition=which)
+        self.main.request_reception(replace_or_append, self.window, conditions=which)
 
     def __json_import(self, which: str, is_replace: bool):
         self.main.request_reception('import', self.window, indexes=(which, is_replace))

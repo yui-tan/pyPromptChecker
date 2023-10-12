@@ -583,7 +583,7 @@ class WindowController(QObject):
                 if answer.success or not ASK_CLEAR:
                     io.clear_trash_bin(trash_bin)
 
-    def request_reception(self, request: str, sender: QMainWindow, indexes: tuple = None, conditions: str = None):
+    def request_reception(self, request: str, sender: QMainWindow, indexes: tuple = None, conditions: str = None, index: int = None):
         result = None
 
         if request == 'view' and len(indexes) == 1:
@@ -618,6 +618,8 @@ class WindowController(QObject):
             result = self.__get_all_dictionary()
         elif request == 'check':
             result = self.__check_main_window(sender)
+        elif request == 'data':
+            result = self.__get_data_by_index(index)
         elif request == 'exit':
             self.__exit_scripts(sender)
         elif request == 'hash':
