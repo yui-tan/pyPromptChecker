@@ -5,9 +5,10 @@ from PyQt6.QtGui import QAction
 
 
 class FileManageMenu(QMenu):
-    def __init__(self, parent=None):
+    def __init__(self, parent, controller):
         super().__init__(parent)
         self.main = parent
+        self.controller = controller
 
         self.delete_menu = QMenu('Delete', self)
         self.delete = QAction('Confirm', self.delete_menu)
@@ -30,31 +31,47 @@ class FileManageMenu(QMenu):
         self.addAction(self.add_favourite)
 
     def __menu_trigger(self):
-        self.delete.triggered.connect(lambda: self.main.signal_received())
-        self.move_to.triggered.connect(lambda: self.main.signal_received())
-        self.add_favourite.triggered.connect(lambda: self.main.signal_received())
+        self.delete.triggered.connect(lambda: self.__file_manage_menu_emit('add'))
+        self.move_to.triggered.connect(lambda: self.__file_manage_menu_emit('move'))
+        self.add_favourite.triggered.connect(lambda: self.__file_manage_menu_emit('delete'))
+
+    def __file_manage_menu_emit(self, action):
+        if hasattr(self.main, 'get_selected_images'):
+            indexes = self.main.get_selected_images(True)
+            self.controller.request_reception(action, self.main, indexes)
 
 
 class SearchMenu(QMenu):
-    def __init__(self, parent=None):
+    def __init__(self, parent, controller):
         super().__init__(parent)
         self.main = parent
+        self.controller = controller
 
         self.restore = QAction('Restore', self)
         self.search = QAction('Search', self)
-        self.search_selected = QAction('Search in selected files', self)
         self.init_search = QAction('Search initial image', self)
 
         self.__menu_position()
+        self.__menu_trigger()
 
     def __menu_position(self):
         self.addAction(self.restore)
 
         self.addSeparator()
 
-        self.addAction(self.init_search)
-        self.addAction(self.search_selected)
         self.addAction(self.search)
+        self.addAction(self.init_search)
+
+    def __menu_trigger(self):
+        self.search.triggered.connect(lambda: self.main.signal_received())
+        self.restore.triggered.connect(lambda: self.main.signal_received())
+        self.init_search.triggered.connect(self.__search_init_image)
+
+    def __search_init_image(self):
+        if hasattr(self.main, 'get_selected_images'):
+            indexes = self.main.get_selected_images(True)
+            if len(indexes) == 1:
+                self.controller.request_reception('init', self.main, indexes)
 
 
 class TabMenu(QMenu):
@@ -203,7 +220,7 @@ class MainMenu(QMenu):
         elif hasattr(self.window, 'get_selected_images'):
             indexes = None
             if which == 'selected':
-                indexes = self.window.get_selected_images()
+                indexes = self.window.get_selected_images(True)
             elif which == 'all':
                 indexes = self.window.get_selected_images(False)
             if indexes:

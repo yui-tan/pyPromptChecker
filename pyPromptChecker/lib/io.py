@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from PIL import Image
+
 import uuid
 import csv
 import json
@@ -100,11 +102,11 @@ def is_directory_empty(directory_path):
     return len(file_list) == 0
 
 
-def extract_lora_hash(filename):
+def extract_lora_hash(filepath):
     lora_hash = hashlib.sha256()
     block = 1024 * 1024
 
-    with open(filename, 'rb') as f:
+    with open(filepath, 'rb') as f:
         f.seek(0)
         header = f.read(8)
         n = int.from_bytes(header, "little")
@@ -117,16 +119,17 @@ def extract_lora_hash(filename):
     return lora_hash.hexdigest()
 
 
-def extract_model_hash(filename):
+def extract_model_hash(filepath):
     model_hash = hashlib.sha256()
     block = 1024 * 1024
 
-    with open(filename, 'rb') as f:
+    with open(filepath, 'rb') as f:
         for chunk in iter(lambda: f.read(block), b''):
             model_hash.update(chunk)
 
     return model_hash.hexdigest()
 
 
-def extract_image_hash(filename):
-    pass
+def extract_image_hash(filepath):
+    img = Image.open(filepath)
+    return hashlib.md5(img.tobytes()).hexdigest()

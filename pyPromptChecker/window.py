@@ -261,8 +261,27 @@ class WindowController(QObject):
     def __check_main_window(self, sender):
         return self.main_window == sender
 
-    def __search_init_image(self):
-        pass
+    def __search_init_image(self, sender, index: int):
+        image_hash = self.__get_tag_data_by_index(index, 'Init image hash')
+        if not image_hash:
+            MessageBox('This image has not init image hash data.', parent=sender)
+            return
+
+        dialog = FileDialog('choose-directory', 'Select directory', sender)
+        directory = dialog.result
+        if not directory:
+            return
+
+        filepaths = find_target(directory, SUBDIRECTORY_DEPTH)
+        valid_filepath, _, _, _ = check_files(filepaths)
+
+        for file, _ in valid_filepath:
+            target_hash = io.extract_image_hash(file)
+            if image_hash == target_hash:
+                self.__add_images('', sender, False, file)
+                return
+
+        MessageBox("Couldn't find init image.", parent=sender)
 
     def __import_json(self, which, sender, is_append=False):
         index_start = len(self.loaded_images) if is_append else 0
@@ -347,7 +366,7 @@ class WindowController(QObject):
                 MessageBox(result + '\n' + str(e), 'Error', 'ok', 'critical', self)
         return
 
-    def __manage_image_files(self, indexes: tuple, request: str):
+    def __manage_image_files(self, sender, indexes: tuple, request: str):
         use_copy = USE_MOVE
         destination = None
         succeed = []
@@ -369,12 +388,12 @@ class WindowController(QObject):
 
             if errors:
                 error_text = '\n'.join(errors)
-                MessageBox(error_text, icon='critical', parent=self.main_window)
+                MessageBox(error_text, icon='critical', parent=sender)
 
             return succeed_flag
 
         if ASK_DELETE and request == 'delete':
-            result = MessageBox('Really?', 'Confirm', 'okcancel', 'question', self.main_window)
+            result = MessageBox('Really?', 'Confirm', 'okcancel', 'question', sender)
             if not result.success:
                 return
 
@@ -389,7 +408,7 @@ class WindowController(QObject):
             use_copy = False
 
         elif request == 'move':
-            dialog = FileDialog('choose-directory', 'Select Directory', parent=self.main_window)
+            dialog = FileDialog('choose-directory', 'Select Directory', parent=sender)
             destination = dialog.result[0] if dialog.result else None
 
         if destination and os.path.exists(destination):
@@ -404,7 +423,7 @@ class WindowController(QObject):
             return flag
 
         elif destination and not os.path.exists(destination):
-            MessageBox(custom_text('404'), icon='critical', parent=self.main_window)
+            MessageBox(custom_text('404'), icon='critical', parent=sender)
             return
 
         elif not destination:
@@ -426,7 +445,7 @@ class WindowController(QObject):
             MessageBox(result[1], 'Result', parent=caller)
             self.search_dialog.activateWindow()
 
-    def __add_images(self, which: str, sender, is_replace: bool = False):
+    def __add_images(self, which: str, sender, is_replace: bool = False, filepath: str = None):
         def filepaths_check(target):
             valid, not_found, directories, not_image = check_files(target)
 
@@ -462,10 +481,12 @@ class WindowController(QObject):
         if which == 'files':
             dialog = FileDialog('choose-files', 'Select files', sender, 'PNG')
             filepaths = dialog.result
-        else:
+        elif which == 'directory':
             dialog = FileDialog('choose-directory', 'Select Directory', sender)
             directory = dialog.result
             filepaths = None if not directory else find_target(directory, SUBDIRECTORY_DEPTH)
+        else:
+            filepaths = [filepath]
 
         if filepaths:
             if not is_replace:
@@ -636,12 +657,14 @@ class WindowController(QObject):
             self.__open_thumbnail_window()
         elif request == 'theme':
             self.__change_themes()
+        elif request == 'init' and len(indexes) == 1:
+            self.__search_init_image(sender, indexes[0])
         elif request == 'json' and len(indexes) > 0:
             result = self.__export_json(indexes)
         elif request == 'interrogate' and len(indexes) > 0:
             result = self.__add_interrogate_wd14(indexes, sender)
         elif (request == 'add' or request == 'move' or request == 'delete') and len(indexes) > 0:
-            result = self.__manage_image_files(indexes, request)
+            result = self.__manage_image_files(sender, indexes, request)
         elif request == 'append':
             result = self.__add_images(conditions, sender)
         elif request == 'replace':

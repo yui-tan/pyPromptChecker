@@ -235,7 +235,7 @@ class Tabview(QMainWindow):
         elif where_from == 'Shrink':
             self.__change_window()
 
-        elif where_from in ('list', 'thumbnail', 'search', 'change', 'exit'):
+        elif where_from in ('list', 'thumbnail', 'search', 'theme', 'exit'):
             self.controller.request_reception(where_from, self)
 
         elif where_from == 'append_file':

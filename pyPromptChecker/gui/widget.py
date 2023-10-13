@@ -65,25 +65,24 @@ class ButtonWithMenu(QPushButton):
 
 
 class HoverLabel(QLabel):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.setStyleSheet(custom_stylesheet('label', 'leave'))
 
     def enterEvent(self, event):
-        stylesheet = custom_stylesheet('label', 'hover')
         current_style = self.styleSheet()
 
-        if current_style:
+        if current_style is not None:
+            stylesheet = custom_stylesheet('label', 'hover')
             current_style += ';' + stylesheet
-
-        self.setStyleSheet(current_style)
+            self.setStyleSheet(current_style)
 
     def leaveEvent(self, event):
         stylesheet = custom_stylesheet('label', 'leave')
         target_part = custom_stylesheet('label', 'hover')
         current_style = self.styleSheet()
 
-        if current_style:
+        if current_style is not None:
             current_style = current_style.replace(target_part, stylesheet)
 
         self.setStyleSheet(current_style)
@@ -146,10 +145,10 @@ class FooterButtons(QWidget):
 
     def __init_submenu(self):
         if 'Add favourite' in self.buttons:
-            manage_menu = FileManageMenu(self.caller)
+            manage_menu = FileManageMenu(self.caller, self.controller)
             self.menus['Add favourite'] = manage_menu
         if 'Search' in self.buttons:
-            search_menu = SearchMenu(self.caller)
+            search_menu = SearchMenu(self.caller, self.controller)
             self.menus['Search'] = search_menu
         if '▲M&enu' in self.buttons:
             main_menu = MainMenu(self.caller, self.controller)

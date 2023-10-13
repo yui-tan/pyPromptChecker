@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 
-from .widget import *
 from .dialog import *
+from .widget import *
 from .custom import *
-from .menu import FileManageMenu
 from . import config
 
 import os
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QScrollArea
 from PyQt6.QtWidgets import QWidget, QComboBox, QLabel
-from PyQt6.QtCore import Qt, QTimer
+
 
 LISTVIEW_PIXMAP = config.get('ListViewPixmapSize', 200)
 MOVE_DELETE = config.get('MoveDelete', False)
@@ -32,7 +32,6 @@ class Listview(QMainWindow):
         self.controller = controller
         self.size = LISTVIEW_PIXMAP
         self.setWindowTitle('Listview')
-        self.menu = FileManageMenu(self)
         custom_keybindings(self)
 
         self.footer = None
@@ -97,7 +96,7 @@ class Listview(QMainWindow):
         self.toast = Toast(self)
 
     def signal_received(self, right_click: bool = False):
-        where_from = self.sender().objectName()
+        where_from = self.sender().objectName().lower()
         selected_index = set()
 
         for border in self.borders:
@@ -105,35 +104,43 @@ class Listview(QMainWindow):
                 selected_index.add(border.index)
         selected_index = tuple(selected_index)
 
-        if where_from == 'Add favourite':
+        if where_from == 'add favourite':
             result = self.controller.request_reception('add', self, selected_index)
             if result:
                 self.toast.init_toast('Added!', 1000)
-        elif where_from == 'Delete':
+        elif where_from == 'delete':
             result = self.controller.request_reception('delete', self, selected_index)
             if result:
                 self.toast.init_toast('Added!', 1000)
-        elif where_from == 'Move':
+        elif where_from == 'move':
             result = self.controller.request_reception('move', self, selected_index)
             if result:
                 self.toast.init_toast('Moved!', 1000)
-        elif where_from == 'Export JSON':
+        elif where_from == 'export JSON':
             result = self.controller.request_reception('json', self, selected_index)
             if result:
                 self.toast.init_toast('Exported!', 1000)
-        elif where_from == 'Interrogate':
+        elif where_from == 'interrogate':
             result = self.controller.request_reception('interrogate', self, selected_index)
             if result:
                 self.toast.init_toast('Interrogated!', 1000)
-        elif where_from == 'Diff':
+        elif where_from == 'append_file':
+            result = self.controller.request_reception('append', self, conditions='files')
+            if result:
+                self.toast.init_toast('Added!', 1000)
+        elif where_from == 'replace_file':
+            result = self.controller.request_reception('replace', self, conditions='files')
+            if result:
+                self.toast.init_toast('Added!', 1000)
+        elif where_from in ('list', 'thumbnail', 'search', 'theme', 'exit'):
+            self.controller.request_reception(where_from, self)
+        elif where_from == 'diff':
             self.controller.request_reception('diff', self, selected_index)
-        elif where_from == 'Search':
-            self.controller.request_reception('search', self)
-        elif where_from == 'Select all':
+        elif where_from == 'select all':
             self.__select_all_toggle(selected_index)
-        elif where_from == 'Restore':
+        elif where_from == 'restore':
             self.search_process(None)
-        elif where_from == 'Close':
+        elif where_from == 'close':
             self.close()
 
     def listview_add_images(self, param_list: list):
@@ -274,7 +281,6 @@ class ListviewBorder(ClickableGroup):
         self.size = size
         self.index = index
         self.params = params
-        self.pixmap_label = None
         self.status_labels = []
         self.selected = False
         self.moved = False

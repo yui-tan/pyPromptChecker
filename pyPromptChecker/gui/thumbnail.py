@@ -113,7 +113,7 @@ class ThumbnailView(QMainWindow):
         scroll_area.setMinimumWidth(0)
 
     def signal_received(self, right: bool = False):
-        where_from = self.sender().objectName()
+        where_from = self.sender().objectName().lower()
         selected_index = set()
 
         for border in self.borders:
@@ -121,27 +121,27 @@ class ThumbnailView(QMainWindow):
                 selected_index.add(border.index)
         selected_index = tuple(selected_index)
 
-        if where_from == 'Add favourite':
+        if where_from == 'add favourite':
             result = self.controller.request_reception('add', self, selected_index)
             if result:
                 self.toast.init_toast('Added!', 1000)
-        elif where_from == 'Delete':
+        elif where_from == 'delete':
             result = self.controller.request_reception('delete', self, selected_index)
             if result:
                 self.toast.init_toast('Added!', 1000)
-        elif where_from == 'Move':
+        elif where_from == 'move':
             result = self.controller.request_reception('move', self, selected_index)
             if result:
                 self.toast.init_toast('Moved!', 1000)
-        elif where_from == 'Export JSON':
+        elif where_from == 'export jSON':
             result = self.controller.request_reception('json', self, selected_index)
             if result:
                 self.toast.init_toast('Exported!', 1000)
-        elif where_from == 'Import Json file replace':
+        elif where_from == 'import json file replace':
             result = self.controller.request_reception('import', self, ('files', False))
             if result:
                 self.toast.init_toast('Imported!', 1000)
-        elif where_from == 'Import Json dir replace':
+        elif where_from == 'import json dir replace':
             result = self.controller.request_reception('import', self, ('files', False))
             if result:
                 self.toast.init_toast('Imported!', 1000)
@@ -149,7 +149,7 @@ class ThumbnailView(QMainWindow):
             result = self.controller.request_reception('append', self, conditions='files')
             if result:
                 self.toast.init_toast('Added!', 1000)
-        elif where_from == 'Append dir':
+        elif where_from == 'append dir':
             result = self.controller.request_reception('append', self, conditions='directory')
             if result:
                 self.toast.init_toast('Added!', 1000)
@@ -157,27 +157,29 @@ class ThumbnailView(QMainWindow):
             result = self.controller.request_reception('replace', self, conditions='files')
             if result:
                 self.toast.init_toast('Replaced!', 1000)
-        elif where_from == 'Replace dir':
+        elif where_from == 'replace dir':
             result = self.controller.request_reception('replace', self, conditions='directory')
             if result:
                 self.toast.init_toast('Replaced!', 1000)
-        elif where_from == 'Interrogate':
+        elif where_from == 'interrogate':
             result = self.controller.request_reception('interrogate', self, selected_index)
             if result:
                 self.toast.init_toast('Interrogated!', 1000)
-        elif where_from == 'Diff':
+        elif where_from == 'diff':
             self.controller.request_reception('diff', self, selected_index)
-        elif where_from == 'Search':
+        elif where_from == 'search':
             self.controller.request_reception('search', self)
-        elif where_from == 'Listview':
+        elif where_from == 'listview':
             self.controller.request_reception('list', self)
-        elif where_from == 'Tabview':
+        elif where_from == 'tabview':
             self.controller.request_reception('tab', self)
-        elif where_from == 'Select all':
+        elif where_from == 'theme':
+            self.controller.request_reception('theme', self)
+        elif where_from == 'select all':
             self.__select_all_toggle(selected_index)
-        elif where_from == 'Restore':
+        elif where_from == 'restore':
             self.search_process(None)
-        elif where_from == 'Close':
+        elif where_from == 'close':
             self.close()
 
     def thumbnail_add_images(self, param_list: list):
@@ -262,8 +264,8 @@ class ThumbnailBorder(ClickableGroup):
         self.size = size
         self.index = index
         self.params = params
-        self.label = None
-        self.pixmap_label = None
+        self.pixmap_label = PixmapLabel(self)
+        self.label = QLabel(self)
         self.selected = False
         self.moved = False
         self.deleted = False
@@ -280,10 +282,6 @@ class ThumbnailBorder(ClickableGroup):
         self.__pixmap_label()
         self.__filename_label()
 
-        filename = self.params.get('Filename')
-        self.pixmap_label.setToolTip(self.__tooltip())
-        self.label.setText(filename)
-
         layout.addWidget(self.pixmap_label, alignment=Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
         layout.addWidget(self.label, alignment=Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignBottom)
         self.setLayout(layout)
@@ -291,13 +289,12 @@ class ThumbnailBorder(ClickableGroup):
     def __pixmap_label(self):
         filepath = self.params.get('Filepath')
         pixmap = portrait_generator(filepath, self.size)
-        pixmap_label = PixmapLabel()
-        pixmap_label.setFixedSize(self.size, self.size)
-        pixmap_label.setPixmap(pixmap)
-        pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
-        pixmap_label.setObjectName(f'pixmap_{self.index}')
-        pixmap_label.rightClicked.connect(self.__pixmap_clicked)
-        self.pixmap_label = pixmap_label
+        self.pixmap_label.setFixedSize(self.size, self.size)
+        self.pixmap_label.setPixmap(pixmap)
+        self.pixmap_label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
+        self.pixmap_label.setObjectName(f'pixmap_{self.index}')
+        self.pixmap_label.rightClicked.connect(self.__pixmap_clicked)
+        self.pixmap_label.setToolTip(self.__tooltip())
 
     def __tooltip(self):
         result = ''
@@ -308,10 +305,10 @@ class ThumbnailBorder(ClickableGroup):
         return result
 
     def __filename_label(self):
-        label = HoverLabel()
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
-        label.setFixedHeight(30)
-        self.label = label
+        filename = self.params.get('Filename')
+        self.label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
+        self.label.setFixedHeight(30)
+        self.label.setText(filename)
 
     def __pixmap_clicked(self):
         if self.parent_window.isActiveWindow():

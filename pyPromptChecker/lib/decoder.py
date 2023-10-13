@@ -71,7 +71,7 @@ def chunk_text_extractor(target, method, index=1):
                     else:
                         text = text + str_data.replace('extras', 'parameters')
 
-            if text.startswith('parameters'):
+            if text.startswith('parameters') and not text.startswith('parametersNone'):
                 return text, original_size
             else:
                 print('{} has not valid parameters'.format(target))

@@ -320,6 +320,10 @@ class ChunkData:
             if noise_match:
                 target_str = target_str.replace(noise_match.group(), '')
 
-            result = [[value.split(':')[0], value.split(':')[1]] for value in target_str.split(',')]
-            result = [[d2.replace('<comma>', ',').replace('"', '').strip() for d2 in d1] for d1 in result]
+            if ':' in target_str:
+                result = [[value.split(':')[0], value.split(':')[1]] for value in target_str.split(',')]
+                result = [[d2.replace('<comma>', ',').replace('"', '').strip() for d2 in d1] for d1 in result]
+            else:
+                result = [target_str]
+
             self.data_refresh(target_str, result)
