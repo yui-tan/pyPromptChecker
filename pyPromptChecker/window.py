@@ -2,8 +2,8 @@
 import sys
 import random
 import qdarktheme
-from PyQt6.QtCore import QObject
-from PyQt6.QtGui import QIcon
+from PySide6.QtCore import QObject
+from PySide6.QtGui import QIcon
 
 from gui.custom import *
 from gui.dialog import *

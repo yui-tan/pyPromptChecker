@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name='pyPromptChecker',
-    version='1.0.0',
+    version='2.2.0',
     packages=find_packages(),
     install_requires=[
-        'pyQt6',
+        'pySide6',
         'pypng',
         'pillow',
         'pyqtdarktheme',

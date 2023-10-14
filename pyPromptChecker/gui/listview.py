@@ -6,9 +6,9 @@ from .custom import *
 from . import config
 
 import os
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QScrollArea
-from PyQt6.QtWidgets import QWidget, QComboBox, QLabel
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QHBoxLayout, QScrollArea
+from PySide6.QtWidgets import QWidget, QComboBox, QLabel
 
 
 LISTVIEW_PIXMAP = config.get('ListViewPixmapSize', 200)

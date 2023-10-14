@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import os
-from PyQt6.QtWidgets import QFileDialog, QProgressDialog, QMessageBox, QLabel, QWidget, QVBoxLayout
-from PyQt6.QtWidgets import QDialog, QRadioButton, QPushButton, QHBoxLayout, QComboBox, QSlider, QGridLayout
-from PyQt6.QtCore import Qt, QTimer
+from PySide6.QtWidgets import QFileDialog, QProgressDialog, QMessageBox, QLabel, QWidget, QVBoxLayout
+from PySide6.QtWidgets import QDialog, QRadioButton, QPushButton, QHBoxLayout, QComboBox, QSlider, QGridLayout
+from PySide6.QtCore import Qt, QTimer
 from .widget import move_centre
 
 

@@ -2,10 +2,10 @@
 
 import importlib
 from functools import lru_cache
-from PyQt6.QtWidgets import QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QTextEdit, QSizePolicy
-from PyQt6.QtWidgets import QApplication, QGroupBox, QTabWidget, QScrollArea, QSplitter, QGridLayout, QWidget
-from PyQt6.QtGui import QPixmap, QPainter, QImageReader
-from PyQt6.QtCore import Qt, pyqtSignal, QPoint
+from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QTextEdit, QSizePolicy
+from PySide6.QtWidgets import QApplication, QGroupBox, QTabWidget, QScrollArea, QSplitter, QGridLayout, QWidget
+from PySide6.QtGui import QPixmap, QPainter, QImageReader
+from PySide6.QtCore import Qt, QPoint, Signal
 
 from .menu import *
 from .custom import *
@@ -16,10 +16,10 @@ FILE_MANAGEMENT = config.get('MoveDelete', True)
 
 
 class PixmapLabel(QLabel):
-    clicked = pyqtSignal()
-    rightClicked = pyqtSignal()
-    ctrl_clicked = pyqtSignal()
-    shift_clicked = pyqtSignal()
+    clicked = Signal()
+    rightClicked = Signal()
+    ctrl_clicked = Signal()
+    shift_clicked = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -38,7 +38,7 @@ class PixmapLabel(QLabel):
 
 
 class ClickableGroup(QGroupBox):
-    clicked = pyqtSignal()
+    clicked = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -50,8 +50,8 @@ class ClickableGroup(QGroupBox):
 
 
 class ButtonWithMenu(QPushButton):
-    clicked = pyqtSignal()
-    rightClicked = pyqtSignal()
+    clicked = Signal()
+    rightClicked = Signal()
 
     def __init__(self, text: str = None, parent=None):
         super().__init__(parent)

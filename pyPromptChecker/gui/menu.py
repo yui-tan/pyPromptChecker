@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from PyQt6.QtWidgets import QMenu
-from PyQt6.QtGui import QAction
+from PySide6.QtWidgets import QMenu
+from PySide6.QtGui import QAction
 
 
 class FileManageMenu(QMenu):

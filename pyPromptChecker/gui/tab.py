@@ -2,8 +2,8 @@
 
 import sys
 
-from PyQt6.QtWidgets import QMainWindow, QStackedWidget, QLineEdit
-from PyQt6.QtGui import QPalette
+from PySide6.QtWidgets import QMainWindow, QStackedWidget, QLineEdit
+from PySide6.QtGui import QPalette
 
 from .dialog import *
 from .widget import *

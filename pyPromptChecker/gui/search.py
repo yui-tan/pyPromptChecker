@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import re
-from PyQt6.QtWidgets import QDialog, QGridLayout, QGroupBox, QCheckBox, QSlider
-from PyQt6.QtWidgets import QWidget, QPushButton, QLabel, QLineEdit, QComboBox
-from PyQt6.QtWidgets import QRadioButton
-from PyQt6.QtGui import QRegularExpressionValidator
-from PyQt6.QtCore import Qt, QRegularExpression
+from PySide6.QtWidgets import QDialog, QGridLayout, QGroupBox, QCheckBox, QSlider
+from PySide6.QtWidgets import QWidget, QPushButton, QLabel, QLineEdit, QComboBox
+from PySide6.QtWidgets import QRadioButton
+from PySide6.QtGui import QRegularExpressionValidator
+from PySide6.QtCore import Qt, QRegularExpression
 
 from .dialog import MessageBox
 

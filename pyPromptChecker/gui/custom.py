@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-from PyQt6.QtGui import QKeySequence, QShortcut, QColor
+from PySide6.QtGui import QKeySequence, QShortcut, QColor
 
 from . import config
 

@@ -6,9 +6,9 @@ from .custom import *
 from . import config
 
 import os
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QScrollArea
-from PyQt6.QtWidgets import QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QMainWindow, QGridLayout, QVBoxLayout, QScrollArea
+from PySide6.QtWidgets import QWidget
 
 THUMBNAIL_PIXMAP = config.get('ThumbnailPixmapSize', 150)
 MOVE_DELETE = config.get('MoveDelete', False)
