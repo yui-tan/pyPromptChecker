@@ -280,11 +280,12 @@ class WindowController(QObject):
         filepaths = find_target(directory, SUBDIRECTORY_DEPTH)
         valid_filepath, _, _, _ = check_files(filepaths)
 
-        for file, _ in valid_filepath:
-            target_hash = io.extract_image_hash(file)
-            if image_hash == target_hash:
-                self.__add_images('', sender, False, file)
-                return
+        for file, filetype in valid_filepath:
+            if filetype != 9:
+                target_hash = io.extract_image_hash(file)
+                if image_hash == target_hash:
+                    self.__add_images('', sender, False, file)
+                    return
 
         MessageBox("Couldn't find init image.", parent=sender)
 
@@ -337,14 +338,20 @@ class WindowController(QObject):
 
             if is_append:
                 if self.thumbnail:
-                    self.thumbnail.add_images(param_list)
+                    self.thumbnail.thumbnail_add_images(param_list)
                 if self.listview:
-                    self.listview.add_image(param_list)
+                    self.listview.listview_add_images(param_list)
+                if self.tabview:
+                    loaded = [(index, value) for index, value in self.loaded_images if index >= index_start]
+                    self.tabview.tabview_add_images(loaded)
             else:
                 if self.thumbnail:
                     self.thumbnail.init_thumbnail(param_list)
                 if self.listview:
-                    self.listview.add_images(param_list)
+                    self.listview.init_listview(param_list)
+                if self.tabview:
+                    loaded = [(index, value) for index, value in self.loaded_images if index >= index_start]
+                    self.tabview.init_tabview(loaded)
             return True
 
     def __export_json(self, indexes: tuple):
