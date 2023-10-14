@@ -83,6 +83,11 @@ class WindowController(QObject):
 
         for tuples in filepaths:
             filepath, filetype = tuples
+
+            if filetype == 9:
+                valid_total -= 1
+                continue
+
             chunk_data, original_size = chunk_text_extractor(filepath, filetype)
 
             if not chunk_data and IGNORE_IMAGE:
