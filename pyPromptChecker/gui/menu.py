@@ -63,8 +63,8 @@ class SearchMenu(QMenu):
         self.addAction(self.init_search)
 
     def __menu_trigger(self):
-        self.search.triggered.connect(lambda: self.main.signal_received())
-        self.restore.triggered.connect(lambda: self.main.signal_received())
+        self.search.triggered.connect(lambda: self.controller.request_reception('search', self.main))
+        self.restore.triggered.connect(self.__restore_search)
         self.init_search.triggered.connect(self.__search_init_image)
 
     def __search_init_image(self):
@@ -72,6 +72,10 @@ class SearchMenu(QMenu):
             indexes = self.main.get_selected_images(True)
             if len(indexes) == 1:
                 self.controller.request_reception('init', self.main, indexes)
+
+    def __restore_search(self):
+        if hasattr(self.main, 'search_process'):
+            self.main.search_process()
 
 
 class TabMenu(QMenu):

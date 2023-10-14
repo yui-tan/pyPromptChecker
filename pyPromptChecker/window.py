@@ -3,6 +3,7 @@ import sys
 import random
 import qdarktheme
 from PyQt6.QtCore import QObject
+from PyQt6.QtGui import QIcon
 
 from gui.custom import *
 from gui.dialog import *
@@ -26,6 +27,7 @@ ASK_DELETE = config.get('AskIfDelete', True)
 USE_MOVE = config.get('UseCopyInsteadOfMove', True)
 SUBDIRECTORY_DEPTH = config.get('SubDirectoryDepth', 0)
 ASK_WHEN_QUIT = config.get('AskWhenQuit', True)
+ICON_PATH = config.get('IconPath')
 
 
 class WindowController(QObject):
@@ -750,6 +752,8 @@ def model_hash_extractor(window):
 def from_main(purpose: str, filepaths: list = None):
     if purpose == 'directory':
         app = QApplication(sys.argv)
+        if ICON_PATH:
+            app.setWindowIcon(QIcon(ICON_PATH))
         if DARK_THEME:
             qdarktheme.setup_theme('dark', additional_qss=custom_stylesheet('theme', 'dark'))
         else:
@@ -760,6 +764,8 @@ def from_main(purpose: str, filepaths: list = None):
 
     elif purpose == 'files':
         app = QApplication(sys.argv)
+        if ICON_PATH:
+            app.setWindowIcon(QIcon(ICON_PATH))
         if DARK_THEME:
             qdarktheme.setup_theme('dark', additional_qss=custom_stylesheet('theme', 'dark'))
         else:
@@ -772,6 +778,12 @@ def from_main(purpose: str, filepaths: list = None):
         app = QApplication.instance()
         if app is None:
             app = QApplication(sys.argv)
+            if ICON_PATH:
+                app.setWindowIcon(QIcon(ICON_PATH))
+            if DARK_THEME:
+                qdarktheme.setup_theme('dark', additional_qss=custom_stylesheet('theme', 'dark'))
+            else:
+                qdarktheme.setup_theme('light')
         WindowController(app, filepaths)
         sys.exit(app.exec())
 
