@@ -34,6 +34,7 @@ class Listview(QMainWindow):
         self.setWindowTitle('Listview')
         custom_keybindings(self)
 
+        self.header = None
         self.footer = None
         self.borders = []
 
@@ -116,30 +117,54 @@ class Listview(QMainWindow):
             result = self.controller.request_reception('move', self, selected_index)
             if result:
                 self.toast.init_toast('Moved!', 1000)
-        elif where_from == 'export JSON':
-            result = self.controller.request_reception('json', self, selected_index)
-            if result:
-                self.toast.init_toast('Exported!', 1000)
         elif where_from == 'interrogate':
             result = self.controller.request_reception('interrogate', self, selected_index)
             if result:
                 self.toast.init_toast('Interrogated!', 1000)
-        elif where_from == 'append_file':
+        elif where_from == 'export jSON':
+            result = self.controller.request_reception('json', self, selected_index)
+            if result:
+                self.toast.init_toast('Exported!', 1000)
+        elif where_from == 'import json file replace':
+            result = self.controller.request_reception('import', self, ('files', False))
+            if result:
+                self.toast.init_toast('Imported!', 1000)
+        elif where_from == 'import json dir replace':
+            result = self.controller.request_reception('import', self, ('files', False))
+            if result:
+                self.toast.init_toast('Imported!', 1000)
+        elif where_from == 'append file':
             result = self.controller.request_reception('append', self, conditions='files')
+            if result:
+                self.toast.init_toast('Added!', 1000)
+        elif where_from == 'append dir':
+            result = self.controller.request_reception('append', self, conditions='directory')
             if result:
                 self.toast.init_toast('Added!', 1000)
         elif where_from == 'replace_file':
             result = self.controller.request_reception('replace', self, conditions='files')
             if result:
-                self.toast.init_toast('Added!', 1000)
-        elif where_from in ('list', 'thumbnail', 'search', 'theme', 'exit'):
-            self.controller.request_reception(where_from, self)
+                self.toast.init_toast('Replaced!', 1000)
+        elif where_from == 'replace dir':
+            result = self.controller.request_reception('replace', self, conditions='directory')
+            if result:
+                self.toast.init_toast('Replaced!', 1000)
         elif where_from == 'diff':
             self.controller.request_reception('diff', self, selected_index)
+        elif where_from == 'search':
+            self.controller.request_reception('search', self)
+        elif where_from == 'thumbnail':
+            self.controller.request_reception('thumbnail', self)
+        elif where_from == 'tabview':
+            self.controller.request_reception('tab', self)
+        elif where_from == 'theme':
+            self.controller.request_reception('theme', self)
+        elif where_from == 'exit':
+            self.controller.request_reception('exit', self)
         elif where_from == 'select all':
             self.__select_all_toggle(selected_index)
         elif where_from == 'restore':
-            self.search_process(None)
+            self.search_process()
         elif where_from == 'close':
             self.close()
 
@@ -199,11 +224,16 @@ class Listview(QMainWindow):
                 result.append(border.index)
         return result
 
+    def update_selected(self):
+        indexes = self.get_selected_images(True)
+        text = f'{str(len(indexes))} image selected'
+        self.header.setText(text)
+
     def __header_section(self):
         row = 1
         col = 0
         header_layout = QGridLayout()
-        header_label = QLabel('Status')
+        self.header = QLabel('0 image selected')
         combo_items = ['Timestamp',
                        'Size',
                        'Seed',
@@ -222,9 +252,9 @@ class Listview(QMainWindow):
                        'Version'
                        ]
 
-        header_label.setMinimumWidth(50)
-        header_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        header_layout.addWidget(header_label, 0, 0, 1, 4)
+        self.header.setMinimumWidth(50)
+        self.header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header_layout.addWidget(self.header, 0, 0, 1, 4)
 
         for index, status in enumerate(('Timestamp', 'Seed', 'Sampler', 'Steps', 'CFG scale', 'Model', 'VAE', 'Version')):
             combo_box = QComboBox()
@@ -420,13 +450,15 @@ class ListviewBorder(ClickableGroup):
         current_stylesheet = custom_stylesheet('groupbox', 'current') + current_stylesheet
         self.setStyleSheet(current_stylesheet)
         self.selected = True
+        self.parent_window.update_selected()
 
     def set_deselected(self):
         current_stylesheet = self.styleSheet()
         target = custom_stylesheet('groupbox', 'current')
         current_stylesheet = current_stylesheet.replace(target, '')
-        self.selected = False
         self.setStyleSheet(current_stylesheet)
+        self.selected = False
+        self.parent_window.update_selected()
 
     def set_moved(self):
         self.moved = True
