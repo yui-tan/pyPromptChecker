@@ -64,30 +64,6 @@ class ButtonWithMenu(QPushButton):
             self.rightClicked.emit()
 
 
-class HoverLabel(QLabel):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setStyleSheet(custom_stylesheet('label', 'leave'))
-
-    def enterEvent(self, event):
-        current_style = self.styleSheet()
-
-        if current_style is not None:
-            stylesheet = custom_stylesheet('label', 'hover')
-            current_style += ';' + stylesheet
-            self.setStyleSheet(current_style)
-
-    def leaveEvent(self, event):
-        stylesheet = custom_stylesheet('label', 'leave')
-        target_part = custom_stylesheet('label', 'hover')
-        current_style = self.styleSheet()
-
-        if current_style is not None:
-            current_style = current_style.replace(target_part, stylesheet)
-
-        self.setStyleSheet(current_style)
-
-
 class FooterButtons(QWidget):
     def __init__(self, button_layout: tuple, parent=None, controller=None):
         super().__init__()

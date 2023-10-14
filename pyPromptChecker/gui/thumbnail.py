@@ -14,7 +14,7 @@ THUMBNAIL_PIXMAP = config.get('ThumbnailPixmapSize', 150)
 MOVE_DELETE = config.get('MoveDelete', False)
 HIDE_NOT_MATCH = config.get('HideNotMatchedTabs', False)
 BUTTONS = (('Select all', 'Select all'),
-           ('Thumbnail', 'Thumbnail'),
+           ('Listview', 'Listview'),
            ('Tabview', 'Tabview'),
            ('Diff', 'Diff'),
            ('Interrogate', 'Interrogate'),
@@ -28,12 +28,12 @@ class ThumbnailView(QMainWindow):
         super().__init__(parent)
         self.toast = None
         self.controller = controller
-        self.size = THUMBNAIL_PIXMAP
-        self.estimated_height = self.size + 67
-        self.estimated_width = self.size + 40
+        self.estimated_height = THUMBNAIL_PIXMAP + 67
+        self.estimated_width = THUMBNAIL_PIXMAP + 40
         self.setWindowTitle('Thumbnail View')
         custom_keybindings(self)
 
+        self.header = None
         self.footer = None
         self.borders = []
         self.pos_x = 0
@@ -59,7 +59,7 @@ class ThumbnailView(QMainWindow):
         for index, param in param_list:
             self.max_y = self.pos_y + 1
             self.max_x = max(self.pos_x + 1, self.max_x)
-            portrait_border = ThumbnailBorder(index, param, self.size, self.controller, self)
+            portrait_border = ThumbnailBorder(index, param, THUMBNAIL_PIXMAP, self.controller, self)
             self.borders.append(portrait_border)
             thumbnails_layout.addWidget(portrait_border, self.pos_y, self.pos_x)
 
@@ -84,6 +84,10 @@ class ThumbnailView(QMainWindow):
 
         central_widget = QWidget()
         central_widget_layout = QVBoxLayout()
+
+        self.header = QLabel('0 image selected')
+        self.header.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
+        central_widget_layout.addWidget(self.header)
 
         scroll_area.setMinimumWidth(thumbnails.sizeHint().width() + 25)
         scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
@@ -133,6 +137,10 @@ class ThumbnailView(QMainWindow):
             result = self.controller.request_reception('move', self, selected_index)
             if result:
                 self.toast.init_toast('Moved!', 1000)
+        elif where_from == 'interrogate':
+            result = self.controller.request_reception('interrogate', self, selected_index)
+            if result:
+                self.toast.init_toast('Interrogated!', 1000)
         elif where_from == 'export jSON':
             result = self.controller.request_reception('json', self, selected_index)
             if result:
@@ -145,7 +153,7 @@ class ThumbnailView(QMainWindow):
             result = self.controller.request_reception('import', self, ('files', False))
             if result:
                 self.toast.init_toast('Imported!', 1000)
-        elif where_from == 'append_file':
+        elif where_from == 'append file':
             result = self.controller.request_reception('append', self, conditions='files')
             if result:
                 self.toast.init_toast('Added!', 1000)
@@ -161,10 +169,6 @@ class ThumbnailView(QMainWindow):
             result = self.controller.request_reception('replace', self, conditions='directory')
             if result:
                 self.toast.init_toast('Replaced!', 1000)
-        elif where_from == 'interrogate':
-            result = self.controller.request_reception('interrogate', self, selected_index)
-            if result:
-                self.toast.init_toast('Interrogated!', 1000)
         elif where_from == 'diff':
             self.controller.request_reception('diff', self, selected_index)
         elif where_from == 'search':
@@ -175,10 +179,12 @@ class ThumbnailView(QMainWindow):
             self.controller.request_reception('tab', self)
         elif where_from == 'theme':
             self.controller.request_reception('theme', self)
+        elif where_from == 'exit':
+            self.controller.request_reception('exit', self)
         elif where_from == 'select all':
             self.__select_all_toggle(selected_index)
         elif where_from == 'restore':
-            self.search_process(None)
+            self.search_process()
         elif where_from == 'close':
             self.close()
 
@@ -195,7 +201,7 @@ class ThumbnailView(QMainWindow):
         for index, param in param_list:
             self.max_y = self.pos_y + 1
             self.max_x = max(self.pos_x + 1, self.max_x)
-            portrait_border = ThumbnailBorder(index, param, self.size, self.controller, self)
+            portrait_border = ThumbnailBorder(index, param, THUMBNAIL_PIXMAP, self.controller, self)
             self.borders.append(portrait_border)
             layout.addWidget(portrait_border, self.pos_y, self.pos_x)
 
@@ -246,6 +252,11 @@ class ThumbnailView(QMainWindow):
             elif not selected:
                 result.append(border.index)
         return result
+
+    def update_selected(self):
+        indexes = self.get_selected_images(True)
+        text = f'{str(len(indexes))} image selected'
+        self.header.setText(text)
 
     def __select_all_toggle(self, count: tuple):
         if len(count) == len(self.borders):
@@ -306,6 +317,7 @@ class ThumbnailBorder(ClickableGroup):
 
     def __filename_label(self):
         filename = self.params.get('Filename')
+        self.label.setStyleSheet(custom_stylesheet('label', 'leave'))
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
         self.label.setFixedHeight(30)
         self.label.setText(filename)
@@ -324,10 +336,12 @@ class ThumbnailBorder(ClickableGroup):
     def set_selected(self):
         self.selected = True
         self.setStyleSheet(custom_stylesheet('groupbox', 'current'))
+        self.parent_window.update_selected()
 
     def set_deselected(self):
         self.selected = False
         self.setStyleSheet('')
+        self.parent_window.update_selected()
 
     def set_moved(self):
         self.label.setStyleSheet(custom_stylesheet('colour', 'moved'))
@@ -359,3 +373,20 @@ class ThumbnailBorder(ClickableGroup):
             self.params['Filename'] = filename
             self.label.setText(filename)
             self.pixmap_label.setToolTip(self.__tooltip())
+
+    def enterEvent(self, event):
+        current_style = self.label.styleSheet()
+
+        if current_style is not None:
+            stylesheet = custom_stylesheet('label', 'hover')
+            current_style += ';' + stylesheet
+            self.label.setStyleSheet(current_style)
+
+    def leaveEvent(self, event):
+        current_style = self.label.styleSheet()
+
+        if current_style is not None:
+            stylesheet = custom_stylesheet('label', 'leave')
+            target_part = custom_stylesheet('label', 'hover')
+            current_style = current_style.replace(target_part, stylesheet)
+            self.label.setStyleSheet(current_style)

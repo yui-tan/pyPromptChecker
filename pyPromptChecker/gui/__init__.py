@@ -25,7 +25,6 @@ ini_section = [['Location', 'ModelList', 'Favourites'],
                ['Tab', 'HiresExtras', 'CFG', 'LoraAddNet', 'TiledDiffusion', 'ControlNet', 'RegionalPrompter'],
                ['Ignore', 'IgnoreIfDataIsNotEmbedded'],
                ['Debug', 'ErrorList'],
-               ['PNG', 'TargetChunkIndex']
                ]
 
 for ini in ini_section:
