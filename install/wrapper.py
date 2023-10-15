@@ -48,7 +48,7 @@ if __name__ == '__main__':
         result = None
 
     if not result:
-        os.chdir(PACKAGE_DIRECTORY)
+        os.chdir(os.path.abspath(os.path.dirname(sys.argv[0])))
         subprocess.run(cmd + ' && pip install -e.', shell=True)
 
     if parameters:
@@ -56,4 +56,4 @@ if __name__ == '__main__':
     else:
         cmd = cmd + ' && mikkumiku'
 
-    subprocess.run(cmd, shell=True, executable='/bin/bash')
+    subprocess.run(cmd, shell=True, executable='/bin/bash' if OS == 'posix' else None)
