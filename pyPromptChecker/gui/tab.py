@@ -2,6 +2,7 @@
 
 import sys
 
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import QMainWindow, QStackedWidget, QLineEdit
 from PySide6.QtGui import QPalette
 
@@ -503,9 +504,9 @@ class TabBar(QWidget):
             pixmap_label.setObjectName(f'index_{str(image_index)}')
             pixmap_label.setToolTip(filename)
             pixmap_label.clicked.connect(self.__pixmap_clicked)
-            pixmap_label.rightClicked.connect(lambda: self.__pixmap_clicked(right=True))
-            pixmap_label.ctrl_clicked.connect(lambda: self.__pixmap_clicked(ctrl=True))
-            pixmap_label.shift_clicked.connect(lambda: self.__pixmap_clicked(shift=True))
+            pixmap_label.rightClicked.connect(self.__pixmap_clicked)
+            pixmap_label.ctrl_clicked.connect(self.__pixmap_clicked)
+            pixmap_label.shift_clicked.connect(self.__pixmap_clicked)
 
             pixmap = portrait_generator(filepath, 100)
             pixmap_label.setPixmap(pixmap)
@@ -534,14 +535,14 @@ class TabBar(QWidget):
         if self.selected:
             self.selected.discard(index)
 
-    def __pixmap_clicked(self, right: bool = False, ctrl: bool = False, shift: bool = False):
-        tmp = self.sender().objectName()
-        number = int(tmp.split('_')[1])
+    @Slot(str, str)
+    def __pixmap_clicked(self, name, pushed):
+        number = int(name.split('_')[1])
 
-        if right:
+        if pushed == 'right':
             self.controller.request_reception('view', self.parent, indexes=(number,))
 
-        elif ctrl:
+        elif pushed == 'ctrl':
             if number in self.selected:
                 if len(self.selected) > 1:
                     self.__border_clear(number)
@@ -550,7 +551,7 @@ class TabBar(QWidget):
             else:
                 self.image_selected(number)
 
-        elif shift:
+        elif pushed == 'shift':
             if self.current != number:
                 current = self.positions.get(self.current)
                 clicked = self.positions.get(number)
@@ -838,14 +839,16 @@ class RootTabPage(QWidget):
         tab_name = self.sender().tabText(current_index)
         self.signal_recipient.tab_link_index = tab_name
 
-    def page_signal_received(self, right: bool = False):
+    @Slot(str, str)
+    def page_pixmap_signal_received(self, name, key):
+        index = int(name.split('_')[1])
+        if key == 'left':
+            self.controller.request_reception('view', self.signal_recipient, indexes=(index,))
+
+    def page_signal_received(self):
         where_from = self.sender().objectName()
         index = int(where_from.split('_')[1])
-        if 'pixmap' in where_from and not right:
-            self.controller.request_reception('view', self.signal_recipient, indexes=(index,))
-        elif 'pixmap' in where_from and right:
-            pass
-        elif 'fav' in where_from:
+        if 'fav' in where_from:
             result = self.controller.request_reception('add', self.signal_recipient, indexes=(index,))
             if result:
                 self.signal_recipient.toast.init_toast('Added!', 1000)

@@ -16,24 +16,25 @@ FILE_MANAGEMENT = config.get('MoveDelete', True)
 
 
 class PixmapLabel(QLabel):
-    clicked = Signal()
-    rightClicked = Signal()
-    ctrl_clicked = Signal()
-    shift_clicked = Signal()
+    clicked = Signal(str, str)
+    rightClicked = Signal(str, str)
+    ctrl_clicked = Signal(str, str)
+    shift_clicked = Signal(str, str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setStyleSheet("border: none;")
 
     def mousePressEvent(self, event):
+        name = self.objectName()
         if event.button() == Qt.MouseButton.LeftButton and event.modifiers() == Qt.KeyboardModifier.ControlModifier:
-            self.ctrl_clicked.emit()
+            self.ctrl_clicked.emit(name, 'ctrl')
         elif event.button() == Qt.MouseButton.LeftButton and event.modifiers() == Qt.KeyboardModifier.ShiftModifier:
-            self.shift_clicked.emit()
+            self.shift_clicked.emit(name, 'shift')
         elif event.button() == Qt.MouseButton.LeftButton:
-            self.clicked.emit()
+            self.clicked.emit(name, 'left')
         elif event.button() == Qt.MouseButton.RightButton:
-            self.rightClicked.emit()
+            self.rightClicked.emit(name, 'right')
         return QLabel.mousePressEvent(self, event)
 
 
@@ -210,8 +211,8 @@ def make_pixmap_section(page, scale: int):
     label.setObjectName(f'pixmap_{index}')
     label.setFixedSize(scale, scale)
     label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    label.clicked.connect(page.page_signal_received)
-    label.rightClicked.connect(lambda: page.page_signal_received(right=True))
+    label.clicked.connect(page.page_pixmap_signal_received)
+#    label.rightClicked.connect(lambda: page.page_signal_received(right=True))
 
     pixmap_section_layout.addWidget(label, alignment=Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop)
     pixmap_section_layout.setContentsMargins(0, 0, 0, 0)

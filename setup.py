@@ -3,7 +3,10 @@ from setuptools import setup, find_packages
 setup(
     name='pyPromptChecker',
     version='2.2.0',
-    packages=find_packages(),
+    discription=' A small script for AI images created by stable diffusion webui ',
+    author='Yui-tan',
+    packages=find_packages(where='pyPromptChecker'),
+    package_dir={'': 'pyPromptChecker'},
     install_requires=[
         'pySide6',
         'pypng',
@@ -16,7 +19,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
-            'mikkumiku = pyPromptChecker.main:main'
+            'mikkumiku = main:main'
         ]
     }
 )

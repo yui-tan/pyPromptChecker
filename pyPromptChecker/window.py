@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 import sys
 import random
 import qdarktheme
@@ -750,26 +751,30 @@ def model_hash_extractor(window):
 
 
 def from_main(purpose: str, filepaths: list = None):
-    if purpose == 'directory':
+    app = QApplication.instance()
+    if app is None:
         app = QApplication(sys.argv)
-        if ICON_PATH:
-            app.setWindowIcon(QIcon(ICON_PATH))
+    if purpose == 'directory':
         if DARK_THEME:
             qdarktheme.setup_theme('dark', additional_qss=custom_stylesheet('theme', 'dark'))
         else:
             qdarktheme.setup_theme('light')
+        if ICON_PATH:
+            app.setWindowIcon(QIcon(ICON_PATH))
         open_directory = FileDialog('choose-directory', 'Select directory')
         result = open_directory.result
         return result
 
     elif purpose == 'files':
-        app = QApplication(sys.argv)
-        if ICON_PATH:
-            app.setWindowIcon(QIcon(ICON_PATH))
+        app = QApplication.instance()
+        if app is None:
+            app = QApplication(sys.argv)
         if DARK_THEME:
             qdarktheme.setup_theme('dark', additional_qss=custom_stylesheet('theme', 'dark'))
         else:
             qdarktheme.setup_theme('light')
+        if ICON_PATH:
+            app.setWindowIcon(QIcon(ICON_PATH))
         open_files = FileDialog('choose-files', 'Select files', file_filter='PNG')
         result = open_files.result
         return result
@@ -778,12 +783,12 @@ def from_main(purpose: str, filepaths: list = None):
         app = QApplication.instance()
         if app is None:
             app = QApplication(sys.argv)
-            if ICON_PATH:
-                app.setWindowIcon(QIcon(ICON_PATH))
-            if DARK_THEME:
-                qdarktheme.setup_theme('dark', additional_qss=custom_stylesheet('theme', 'dark'))
-            else:
-                qdarktheme.setup_theme('light')
+        if DARK_THEME:
+            qdarktheme.setup_theme('dark', additional_qss=custom_stylesheet('theme', 'dark'))
+        else:
+            qdarktheme.setup_theme('light')
+        if ICON_PATH:
+            app.setWindowIcon(QIcon(ICON_PATH))
         WindowController(app, filepaths)
         sys.exit(app.exec())
 
@@ -814,6 +819,8 @@ def check_files(target_list: list):
     app = QApplication.instance()
     if app is None:
         app = QApplication(sys.argv)
+        if ICON_PATH:
+            app.setWindowIcon(QIcon(ICON_PATH))
     file_counts = len(target_list) if target_list else 0
     progress_bar = None
     file_is_not_found_list = []
