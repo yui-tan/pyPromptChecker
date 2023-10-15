@@ -888,7 +888,7 @@ class RootTabPage(QWidget):
             if self.extension_tab.tabText(i) == 'Interrogate':
                 self.extension_tab.removeTab(i)
                 break
-        interrogate_tab = InterrogateTab(result, self.signal_recipient, self.signal_recipient.root_tab)
+        interrogate_tab = InterrogateTab(result, self.signal_recipient, self.signal_recipient.root_tab, self.controller)
         self.extension_tab.addTab(interrogate_tab, 'Interrogate')
 
     def tab_page_image_moved(self):
@@ -907,9 +907,11 @@ class RootTabPage(QWidget):
 
 
 class InterrogateTab(QStackedWidget):
-    def __init__(self, result_list: list, parent=None, link=None):
+    def __init__(self, result_list: list, parent=None, link=None, controller=None):
         super().__init__(parent)
+        self.parent = parent
         self.root_tab = link
+        self.controller = controller
         self.sync = False
         self.page0 = QWidget()
         self.page1 = None
@@ -1200,10 +1202,10 @@ class InterrogateTab(QStackedWidget):
                 toast.init_toast('Exported', 1000)
 
     def re_interrogate(self):
-        from pyPromptChecker.lora import interrogate
         self.setCurrentIndex(0)
 
-        result_list = interrogate(self.model, self.filepath, self.tag_threshold, self.chara_threshold)
+        indexes = (self.model, self.filepath, self.tag_threshold, self.chara_threshold)
+        result_list = self.controller.request_reception('re-interrogate', self.parent, indexes)
 
         self.model = result_list[1]
         self.prompt = result_list[4]
@@ -1215,6 +1217,9 @@ class InterrogateTab(QStackedWidget):
         self._init_page2()
 
         self.setCurrentIndex(1)
+
+        toast = Toast(self.root_tab)
+        toast.init_toast('Interrogated!', 1000)
 
 
 def main_slider(name: str, value: int, slider_range: int, style=None, disabled=False):

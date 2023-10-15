@@ -568,7 +568,8 @@ class WindowController(QObject):
             if flag:
                 selected = MessageBox(text, 'Interrogate', 'ok_cancel', 'info', sender)
                 if selected.result:
-                    model_downloads(model[1], model_filename, label_filename, model[0].lower())
+                    for model_setting in models:
+                        model_downloads(model_setting[1], model_filename, label_filename, model_setting[0].lower())
                     return True
             return True
 
@@ -608,6 +609,9 @@ class WindowController(QObject):
             if progress:
                 progress.close()
             return True
+
+    def __directory_interrogate_wd14(self, setting_tuple: tuple):
+        return interrogate(setting_tuple[0], setting_tuple[1], setting_tuple[2], setting_tuple[3])
 
     def __change_themes(self):
         if self.dark:
@@ -677,6 +681,8 @@ class WindowController(QObject):
             result = self.__export_json(indexes)
         elif request == 'interrogate' and len(indexes) > 0:
             result = self.__add_interrogate_wd14(indexes, sender)
+        elif request == 're-interrogate':
+            result = self.__directory_interrogate_wd14(indexes)
         elif (request == 'add' or request == 'move' or request == 'delete') and len(indexes) > 0:
             result = self.__manage_image_files(sender, indexes, request)
         elif request == 'append':
