@@ -8,7 +8,7 @@ setup(
     packages=find_packages(where='pyPromptChecker'),
     package_dir={'': 'pyPromptChecker'},
     install_requires=[
-        'pySide6',
+        'pyQt6',
         'pypng',
         'pillow',
         'pyqtdarktheme',
