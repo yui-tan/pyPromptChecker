@@ -1,0 +1,53 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <value>
+          <list size="1">
+            <item index="0" class="java.lang.String" itemvalue="pyQt6" />
+          </list>
+        </value>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyPep8Inspection" enabled="true" level="WEAK WARNING" enabled_by_default="true">
+      <option name="ignoredErrors">
+        <list>
+          <option value="E501" />
+        </list>
+      </option>
+    </inspection_tool>
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="PySide6.QtCore.Signal.connect" />
+          <option value="pyPromptChecker.gui.dialog.InterrogateSelectDialog.currentText" />
+          <option value="pyPromptChecker.gui.dialog.InterrogateSelectDialog.value" />
+          <option value="pyPromptChecker.gui.listview.Listview.currentText" />
+          <option value="pyPromptChecker.gui.search.SearchWindow.currentText" />
+          <option value="pyPromptChecker.gui.search.SearchWindow.value" />
+          <option value="pyPromptChecker.gui.tab.Tabview.setText" />
+          <option value="pyPromptChecker.gui.tab.Tabview.currentIndex" />
+          <option value="pyPromptChecker.gui.tab.Tabview.tabText" />
+          <option value="pyPromptChecker.gui.tab.Tabview.tabBar" />
+          <option value="PySide6.QtWidgets.QWidget.search_process" />
+          <option value="pyPromptChecker.gui.tab.TabNavigation.currentIndex" />
+          <option value="PySide6.QtWidgets.QWidget.root_tab" />
+          <option value="pyPromptChecker.gui.tab.InterrogateTab.currentText" />
+          <option value="pyPromptChecker.gui.tab.InterrogateTab.value" />
+          <option value="pyPromptChecker.gui.tab.RootTabPage.currentIndex" />
+          <option value="pyPromptChecker.gui.tab.RootTabPage.tabBar" />
+          <option value="pyPromptChecker.gui.tab.RootTabPage.tabText" />
+          <option value="PySide6.QtWidgets.QWidget.tab_link" />
+          <option value="PySide6.QtWidgets.QWidget.toast" />
+          <option value="pyPromptChecker.gui.tab.RootTabPage.toast" />
+          <option value="pyPromptChecker.gui.tab.TabBar.image_index" />
+          <option value="object.setDisabled" />
+          <option value="object.setStyleSheet" />
+          <option value="object.hide" />
+          <option value="object.layout" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
