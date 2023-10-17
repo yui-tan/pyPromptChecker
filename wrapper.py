@@ -1,12 +1,14 @@
 import os
 import subprocess
 import sys
-import venv
 import argparse
 
+from tkinter import messagebox
+import tkinter as tk
 
 PACKAGE_DIRECTORY = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), 'pyPromptChecker')
 OS = os.name
+
 
 if __name__ == '__main__':
 
@@ -16,7 +18,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=description_text, formatter_class=argparse.RawTextHelpFormatter)
     group = parser.add_mutually_exclusive_group()
     group.add_argument('-a', '--ask', action='store_true', help='Open directory choose dialog.')
-    parser.add_argument('filepaths', metavar='Filepath', type=str, nargs='*', help='Send path to files and directories.')
+    parser.add_argument('filepaths', metavar='Filepath', type=str, nargs='*',
+                        help='Send path to files and directories.')
     args = parser.parse_args()
 
     if args.filepaths:
@@ -28,16 +31,10 @@ if __name__ == '__main__':
 
     venv_dir = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), 'pyPromptChecker/venv')
 
-    if not os.path.isdir(venv_dir):
-        venv.create(venv_dir, with_pip=True)
-        first_time_flag = True
-
     if OS == 'posix':
-        venv_dir = os.path.join(venv_dir, 'bin/activate')
-        cmd = 'source ' + venv_dir
+        cmd = 'source ' + os.path.join(venv_dir, 'bin/activate')
     elif OS == 'nt':
-        venv_dir = os.path.join(venv_dir, 'Scripts/activate.bat')
-        cmd = venv_dir
+        cmd = os.path.join(venv_dir, 'Scripts/activate.bat')
     else:
         print('Unsupported OS.')
         sys.exit()
@@ -47,9 +44,32 @@ if __name__ == '__main__':
     except subprocess.CalledProcessError:
         result = None
 
+    if not os.path.isdir(venv_dir):
+        window = tk.Tk()
+        window.withdraw()
+
+        result_message = messagebox.showinfo('Installation', 'This is first time.\nStarting installation.')
+
+        if result_message == 'ok':
+            subprocess.run('python -m venv ' + venv_dir, shell=True)
+            subprocess.run(cmd + ' && pip install --upgrade pip', shell=True)
+            subprocess.run(cmd + ' && pip install -e.', shell=True)
+            messagebox.showinfo('Installation', 'Installation is completed!')
+            window.destroy()
+        else:
+            sys.exit()
+
+        window.mainloop()
+
+        result = True
+
     if not result:
-        os.chdir(os.path.abspath(os.path.dirname(sys.argv[0])))
-        subprocess.run(cmd + ' && pip install -e.', shell=True)
+        window = tk.Tk()
+        window.withdraw()
+        tk.messagebox.showinfo('Error', 'Error occurred.')
+        sys.exit()
+    else:
+        subprocess.run(cmd + ' && pip install --upgrade pip', shell=True)
 
     if parameters:
         cmd = cmd + ' && mikkumiku ' + parameters
