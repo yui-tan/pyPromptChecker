@@ -820,6 +820,12 @@ def check_files(target_list: list):
     app = QApplication.instance()
     if app is None:
         app = QApplication(sys.argv)
+    if ICON_PATH:
+        app.setWindowIcon(QIcon(ICON_PATH))
+    if DARK_THEME:
+        qdarktheme.setup_theme('dark', additional_qss=custom_stylesheet('theme', 'dark'))
+    else:
+        qdarktheme.setup_theme('light')
     file_counts = len(target_list) if target_list else 0
     progress_bar = None
     file_is_not_found_list = []

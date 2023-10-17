@@ -107,7 +107,7 @@ class ThumbnailView(QMainWindow):
         estimated_width = self.estimated_width * self.max_x + 210
 
         self.show()
-        self.resize(estimated_width, estimated_height)
+        self.resize(estimated_width, estimated_height + 25)
         move_centre(self)
 
         self.toast = Toast(self)
