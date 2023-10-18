@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 import sys
 import random
 import qdarktheme
@@ -28,6 +29,7 @@ USE_MOVE = config.get('UseCopyInsteadOfMove', True)
 SUBDIRECTORY_DEPTH = config.get('SubDirectoryDepth', 0)
 ASK_WHEN_QUIT = config.get('AskWhenQuit', True)
 ICON_PATH = config.get('IconPath')
+INSTALLED_PATH = config.get('Installed')
 
 
 class WindowController(QObject):
@@ -417,7 +419,7 @@ class WindowController(QObject):
                 return
 
         elif request == 'delete':
-            destination = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.trash')
+            destination = os.path.join(os.path.abspath(INSTALLED_PATH), '.trash')
             os.makedirs(destination, exist_ok=True)
             use_copy = False
 
@@ -554,13 +556,13 @@ class WindowController(QObject):
             flag = False
             text = "The script couldn't locate the required files."
             text += "\nWould you like to download them?"
-            text += "\nIf so, you'll need approximately 2 GiB of free space."
+            text += "\nIf so, you'll need approximately 2GiB of free space."
 
             for model_setting in models:
                 model_base = '.models/' + model_setting[0].lower() + '/' + model_filename
                 label_base = '.models/' + model_setting[0].lower() + '/' + label_filename
-                model_path = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), model_base)
-                label_path = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), label_base)
+                model_path = os.path.join(os.path.abspath(INSTALLED_PATH), model_base)
+                label_path = os.path.join(os.path.abspath(INSTALLED_PATH), label_base)
                 if not os.path.exists(model_path) or not os.path.exists(label_path):
                     flag = True
                     break
@@ -568,8 +570,13 @@ class WindowController(QObject):
             if flag:
                 selected = MessageBox(text, 'Interrogate', 'ok_cancel', 'info', sender)
                 if selected.result:
+                    download_progress = ProgressDialog()
+                    download_progress.setLabelText('Downloading......')
+                    download_progress.setRange(0, 10)
                     for model_setting in models:
-                        model_downloads(model_setting[1], model_filename, label_filename, model_setting[0].lower())
+                        model_path = os.path.join(os.path.abspath(INSTALLED_PATH), '.models/' + model_setting[0].lower())
+                        model_downloads(model_setting[1], model_filename, label_filename, model_path)
+                        download_progress.update_value()
                     return True
             return True
 
@@ -599,7 +606,7 @@ class WindowController(QObject):
                 for image_index, image_data in self.loaded_images:
                     if image_index == index:
                         filepath = image_data.params.get('Filepath')
-                        interrogate_result = interrogate(model, filepath, tag, chara)
+                        interrogate_result = interrogate(model, filepath, tag, chara, INSTALLED_PATH)
                         self.tabview.manage_subordinates(image_index, 'interrogated', result=interrogate_result)
                 if progress:
                     progress.update_value()
@@ -611,7 +618,7 @@ class WindowController(QObject):
             return True
 
     def __directory_interrogate_wd14(self, setting_tuple: tuple):
-        return interrogate(setting_tuple[0], setting_tuple[1], setting_tuple[2], setting_tuple[3])
+        return interrogate(setting_tuple[0], setting_tuple[1], setting_tuple[2], setting_tuple[3], INSTALLED_PATH)
 
     def __change_themes(self):
         if self.dark:
@@ -646,7 +653,7 @@ class WindowController(QObject):
             sender.close()
 
     def __obliterate(self):
-        trash_bin = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.trash')
+        trash_bin = os.path.join(os.path.abspath(INSTALLED_PATH), '.trash')
         if os.path.exists(trash_bin):
             if not io.is_directory_empty(trash_bin):
                 answer = None

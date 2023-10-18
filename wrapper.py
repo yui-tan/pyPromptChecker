@@ -10,6 +10,30 @@ PACKAGE_DIRECTORY = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), 
 OS = os.name
 
 
+def error_raise(text):
+    window = tk.Tk()
+    window.withdraw()
+    tk.messagebox.showinfo('Error', text)
+    sys.exit()
+
+
+def installation_starts():
+    window = tk.Tk()
+    window.withdraw()
+    answer = tk.messagebox.showinfo('Installation', 'This is initial starts, need to install pyPromptChecker.')
+    if answer == 'ok':
+        return True
+    else:
+        return False
+
+
+def finished():
+    window = tk.Tk()
+    window.withdraw()
+    tk.messagebox.showinfo('Installation', 'Installed.')
+    window.destroy()
+
+
 if __name__ == '__main__':
 
     description_text = 'Script for extracting and formatting PNG chunks.\n'
@@ -29,7 +53,7 @@ if __name__ == '__main__':
     else:
         parameters = None
 
-    venv_dir = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), 'pyPromptChecker/venv')
+    venv_dir = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), 'venv')
 
     if OS == 'posix':
         cmd = 'source ' + os.path.join(venv_dir, 'bin/activate')
@@ -45,29 +69,20 @@ if __name__ == '__main__':
         result = None
 
     if not os.path.isdir(venv_dir):
-        window = tk.Tk()
-        window.withdraw()
-
-        result_message = messagebox.showinfo('Installation', 'This is first time.\nStarting installation.')
-
-        if result_message == 'ok':
-            subprocess.run('python -m venv ' + venv_dir, shell=True)
-            subprocess.run(cmd + ' && pip install --upgrade pip', shell=True)
-            subprocess.run(cmd + ' && pip install -e.', shell=True)
-            messagebox.showinfo('Installation', 'Installation is completed!')
-            window.destroy()
+        permission = installation_starts()
+        if permission:
+            command = 'python -m venv ' + venv_dir + ' && ' + cmd + ' && pip install --upgrade pip &&' + cmd + ' && pip install -e.'
+            run_result = subprocess.run(command, shell=True)
+            if run_result.returncode == 0:
+                finished()
+                result = True
+            else:
+                error_raise('Error has occurred during installation.')
         else:
             sys.exit()
 
-        window.mainloop()
-
-        result = True
-
     if not result:
-        window = tk.Tk()
-        window.withdraw()
-        tk.messagebox.showinfo('Error', 'Error occurred.')
-        sys.exit()
+        error_raise('Unexpected error has occurred.')
     else:
         subprocess.run(cmd + ' && pip install --upgrade pip', shell=True)
 

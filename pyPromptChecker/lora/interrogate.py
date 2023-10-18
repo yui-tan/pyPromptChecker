@@ -5,7 +5,6 @@ from onnxruntime import InferenceSession
 from huggingface_hub.file_download import hf_hub_download
 
 import csv
-import sys
 import PIL.Image
 import cv2
 import functools
@@ -38,17 +37,13 @@ def smart_resize(img, size):
     return img
 
 
-def model_downloads(repository, filename, label_file, model_name):
-    model_path = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.models/' + model_name)
+def model_downloads(repository, filename, label_file, model_path):
     os.makedirs(model_path, exist_ok=True)
-    hf_hub_download(repository, filename, local_dir=model_path, local_dir_use_symlinks=False, use_auth_token=False)
     hf_hub_download(repository, label_file, local_dir=model_path, local_dir_use_symlinks=False, use_auth_token=False)
+    hf_hub_download(repository, filename, local_dir=model_path, local_dir_use_symlinks=False, use_auth_token=False)
 
 
-def model_loads(model_name, filename):
-    path = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.models/' + model_name)
-    model_path = os.path.join(path, filename)
-
+def model_loads(model_path):
     if not os.path.exists(model_path):
         print('Error')
         return None
@@ -57,9 +52,8 @@ def model_loads(model_name, filename):
     return loaded_model
 
 
-def label_loads(model_name, filename):
-    path = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.models/' + model_name)
-    label = os.path.join(path, filename)
+def label_loads(model_path, filename):
+    label = os.path.join(model_path, filename)
 
     if not os.path.exists(label):
         print('Error')
@@ -84,7 +78,6 @@ def label_loads(model_name, filename):
 
 
 def predict(image,
-            model_name,
             general_threshold,
             character_threshold,
             filename,
@@ -93,7 +86,7 @@ def predict(image,
             general_indexes,
             character_indexes
             ):
-    model = model_loads(model_name, filename)
+    model = model_loads(filename)
     _, height, width, _ = model.get_inputs()[0].shape
 
     # Alpha to white
@@ -138,16 +131,17 @@ def predict(image,
     return a, c, rating, character_res, general_res
 
 
-def interrogate(model_param: str, filepath: str, tag_threshold: float, chara_threshold: float):
+def interrogate(model_param: str, filepath: str, tag_threshold: float, chara_threshold: float, installed: str):
     model_param = model_param.lower()
     model_filename = 'model.onnx'
     label_filename = "selected_tags.csv"
+    model_path = os.path.join(os.path.abspath(installed), '.models/' + model_param)
 
-    tag_names, rating_indexes, general_indexes, character_indexes = label_loads(model_param, label_filename)
+    tag_names, rating_indexes, general_indexes, character_indexes = label_loads(model_path, label_filename)
 
     func = functools.partial(
         predict,
-        filename=model_filename,
+        filename=os.path.join(model_path, model_filename),
         tag_names=tag_names,
         rating_indexes=rating_indexes,
         general_indexes=general_indexes,
@@ -155,7 +149,7 @@ def interrogate(model_param: str, filepath: str, tag_threshold: float, chara_thr
     )
 
     image_file = Image.open(filepath)
-    prompt, original, rating, character, confidence = func(image_file, model_param, tag_threshold, chara_threshold)
+    prompt, original, rating, character, confidence = func(image_file, tag_threshold, chara_threshold)
     result = [filepath, model_param, tag_threshold, chara_threshold, prompt, original, rating, character, confidence]
 
     return result

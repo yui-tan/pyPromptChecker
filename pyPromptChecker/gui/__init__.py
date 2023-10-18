@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import os
-import sys
 import configparser
 
 config = {}
 
-config_file = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), 'config.ini')
-if not os.path.exists(config_file):
-    config_file = os.path.join('', 'config.ini')
+module_filepath = os.path.abspath(os.path.dirname(__file__))
+package_filepath = os.path.dirname(module_filepath)
+installed_filepath = os.path.dirname(package_filepath)
+config_file = os.path.join(installed_filepath, 'config.ini')
 
 ini_config = configparser.ConfigParser()
 ini_config.read(config_file, encoding='utf-8')
@@ -83,15 +83,8 @@ for ini in ini_section:
                 config[option] = value
 
 if not config.get('ModelList'):
-    model_list = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), 'model_list.csv')
-    if os.path.exists(model_list):
-        config['ModelList'] = model_list
-    else:
-        config['ModelList'] = os.path.join(os.path.abspath(''), 'model_list.csv')
+    config['ModelList'] = os.path.join(installed_filepath, 'model_list.csv')
 
-estimated_icon_path_1 = os.path.abspath(os.path.join((os.path.dirname(__file__)), "../icon/icon.png"))
-estimated_icon_path_2 = os.path.abspath(os.path.join((os.path.dirname(__file__)), "../icon/icon.png"))
-if os.path.exists(estimated_icon_path_1):
-    config['IconPath'] = estimated_icon_path_1
-elif os.path.exists(estimated_icon_path_2):
-    config['IconPath'] = estimated_icon_path_2
+estimated_icon_path = os.path.abspath(os.path.join(package_filepath, 'icon/icon.png'))
+config['IconPath'] = estimated_icon_path
+config['Installed'] = installed_filepath

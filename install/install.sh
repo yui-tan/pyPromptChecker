@@ -40,7 +40,7 @@ echo "Making files..."
 mkdir sh
 
 path_to_venv=$(pwd)"/venv/bin/activate"
-path_to_icon=$(pwd)"/icon/icon.png"
+path_to_icon=$(pwd)"/pyPromptChecker/icon/icon.png"
 
 command[0]="/bin/bash -c \"source $path_to_venv && mikkumiku\""
 command[1]="/bin/bash -c \"source $path_to_venv && mikkumiku --ask\""

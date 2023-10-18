@@ -20,6 +20,7 @@ HIDE_NORMAL_TAB_BAR = config.get('HideNormalTabBar', False)
 HIDE_NOT_MATCH = config.get('HideNotMatchedTabs', False)
 FILE_MANAGEMENT = config.get('MoveDelete', True)
 PIXMAP_SCALE = config.get('PixmapSize', 350)
+INSTALLED_PATH = config.get('Installed')
 BUTTONS = (('Copy &positive', 'Copy positive'),
            ('Copy &negative', 'Copy negative'),
            ('Copy &seed', 'Copy seed'),
@@ -744,7 +745,7 @@ class RootTabPage(QWidget):
 
     def __check_filepath(self):
         favourite = FAVOURITE_DIR
-        trash_bin = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), '.trash')
+        trash_bin = os.path.join(os.path.abspath(INSTALLED_PATH), '/.trash')
         directory = os.path.dirname(self.filepath)
         fav_button = self.main_section.findChild(QPushButton, f'fav_{self.image_index}')
         del_button = self.main_section.findChild(QPushButton, f'del_{self.image_index}')
