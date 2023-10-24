@@ -41,8 +41,7 @@ mkdir sh
 
 path_to_venv=$(pwd)"/venv/bin/activate"
 path_to_icon=$(pwd)"/pyPromptChecker/icon/icon.png"
-
-command[0]="/bin/bash -c \"source $path_to_venv && mikkumiku\""
+command[0]="/bin/bash -c 'source $path_to_venv && mikkumiku \"\$@\"' bash"
 command[1]="/bin/bash -c \"source $path_to_venv && mikkumiku --ask\""
 command_name[0]="mikkumiku"
 command_name[1]="folder_picker"
