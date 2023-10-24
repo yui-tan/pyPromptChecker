@@ -103,7 +103,7 @@ class ThumbnailView(QMainWindow):
             self.centralWidget().deleteLater()
         self.setCentralWidget(central_widget)
 
-        estimated_height = min(self.estimated_height * self.max_y + 70, 1000)
+        estimated_height = min(self.estimated_height * self.max_y + 80, 1000)
         estimated_width = self.estimated_width * self.max_x + 210
 
         self.show()

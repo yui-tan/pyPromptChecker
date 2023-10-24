@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import sys
-
 from PyQt6.QtWidgets import QMainWindow, QStackedWidget, QLineEdit
 from PyQt6.QtGui import QPalette
 
@@ -84,7 +82,7 @@ class Tabview(QMainWindow):
             middle_section_layout.addWidget(self.root_tab)
 
         middle_section = QWidget()
-        middle_section_layout.setContentsMargins(0, 0, 0, 0)
+        middle_section_layout.setContentsMargins(5, 5, 5, 5)
         middle_section.setLayout(middle_section_layout)
 
         root_layout.addWidget(self.tab_navigation)
@@ -394,7 +392,7 @@ class TabNavigation(QWidget):
         self.dropdown.setObjectName('Dropdown')
         self.dropdown.currentIndexChanged.connect(self.__navi_signal_received)
         layout.insertWidget(2, self.dropdown, 5)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(5, 5, 5, 5)
 
         self.setLayout(layout)
         self.setObjectName('TabNavigation')
@@ -1168,11 +1166,11 @@ class InterrogateTab(QStackedWidget):
         value_str = str(value)
 
         if where_from == 'Tag':
-            target = self.sender().parent().findChild(QLabel, 'tag_label')
+            target = self.page1.findChild(QLabel, 'tag_label')
             target.setText(value_str)
             self.tag_threshold = value
         else:
-            target = self.sender().parent().findChild(QLabel, 'chara_label')
+            target = self.page1.findChild(QLabel, 'chara_label')
             target.setText(value_str)
             self.chara_threshold = value
 

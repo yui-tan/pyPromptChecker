@@ -80,7 +80,7 @@ class FooterButtons(QWidget):
 
     def __init_buttons(self, buttons: tuple):
         layout = QHBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(5, 5, 5, 5)
         for text, name in buttons:
             if '&' in text or 'Shrink' in text:
                 button = QPushButton(text, self.caller)
