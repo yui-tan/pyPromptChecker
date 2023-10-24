@@ -25,20 +25,28 @@ See more details [here.](description.md)
 
 
 # Requirements  
-### pyPromptChecker binary edition no longer has any requirements.  
-But source code edition still has requirements as follows.
+### ~~pyPromptChecker binary edition no longer has any requirements.~~ 
+I decided to give up distribute binary editions.  
+Because of quite difficult to avoid false positives of Windows Defender.  
+If you want to continue using you need to install at least python 3.x 
 - Python 3.x
 - pillow (PIL)
 - pypng
 - PyQt6
 - pyqtdarktheme
 
+As follows for interrogate features.
+- onnxruntime
+- numpy
+- opencv-python
+- huggingface_hub
+
 # Installation
-### pyPromptChecker binary edition (for Linux and Windows users)  
-1. Download the binary packages from the 'Releases'.
-2. Extract pyPromptChecker directory to any location of your choice.
-3. Optionally, desktop files for enable drag-and-drop functionality.
-4. Execute pyPromptChecker by double-click.
+### ~~pyPromptChecker binary edition (for Linux and Windows users)~~   
+~~1. Download the binary packages from the 'Releases'.~~  
+~~2. Extract pyPromptChecker directory to any location of your choice.~~  
+~~3. Optionally, desktop files for enable drag-and-drop functionality.~~  
+~~4. Execute pyPromptChecker by double-click.~~ 
 
 ### pyPromptChecker source code edition
 
@@ -48,7 +56,6 @@ git clone https://github.com/yui-tan/pyPromptChecker
 cd pyPromptChecker/install
 ./install.sh
 ````
-  
 For Windows
 1. Make sure you've got Python 3.x hanging around. 
 2. Download the packages from the 'Releases' or code > download ZIP.
@@ -56,23 +63,12 @@ For Windows
 4. Run pyPromptChecker/install/install.bat file.
 5. Don't miss a single word of the words that pop up on the screen, before going wild in the comments
 # Usage
-### Binary edition
-```bash
-pyPromptChecker -a, --ask  
-# Open directory choose dialog.
-pyPromptChecker -f [FILEPATH ...], --filepath [FILEPATH ...]  
-# Send filepaths to the script.
-pyPromptChecker -d DIRECTORY, --directory DIRECTORY  
-# Send directory paths to the script.
-```
 ### Source code edition
 ```bash
 mikkumiku -a, --ask  
 # Open directory choose dialog.
 mikkumiku -f [FILEPATH ...], --filepath [FILEPATH ...]  
-# Send filepaths to the script.
-mikkumiku -d DIRECTORY, --directory DIRECTORY  
-# Send directory paths to the script.
+# Send file or directory paths to the script.
 ```
 # Roadmap
  - [x] Tab navigation with thumbnails
@@ -84,8 +80,8 @@ mikkumiku -d DIRECTORY, --directory DIRECTORY
     - [x] webp
  - [x] Add support for import JSON
  - [ ] Automated LoRa creation
-    - [ ] Positive prompt export to txt files.
-    - [ ] Implement interrogate feature.
+    - [x] Positive prompt export to txt files.
+    - [x] Implement interrogate feature.
     - [ ] Import configure from files.
     - [ ] Linking sd-scripts.
  - [ ] ~~Export Data to Stable-Diffusion-Webui via API~~

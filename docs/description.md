@@ -38,11 +38,21 @@ The key bindings for each feature, see the feature description.
   It will work with the default values even without it, but you may want to create your own favourite settings.  
   The description of each configuration value is given here, but see below for a description of the individual features.
 - ### [Window] section
-  - **"MaxWindowWidth" option** (Integer)
-  - **"MaxWindowHeight" option** (Integer)   
-Sets the maximum size of the window.  
-Not very useful in practice.  
-I'll address this soon, but for now, please treat it as a placeholder.
+  - **"AlwaysOpenBy" option** (Strings)  
+The strings are case-insensitive.  
+The valid strings are as follows:  
+"tab": tab view (default view up to now),  
+"thumbnail": thumbnail view,  
+"list": list view,  
+"random": select view on whim by the script,  
+"number: select view by file counts.  
+<11 tab view.  
+<21 list view.  
+\>20 thumbnail view.  
+Default value is **tab**.
+  - **"AskWhenQuit" option** (Boolean)  
+Warns when an attempt is made to close the first window that was opened (as it lead to script termination).  
+Default value is **True**.
   - **"AlwaysStartWithDarkMode" option** (Boolean)  
 If this setting set to True, always turn on dark mode at startup.  
 Default value is **False**.
@@ -146,9 +156,6 @@ Depends on number of files, it requires huge mount of time and memories[^2].
     
 - ### Related values in 'config.ini'
   - ### [Features] section ###
-    - **"JsonExport" option** (Boolean)  *Deprecated*
-      This option now only mean toggle shown/not shown "Export Json" buttons.  
-      Default value is **False**.
     - **"JsonSingle" option** (Strings) 
       This option is setting for exported JSONs (single file) default Name.  
       Setting whatever you want.  
@@ -210,11 +217,6 @@ A combo box at the top of the window and a thumbnail window are provided.
   - ### [Features] section ###
     - **"TabNavigation" option** (Boolean)  
 Toggle to enable or to disable tab navigation.  
-Default value is **True**.
-    - **"TabNavigationWithThumbnails" option** (Boolean)  
-Toggle to enable or to disable thumbnail view.  
-If set to True, thumbnail button appears next to 'Jump to' button, right top of the window.  
-This setting has no meanings unless "TabNavigation" option is enable.  
 Default value is **True**.
     - **"TabNavigationMinimumTabs" option** (Integer)  
 Setting appear tab navigation when how many files are opens.   
