@@ -27,8 +27,9 @@ See more details [here.](description.md)
 # Requirements  
 ### ~~pyPromptChecker binary edition no longer has any requirements.~~ 
 I decided to give up distribute binary editions.  
-Because of quite difficult to avoid false positives of Windows Defender.  
-If you want to continue using you need to install at least python 3.x 
+Because very difficult to avoid false positives of Windows Defender.  
+If you want to continue using you need to install at least python 3.x  
+
 - Python 3.x
 - pillow (PIL)
 - pypng
