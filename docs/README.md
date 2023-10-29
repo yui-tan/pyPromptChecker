@@ -60,9 +60,14 @@ cd pyPromptChecker/install
 For Windows
 1. Make sure you've got Python 3.x hanging around. 
 2. Download the packages from the 'Releases' or code > download ZIP.
-3. Extract the packages to a location of your choice as 'pyPromptChecker'.
-4. Run pyPromptChecker/install/install.bat file.
-5. Don't miss a single word of the words that pop up on the screen, before going wild in the comments
+3. Extract the packages to a location of your choice.
+4. Run command in **PowerShell**.
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope Process
+cd /path/to/pyPromptChecker/install
+./install.ps1
+Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope Process
+```
 # Usage
 ### Source code edition
 ```bash
