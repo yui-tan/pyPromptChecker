@@ -64,7 +64,7 @@ For Windows
 4. Run command in **PowerShell**.
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope Process
-cd /path/to/pyPromptChecker/install
+cd \path\to\pyPromptChecker\install
 ./install.ps1
 Set-ExecutionPolicy -ExecutionPolicy Undefined -Scope Process
 ```
