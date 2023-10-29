@@ -572,11 +572,14 @@ class WindowController(QObject):
                 if selected.result:
                     download_progress = ProgressDialog()
                     download_progress.setLabelText('Downloading......')
-                    download_progress.setRange(0, 10)
+                    download_progress.setRange(0, len(models))
+                    download_progress.show()
+                    QApplication.processEvents()
                     for model_setting in models:
                         model_path = os.path.join(os.path.abspath(INSTALLED_PATH), '.models/' + model_setting[0].lower())
                         model_downloads(model_setting[1], model_filename, label_filename, model_path)
                         download_progress.update_value()
+                        QApplication.processEvents()
                     return True
             return True
 

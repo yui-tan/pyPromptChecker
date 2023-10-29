@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import sys
 
 from PIL import Image
 from onnxruntime import InferenceSession
@@ -38,9 +39,20 @@ def smart_resize(img, size):
 
 
 def model_downloads(repository, filename, label_file, model_path):
-    os.makedirs(model_path, exist_ok=True)
-    hf_hub_download(repository, label_file, local_dir=model_path, local_dir_use_symlinks=False, use_auth_token=False)
-    hf_hub_download(repository, filename, local_dir=model_path, local_dir_use_symlinks=False, use_auth_token=False)
+    original = sys.stderr
+    error_log = 'error.log'
+    try:
+        with open(error_log, 'w') as log:
+            sys.stderr = log
+            os.makedirs(model_path, exist_ok=True)
+            hf_hub_download(repository, label_file, local_dir=model_path, local_dir_use_symlinks=False, use_auth_token=False)
+            hf_hub_download(repository, filename, local_dir=model_path, local_dir_use_symlinks=False, use_auth_token=False)
+    except Exception as e:
+        return e
+    else:
+        os.remove(error_log)
+    finally:
+        sys.stderr = original
 
 
 def model_loads(model_path):
