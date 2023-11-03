@@ -569,7 +569,7 @@ class WindowController(QObject):
 
             if flag:
                 selected = MessageBox(text, 'Interrogate', 'ok_cancel', 'info', sender)
-                if selected.result:
+                if selected.success:
                     download_progress = ProgressDialog()
                     download_progress.setLabelText('Downloading......')
                     download_progress.setRange(0, len(models))
@@ -581,6 +581,8 @@ class WindowController(QObject):
                         download_progress.update_value()
                         QApplication.processEvents()
                     return True
+                else:
+                    return False
             return True
 
         model_enable = model_checks()
